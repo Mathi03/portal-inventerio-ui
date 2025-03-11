@@ -16,7 +16,6 @@ export default function MenuList({
   onEdit: () => void;
   onDelete?: () => void;
 }) {
-  console.log({ status });
   return (
     <Popover>
       <PopoverTrigger asChild>

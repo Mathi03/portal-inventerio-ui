@@ -44,8 +44,18 @@ export default function Create({
         onSubmit={(value) => onSubmit(value as CreateRedDto)}
         className="grid gap-4 px-6 content-start"
       >
-        <TextField name={"label" as FormItem} label="Etiqueta" fullWidth />
-        <TextField name={"name" as FormItem} label="Nombre" fullWidth />
+        <TextField
+          name={"label" as FormItem}
+          label="Etiqueta"
+          fullWidth
+          maxLength={255}
+        />
+        <TextField
+          name={"name" as FormItem}
+          label="Nombre"
+          fullWidth
+          maxLength={255}
+        />
         <Select
           name={"status" as FormItem}
           label="Estado"

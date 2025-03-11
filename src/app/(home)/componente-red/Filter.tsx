@@ -1,12 +1,25 @@
 "use client";
 import Button from "@/components/Button";
-import Select from "@/components/Select";
 import { Form, TextField } from "@telefonica/mistica";
+import SelectFuentes from "./SelectFuentes";
+import SelectRedes from "./SelectRedes";
+import SelectTipoComponentes from "./SelectTipoComponentes";
+import SelectRegiones from "./SelectRegiones";
+import { QueryComponenteRedDto } from "@/core/componente-red/dto/search.dto";
+export type FormFilterType = Omit<
+  QueryComponenteRedDto,
+  "page" | "limit" | "q"
+>;
+export type FilterType = keyof FormFilterType;
 
-export default function Filter() {
+export default function Filter({
+  onFilter,
+}: {
+  onFilter: (form: FormFilterType) => void;
+}) {
   return (
     <Form
-      onSubmit={console.log}
+      onSubmit={(value) => onFilter(value as FormFilterType)}
       className="max-w-[360px] bg-white rounded-[8px] grid grid-rows-[auto_1fr_auto] gap-4 overflow-hidden"
     >
       <header className="p-4 grid gap-4">
@@ -20,58 +33,35 @@ export default function Filter() {
         </p>
       </header>
       <section className="grid gap-4 overflow-auto px-4 pb-4 scroller">
-        <TextField id="codigo" name="codigo" label="Código" fullWidth />
         <TextField
-          id="componente_id"
-          name="componente_id"
+          name={"id" as FilterType}
           label="Componente Id"
           fullWidth
+          optional
         />
-        <TextField id="nombre" name="nombre" label="Nombre" fullWidth />
-        <Select
-          id="etiqueta"
-          name="etiqueta"
-          label="Etiqueta"
-          options={[
-            {
-              text: "Option 1",
-              value: "1",
-            },
-          ]}
-          fullWidth
-        />
-        <Select
-          id="tipo_componente"
-          name="tipo_componente"
-          label="Tipo de componente"
-          options={[
-            {
-              text: "Option 1",
-              value: "1",
-            },
-          ]}
-          fullWidth
-        />
-        <Select
-          id="status"
-          name="status"
-          label="Status"
-          options={[
-            {
-              text: "Option 1",
-              value: "1",
-            },
-          ]}
-          fullWidth
-        />
-        <TextField id="red" name="red" label="Red" fullWidth />
         <TextField
-          id="id_control"
-          name="id_control"
+          id="nombre"
+          name="nombre"
+          label="Nombre"
+          fullWidth
+          optional
+        />
+        <TextField
+          name={"label" as FilterType}
+          label="Etiqueta"
+          fullWidth
+          optional
+        />
+        <SelectTipoComponentes name={"ref_component_type_id" as FilterType} />
+        <SelectRedes name={"ref_network_id" as FilterType} />
+        <SelectRegiones name={"region_id" as FilterType} />
+        <TextField
+          name={"control_id" as FilterType}
           label="Id Control"
           fullWidth
+          optional
         />
-        <TextField id="fuente" name="fuente" label="Fuente" fullWidth />
+        <SelectFuentes name={"ref_source_id" as FilterType} />
       </section>
       <footer className="grid gap-4 grid-cols-2 p-4 border-t-[1px] border-[#eee]">
         <Button variant="secondary">Limpiar</Button>

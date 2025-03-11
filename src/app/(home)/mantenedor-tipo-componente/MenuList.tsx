@@ -4,13 +4,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
 
 export default function MenuList({
+  onApproval,
   onEdit,
   onDelete,
+  tc,
 }: {
+  onApproval: () => void;
   onEdit: () => void;
   onDelete?: () => void;
+  tc: TipoComponenteType;
 }) {
   return (
     <Popover>
@@ -30,6 +35,14 @@ export default function MenuList({
           >
             Editar
           </li>
+          {tc.status === 0 && (
+            <li
+              className="hover:bg-[#0066FF]/10 hover:text-[#0066FF] py-2 px-4 cursor-pointer"
+              onClick={onApproval}
+            >
+              Aprobar
+            </li>
+          )}
           <li
             className="hover:bg-[#0066FF]/10 hover:text-[#0066FF] py-2 px-4 cursor-pointer"
             onClick={onDelete}

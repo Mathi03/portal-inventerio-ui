@@ -21,8 +21,8 @@ export class RedService {
     return response;
   }
 
-  public async getById() {
-    const {} = await bff.get("/v1/portal/ref-component-type");
+  public async getById(id: number) {
+    return await bff.get(`/v1/portal/ref-networks/${id}`);
   }
 
   public async update(id: number, updateRed: UpdateRedDto) {

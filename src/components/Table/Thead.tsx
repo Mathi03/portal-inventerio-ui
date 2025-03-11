@@ -2,7 +2,7 @@ import { TableColumn } from "./Table";
 
 export default function Thead({ columns }: { columns: TableColumn[] }) {
   return (
-    <thead className="h-fit flex w-full bg-[#F2F7FF] text-[#0066FF] sticky top-0">
+    <thead className="h-fit flex w-full bg-[#F2F7FF] text-[#0066FF] sticky top-0 z-10">
       <tr className="flex w-full">
         {columns.map(({ title, maxWidth, hidden }, columnKey) => (
           <th

@@ -35,7 +35,7 @@ const chartConfig = {
 
 export function Chart4() {
   return (
-    <Card>
+    <Card className="col-span-5">
       <CardHeader>
         <CardTitle>Mantenedor de fuentes</CardTitle>
         <CardDescription>January - June 2024</CardDescription>

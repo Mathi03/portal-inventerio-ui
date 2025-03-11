@@ -97,6 +97,14 @@ body {
   }
 }
 
+[role="listbox"] {
+  z-index: 10000;
+}
+
+body > div {
+  isolation: auto !important;
+}
+
 @layer base {
   * {
     @apply border-border;

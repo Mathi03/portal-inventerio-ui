@@ -15,6 +15,7 @@ import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type"
 import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
 import { Tag, useDialog, useSnackbar } from "@telefonica/mistica";
 import Pagination from "@/components/Pagination";
+import Aprobar from "./Aprobar";
 
 export default function MantenedorRedPage() {
   const { confirm } = useDialog();
@@ -24,12 +25,14 @@ export default function MantenedorRedPage() {
   const [openFiter, setOpenFilter] = useState(true);
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
+  const [openApprove, setOpenApprove] = useState(false);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<number>(10);
   const [limit, setLimit] = useState<number>(20);
 
   const [isLoadingTC, setIsLoadingTC] = useState(true);
-
+  const [tipoComponente, setTipoComponente] =
+    useState<TipoComponenteType | null>(null);
   const [showColumn, setShowColumn, isLoadingShowColumn] = useStorage(
     "filtro-mantenedor-tipo-componente",
     {
@@ -95,6 +98,11 @@ export default function MantenedorRedPage() {
         maxWidth: "64px",
         render: (row) => (
           <MenuList
+            tc={row}
+            onApproval={() => {
+              setOpenApprove(true);
+              setTipoComponente(row);
+            }}
             onEdit={() => {
               setSelectedTC(row);
               setOpenEdit(true);
@@ -125,7 +133,10 @@ export default function MantenedorRedPage() {
           rows={tipoComponentes}
           isLoading={isLoadingTC || isLoadingShowColumn}
           header={
-            <header className="flex justify-between gap-4">
+            <header className="grid grid-cols-[1fr_auto] justify-between gap-4">
+              <h1 className="col-span-2 text-[22px]">
+                Mantenedor de tipo de componentes
+              </h1>
               <InputSearch onSearch={(value) => setSearch(value)} />
               <menu className="flex gap-4">
                 <ExportXLS />
@@ -162,6 +173,19 @@ export default function MantenedorRedPage() {
           }
         />
       </section>
+      {openApprove && (
+        <Aprobar
+          tc={tipoComponente}
+          onClose={() => setOpenApprove(false)}
+          onSuccess={() => {
+            openSnackbar({
+              message: `${tipoComponente?.name} aprobado`,
+              type: "INFORMATIVE",
+            });
+            getComponentTypes();
+          }}
+        />
+      )}
       {openCreate && (
         <Create
           onClose={() => setOpenCreate(false)}

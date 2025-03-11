@@ -12,6 +12,7 @@ export interface TipoComponenteType {
   status: TCStatusEnum; //estatus
   createdAt: string; //fecha_creacion
   updatedAt: string; //fecha_actualizacion
+  commentApproval?: string;
 }
 
 export const TCStatusEnumOptions = [

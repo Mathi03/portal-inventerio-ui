@@ -15,6 +15,8 @@ import { Tag, useDialog, useSnackbar } from "@telefonica/mistica";
 import Pagination from "@/components/Pagination";
 import { FuenteType } from "@/core/fuente/fuente.type";
 import { FuenteService } from "@/core/fuente/fuente.service";
+import DetalleRed from "../DetalleRed";
+import DetalleTipoComponente from "../DetalleTipoComponente";
 
 export default function MantenedorFuentePage() {
   const { confirm } = useDialog();
@@ -37,7 +39,6 @@ export default function MantenedorFuentePage() {
       name: true,
       status: true,
       id: true,
-      attribute: true,
       refComponentTypeId: true,
       refNetworkId: true,
       version: true,
@@ -86,27 +87,18 @@ export default function MantenedorFuentePage() {
       },
       {
         title: "Tipo de componente",
-        render: (row) => (
-          <Tag type="inactive">{row.refComponentTypeId.toString()}</Tag>
-        ),
+        render: (row) => <DetalleTipoComponente id={row.refComponentTypeId} />,
         hidden: !showColumn.refComponentTypeId,
       },
       {
         title: "Red",
-        render: (row) => (
-          <Tag type="inactive">{row.refNetworkId.toString()}</Tag>
-        ),
+        render: (row) => <DetalleRed id={row.refNetworkId} />,
         hidden: !showColumn.refNetworkId,
       },
       {
         title: "Versión",
         key: "version",
         hidden: !showColumn.version,
-      },
-      {
-        title: "Atributo",
-        key: "attribute",
-        hidden: !showColumn.attribute,
       },
       {
         title: "Estado",
@@ -151,7 +143,8 @@ export default function MantenedorFuentePage() {
           rows={fuentes}
           isLoading={isLoadingFuentes || isLoadingShowColumn}
           header={
-            <header className="flex justify-between gap-4">
+            <header className="grid grid-cols-[1fr_auto] justify-between gap-4">
+              <h1 className="col-span-2 text-[22px]">Mantenedor de Fuentes</h1>
               <InputSearch onSearch={(value) => setSearch(value)} />
               <menu className="flex gap-4">
                 <ExportXLS />

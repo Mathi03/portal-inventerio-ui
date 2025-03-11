@@ -18,7 +18,6 @@ export type FormType = keyof Pick<
   | "refNetworkId"
   | "refComponentTypeId"
   | "version"
-  | "attribute"
 >;
 export default function ExportXLS() {
   const [form] = useState({
@@ -69,7 +68,6 @@ export default function ExportXLS() {
           </Checkbox>
           <Checkbox name={"refNetworkId" as FormType}>Red</Checkbox>
           <Checkbox name={"version" as FormType}>Versión</Checkbox>
-          <Checkbox name={"attribute" as FormType}>Atributo</Checkbox>
           <Checkbox name={"status" as FormType}>Estado</Checkbox>
         </Form>
       </PopoverContent>

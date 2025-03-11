@@ -8,4 +8,5 @@ export type CreateTipoComponenteDto = Pick<
   | "configAttributes"
   | "configServices"
   | "configRelations"
+  | "commentApproval"
 >;

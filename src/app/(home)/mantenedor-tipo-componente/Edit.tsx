@@ -1,13 +1,9 @@
 import Aside from "@/components/Aside";
 import Button from "@/components/Button";
 import InputJson from "@/components/InputJson";
-import Select from "@/components/Select";
 import { UpdateTipoComponenteDto } from "@/core/tipo-componente/dto/update.dto";
 import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
-import {
-  TCStatusEnumOptions,
-  TipoComponenteType,
-} from "@/core/tipo-componente/tipo-componente.type";
+import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
 import { Form, TextField } from "@telefonica/mistica";
 import { useCallback, useState } from "react";
 type FormItem = keyof UpdateTipoComponenteDto;
@@ -21,45 +17,38 @@ export default function Edit({
   onSuccess: () => void;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [configAttributes, setConfigAttributes] = useState<
     UpdateTipoComponenteDto["configAttributes"]
   >(tipoComponente.configAttributes);
+
   const [configServices, setConfigServices] = useState<
     UpdateTipoComponenteDto["configServices"]
   >(tipoComponente.configServices);
-  const [configRelations, setConfigRelations] = useState<
-    UpdateTipoComponenteDto["configRelations"]
-  >(tipoComponente.configRelations);
+
   const onSubmit = useCallback(
     async (form: UpdateTipoComponenteDto) => {
       setIsSubmitting(true);
       const tcService = new TipoComponenteService();
       await tcService.update(tipoComponente.id, {
         ...form,
-        status: +form.status,
+        status: tipoComponente.status,
         configAttributes,
         configServices,
-        configRelations,
+        commentApproval: "",
       });
       setIsSubmitting(false);
       onSuccess();
       onClose();
     },
-    [
-      tipoComponente,
-      onSuccess,
-      onClose,
-      configAttributes,
-      configServices,
-      configRelations,
-    ],
+    [tipoComponente, onSuccess, onClose, configAttributes, configServices],
   );
   return (
     <Aside
-      className="grid grid-rows-[auto_1fr_auto] overflow-auto min-w-[720px]"
+      className="grid grid-rows-[auto_1fr_auto] overflow-auto min-w-[1024px]"
       onClose={onClose}
     >
-      <header className="p-6 grid gap-4">
+      <header className="p-6 grid gap-1">
         <h4 className="text-[28px]">Editar mantenedor de tipo de componente</h4>
         <p>
           Actualice todo los datos correspondiente para editar con éxito un
@@ -68,23 +57,26 @@ export default function Edit({
       </header>
       <Form
         onSubmit={(value) => onSubmit(value as UpdateTipoComponenteDto)}
-        className="grid gap-4 px-6 content-start"
+        className="grid px-6 content-start"
         initialValues={{
           ...tipoComponente,
           status: tipoComponente.status.toString(),
         }}
       >
-        <TextField name={"label" as FormItem} label="Etiqueta" fullWidth />
-        <TextField name={"name" as FormItem} label="Nombre" fullWidth />
-        <Select
-          name={"status" as FormItem}
-          label="Estado"
-          options={TCStatusEnumOptions.map((option) => ({
-            text: option.label,
-            value: option.value.toString(),
-          }))}
-          fullWidth
-        />
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <TextField
+            name={"label" as FormItem}
+            label="Etiqueta"
+            fullWidth
+            maxLength={255}
+          />
+          <TextField
+            name={"name" as FormItem}
+            label="Nombre"
+            fullWidth
+            maxLength={255}
+          />
+        </div>
         <h4 className="text-[22px]">Actualización Configuración dinamica</h4>
         <p className="mb-4">
           las configuraciones estaran asociada a cada componnente de red, por lo
@@ -96,16 +88,13 @@ export default function Edit({
           label="Configuración de Atributos"
           onChange={setConfigAttributes}
         />
+        <br />
         <InputJson
           codeDefault={JSON.stringify(configServices)}
           label="Configuración de servicios"
           onChange={setConfigServices}
         />
-        <InputJson
-          codeDefault={JSON.stringify(configRelations)}
-          label="Configuración de relación"
-          onChange={setConfigRelations}
-        />
+        <br />
         <footer className="grid gap-4 p-4 border-t-[1px] border-[#eee]">
           <Button showSpinner={isSubmitting}>Guardar</Button>
           <Button variant="link" onClick={onClose}>

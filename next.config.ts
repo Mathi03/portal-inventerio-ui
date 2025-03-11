@@ -11,6 +11,21 @@ const nextConfig: NextConfig = {
         destination: `${process.env.API_URL}/api/:path*`,
         basePath: false,
       },
+      {
+        source: "/ms-direcciones/:path*",
+        destination: `${process.env.API_URL_MS_DIRECCIONES}/:path*`,
+        basePath: false,
+      },
+      {
+        source: "/estaciones/:path*",
+        destination: `${process.env.API_URL_ESTACIONES}/:path*`,
+        basePath: false,
+      },
+      {
+        source: "/test/:path*",
+        destination: `${process.env.API_URL_CONTACTO}/:path*`,
+        basePath: false,
+      },
     ];
   },
 };
