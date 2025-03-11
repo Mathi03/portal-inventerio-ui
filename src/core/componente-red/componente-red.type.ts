@@ -1,3 +1,6 @@
+import { ControlType } from "../control/control.type";
+import { ServicioType } from "../servicio/servicio.type";
+
 export enum CRStatusEnum {
   ACTIVO = 1,
   INACTIVO = 0,
@@ -17,11 +20,15 @@ export interface ComponenteRedType {
   approvalComment: string;
   observation: string;
   status: CRStatusEnum;
+  disabledAt?: string;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
   updatedBy: string;
   refSourceId: number;
+  control?: ControlType;
+  service?: ServicioType;
+  relations: any;
 }
 
 export const CRStatusEnumOptions = [

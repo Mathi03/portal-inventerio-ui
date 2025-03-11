@@ -96,8 +96,18 @@ export default function Create({
         onSubmit={(value) => onSubmit(value as CreateFuenteDto)}
         className="grid gap-4 px-6 content-start"
       >
-        <TextField name={"label" as FormItem} label="Etiqueta" fullWidth />
-        <TextField name={"name" as FormItem} label="Nombre" fullWidth />
+        <TextField
+          name={"label" as FormItem}
+          label="Etiqueta"
+          fullWidth
+          maxLength={255}
+        />
+        <TextField
+          name={"name" as FormItem}
+          label="Nombre"
+          fullWidth
+          maxLength={255}
+        />
         <Select
           disabled={isLoadingTC}
           name={"refComponentTypeId" as FormItem}

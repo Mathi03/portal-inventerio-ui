@@ -55,7 +55,6 @@ export default function ShowColumns({
           </Checkbox>
           <Checkbox name={"refNetworkId" as ShowColumnType}>Red</Checkbox>
           <Checkbox name={"version" as ShowColumnType}>Versión</Checkbox>
-          <Checkbox name={"attribute" as ShowColumnType}>Atributo</Checkbox>
           <Checkbox name={"status" as ShowColumnType}>Estado</Checkbox>
         </Form>
       </PopoverContent>

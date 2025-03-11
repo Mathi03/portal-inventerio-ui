@@ -13,7 +13,6 @@ export type FormType = keyof Pick<
   | "label"
   | "name"
   | "status"
-  | "attribute"
   | "version"
   | "refNetworkId"
   | "refComponentTypeId"
@@ -99,7 +98,6 @@ export default function Filter({
           fullWidth
         />
         <TextField name={"version" as FormType} label="Versión" fullWidth />
-        <TextField name={"attribute" as FormType} label="Atributo" fullWidth />
       </section>
       <footer className="grid gap-4 grid-cols-2 p-4 border-t-[1px] border-[#eee]">
         <Button variant="secondary">Limpiar</Button>

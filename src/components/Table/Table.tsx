@@ -18,22 +18,29 @@ export default function Table({
   header,
   isLoading = false,
   pagination,
+  compact = false,
 }: {
   columns: TableColumn[];
   rows: any[];
-  header: ReactNode;
+  header?: ReactNode;
   isLoading?: boolean;
-  pagination: ReactNode;
+  pagination?: ReactNode;
+  compact?: boolean;
 }) {
   return (
-    <section className="w-full h-full bg-white grid grid-rows-[auto_1fr_auto] overflow-hidden p-4 gap-4 rounded-[8px]">
+    <section
+      className={`w-full h-full bg-white grid grid-rows-[auto_1fr_auto] overflow-hidden ${!compact && "p-4"} gap-4 rounded-[8px]`}
+    >
       {header}
       {isLoading && <TLoading />}
-      {!isLoading && rows?.length === 0 && <TEmpty />}
-      {!isLoading && rows?.length !== 0 && (
-        <table className="rounded-[12px] grid content-start overflow-auto border-[#D1D5E4] border-[1px] scroller">
+      {!isLoading && rows.length === 0 && <TEmpty />}
+      {!isLoading && rows.length !== 0 && (
+        <table
+          className="rounded-[12px] grid content-start overflow-auto border-[#D1D5E4] border-[1px] scroller"
+          style={{ gridRow: "2/3" }}
+        >
           <Thead columns={columns} />
-          <Tbody columns={columns} rows={rows ?? []} />
+          <Tbody columns={columns} rows={rows} />
         </table>
       )}
       {pagination}

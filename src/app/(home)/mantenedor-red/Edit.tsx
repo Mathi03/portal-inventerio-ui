@@ -51,8 +51,18 @@ export default function Edit({
           status: red.status.toString(),
         }}
       >
-        <TextField name={"label" as FormItem} label="Etiqueta" fullWidth />
-        <TextField name={"name" as FormItem} label="Nombre" fullWidth />
+        <TextField
+          name={"label" as FormItem}
+          label="Etiqueta"
+          fullWidth
+          maxLength={255}
+        />
+        <TextField
+          name={"name" as FormItem}
+          label="Nombre"
+          fullWidth
+          maxLength={255}
+        />
         <Select
           name={"status" as FormItem}
           label="Estado"

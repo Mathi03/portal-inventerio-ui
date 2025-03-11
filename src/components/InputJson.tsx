@@ -37,7 +37,7 @@ export default function InputJson({
   }, [code, onChange]);
 
   const formatJson = useCallback(
-    (_, replacer = 2) => {
+    (replacer = 2) => {
       setMessage("");
       try {
         if (code) {
@@ -126,20 +126,23 @@ export default function InputJson({
     </div>
   );
   return (
-    <div className="min-h-[420px] bg-gray-100 px-4 py-6 rounded-[8px] overflow-auto">
-      <Split mode="vertical">
-        <header className="flex justify-between items-center mb-4">
-          <p className="text-lg font-medium">{label}</p>
-          <menu className="flex gap-2">
-            <div
-              className="px-6 py-1 border-[#0066FF] border-[1px] text-[#0066FF] w-fit rounded-full cursor-pointer"
-              onClick={formatJson}
-            >
-              Formatear
-            </div>
-            {/* <div className="px-6 py-1 border-[#0066FF] border-[1px] text-[#0066FF] w-fit rounded-full" onClick={() => formatJson(null, 0)}>Acortar</div> */}
-          </menu>
-        </header>
+    <>
+      <header className="flex justify-between items-center sticky top-0 z-10 bg-gray-100 px-4 pt-6 pb-4 rounded-[8px] rounded-b-none">
+        <p className="text-lg font-medium">{label}</p>
+        <menu className="flex gap-2">
+          <div
+            className="px-6 py-1 border-[#0066FF] border-[1px] text-[#0066FF] w-fit rounded-full cursor-pointer"
+            onClick={() => formatJson()}
+          >
+            Formatear
+          </div>
+          {/* <div className="px-6 py-1 border-[#0066FF] border-[1px] text-[#0066FF] w-fit rounded-full" onClick={() => formatJson(null, 0)}>Acortar</div> */}
+        </menu>
+      </header>
+      <Split
+        mode="vertical"
+        className="min-h-[420px] bg-gray-100 px-4 py-6 rounded-[8px] overflow-auto rounded-t-none"
+      >
         <Split
           style={{
             flex: 1,
@@ -158,6 +161,6 @@ export default function InputJson({
           </div>
         </div>
       </Split>
-    </div>
+    </>
   );
 }

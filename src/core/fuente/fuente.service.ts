@@ -21,8 +21,8 @@ export class FuenteService {
     return response;
   }
 
-  public async getById() {
-    const {} = await bff.get("/v1/portal/ref-sources");
+  public async getById(id: number) {
+    return await bff.get(`/v1/portal/ref-sources/${id}`);
   }
 
   public async update(id: number, updateFuente: UpdateFuenteDto) {

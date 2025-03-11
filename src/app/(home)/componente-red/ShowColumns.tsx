@@ -43,7 +43,7 @@ export default function ShowColumns({
             Selecciones los campos que quieres mostrar en la tabla
           </p>
           <Checkbox name="codigo">Codigo</Checkbox>
-          <Checkbox name="componente_id">Componente id</Checkbox>
+          <Checkbox name="id">Componente id</Checkbox>
           <Checkbox name="nombre">Nombre</Checkbox>
           <Checkbox name="etiqueta">Etiqueta</Checkbox>
           <Checkbox name="tipo_componente">Tipo</Checkbox>

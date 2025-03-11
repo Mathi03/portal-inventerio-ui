@@ -14,7 +14,7 @@ export default function DetalleComponenteRed() {
   );
   const getComponenteRed = useCallback(async () => {
     const componenteRed = new ComponenteRedService();
-    const { data } = await componenteRed.getById(+id!);
+    const data = await componenteRed.getById(+id!);
     setComponenteRed(data);
   }, [id]);
 

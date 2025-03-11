@@ -9,4 +9,11 @@ export class ControlService {
     );
     return response;
   }
+
+  async findById(id: number) {
+    const {
+      data: { data: control },
+    } = await bff.get<{ data: ControlType }>(`/v1/portal/controls/${id}`);
+    return control;
+  }
 }

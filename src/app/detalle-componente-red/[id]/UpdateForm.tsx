@@ -1,71 +1,59 @@
-import Aside from "@/components/Aside";
 import Select from "@/components/Select";
-import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
 import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
-import { Form, TextField } from "@telefonica/mistica";
-import { useCallback, useEffect, useState } from "react";
+import { Form, TextField, useSnackbar } from "@telefonica/mistica";
+import { useCallback, useState } from "react";
 import Button from "@/components/Button";
 import { RedType } from "@/core/red/red.type";
 import { CreateComponenteRedDto } from "@/core/componente-red/dto/create.dto";
-import { RedService } from "@/core/red/red.service";
-import { FuenteService } from "@/core/fuente/fuente.service";
-import { FuenteType } from "@/core/fuente/fuente.type";
 import {
   ComponenteRedType,
   CRStatusEnumOptions,
 } from "@/core/componente-red/componente-red.type";
+import RelacionJerarquica from "../Relatcion-jerarquica";
+import SelectFuentes from "./SelectFuentes";
+import SelectRedes from "./SelectRedes";
+import SelectTipoComponentes from "./SelectTipoComponentes";
 import { ComponenteRedService } from "@/core/componente-red/componente-red.service";
-import ConfigAdicional from "@/app/(home)/componente-red/ConfigAdicional";
+import ConfigAdicional from "./ConfigAdicional";
+import SelectRegiones from "./SelectRegiones";
+import { RelacionJerarquicaService } from "@/core/relacion-jerarquica/relacion-jerarquica.service";
 type FormItem = keyof CreateComponenteRedDto;
 export default function UpdateForm({
   componenteRed,
 }: {
-  componenteRed: ComponenteRedType | null;
+  componenteRed: ComponenteRedType;
 }) {
-  const [isLoadingTC, setIsLoadingTC] = useState(true);
-  const [isLoadingRedes, setIsLoadingRed] = useState(true);
-  const [isLoadingFuentes, setIsLoadingFuentes] = useState(true);
+  const { openSnackbar } = useSnackbar();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tipoComponentes, setTipoComponentes] = useState<TipoComponenteType[]>(
-    [],
-  );
-  const [redes, setRedes] = useState<RedType[]>([]);
   const [tipoComponente, setTipoComponente] =
     useState<TipoComponenteType | null>();
-  const [fuentes, setFuentes] = useState<FuenteType[]>([]);
-  const [attribute, setAttribute] = useState<any>({});
-  const [service, setService] = useState<any>({});
+  const [red, setRed] = useState<RedType | null>();
+  const [attribute, setAttribute] = useState<any>(
+    JSON.parse(componenteRed.attribute),
+  );
+  console.log(attribute);
+  const [service, setService] = useState<any>(
+    JSON.parse(componenteRed.service?.attribute as string),
+  );
 
-  console.log(JSON.parse(componenteRed?.attribute)[0]);
+  const [componenteSeleted, setComponenteSeleted] = useState<
+    ComponenteRedType[]
+  >([]);
 
-  const getTipoComponente = useCallback(async () => {
-    setIsLoadingTC(true);
-    const tcService = new TipoComponenteService();
-    const { data } = await tcService.findAll({});
-    setTipoComponentes(data.data.data);
-    setTipoComponente(
-      data.data.data.find(
-        (data) => data.id === componenteRed?.refComponentTypeId,
-      ),
+  const createRelacionJerarquicas = useCallback(async () => {
+    const relacionJerarquicaService = new RelacionJerarquicaService();
+    await Promise.all(
+      componenteSeleted.map(async (selected) => {
+        relacionJerarquicaService.create({
+          controlId: componenteRed.controlId,
+          superiorControlId: selected.controlId,
+          refComponentTypeId: componenteRed.refComponentTypeId,
+          refNetworkId: componenteRed.refNetworkId,
+          status: 1,
+        });
+      }),
     );
-    setIsLoadingTC(false);
-  }, [componenteRed]);
-
-  const getRedes = useCallback(async () => {
-    setIsLoadingRed(true);
-    const redService = new RedService();
-    const { data } = await redService.findAll({});
-    setRedes(data.data.data);
-    setIsLoadingRed(false);
-  }, []);
-
-  const getFuentes = useCallback(async () => {
-    setIsLoadingFuentes(true);
-    const fuenteService = new FuenteService();
-    const { data } = await fuenteService.findAll({ page: 1, limit: 20 });
-    setFuentes(data.data.data);
-    setIsLoadingFuentes(false);
-  }, []);
+  }, [componenteSeleted, componenteRed]);
 
   const onSubmit = useCallback(
     async (form: any) => {
@@ -84,10 +72,11 @@ export default function UpdateForm({
         service_label,
         service_name,
         service_status,
+        status,
       } = form;
       // setIsSubmitting(true);
       const componenteRedService = new ComponenteRedService();
-      await componenteRedService.create({
+      await componenteRedService.update(componenteRed.id, {
         label,
         name,
         stationId: +stationId,
@@ -95,9 +84,12 @@ export default function UpdateForm({
         refComponentTypeId: +refComponentTypeId,
         refNetworkId: +refNetworkId,
         regionId: +regionId,
-        status: +form.status,
+        status: status,
+        serviceModified: false,
+        relationModified: false,
+        approvalComment: "",
         // componentId: 1,
-        attribute: JSON.stringify([attribute]),
+        attribute: JSON.stringify(attribute),
         observation,
         service: {
           label: service_label,
@@ -111,24 +103,24 @@ export default function UpdateForm({
           status: +control_status,
         },
       });
+      createRelacionJerarquicas();
       setIsSubmitting(false);
+      openSnackbar({
+        message: "Componente de red actualizado exitosamente",
+        type: "INFORMATIVE",
+      });
     },
-    [attribute, service],
+    [
+      attribute,
+      service,
+      openSnackbar,
+      componenteRed,
+      createRelacionJerarquicas,
+    ],
   );
 
-  useEffect(() => {
-    getTipoComponente();
-  }, [getTipoComponente]);
-
-  useEffect(() => {
-    getRedes();
-  }, [getRedes]);
-
-  useEffect(() => {
-    getFuentes();
-  }, [getFuentes]);
   return (
-    <section className="grid content-start overflow-auto bg-[white] w-full h-full rounded-[8px] scroller">
+    <section className="grid content-start overflow-auto bg-[white] w-full h-full rounded-[8px] scroller scroll-smooth">
       <header className="p-6 grid gap-4">
         <h4 className="text-[28px]">Detalle de componente de red</h4>
         <p>
@@ -137,59 +129,73 @@ export default function UpdateForm({
         </p>
       </header>
       <Form
-        onSubmit={(value) => onSubmit(value as CreateComponenteRedDto)}
-        className="grid grid-cols-4 content-start gap-4 px-6"
+        onSubmit={(value) => onSubmit(value)}
+        className="grid grid-cols-3 content-start gap-4 px-6"
         initialValues={{
-          ...componenteRed,
+          label: componenteRed.label,
+          name: componenteRed.name,
+          code: componenteRed.code,
+          observation: componenteRed.observation,
+          regionId: componenteRed?.regionId.toString(),
+          stationId: componenteRed?.stationId.toString(),
+          refNetworkId: componenteRed?.refNetworkId.toString(),
+          refComponentTypeId: componenteRed?.refComponentTypeId.toString(),
+          refSourceId: componenteRed?.refSourceId.toString(),
           status: componenteRed?.status.toString(),
+          control_label: componenteRed.control?.label,
+          control_name: componenteRed.control?.name,
+          control_status: componenteRed.control?.status.toString(),
+          service_label: componenteRed.service?.label,
+          service_name: componenteRed.service?.name,
+          service_status: componenteRed.service?.status.toString(),
+          ...JSON.parse(componenteRed?.service?.attribute as string)[0],
           ...JSON.parse(componenteRed?.attribute)[0],
         }}
       >
-        <h1 className="col-span-4 text-xl font-semibold">
+        <h1 className="col-span-3 text-xl" id="datos">
           Datos de componente de red
         </h1>
-        <TextField name={"code" as FormItem} label="Código" fullWidth />
-        <TextField name={"name" as FormItem} label="Nombre" fullWidth />
-        <TextField name={"label" as FormItem} label="Etiqueta" fullWidth />
-        <Select
-          name={"regionId" as FormItem}
-          label="Región"
-          options={[
-            {
-              text: "Caracas",
-              value: "1",
-            },
-            {
-              text: "Valencia",
-              value: "2",
-            },
-          ]}
+        <TextField
+          name="control_label"
+          label="Control etiqueta"
           fullWidth
+          maxLength={255}
+        />
+        <TextField
+          name="control_name"
+          label="Control nombre"
+          fullWidth
+          maxLength={255}
         />
         <Select
-          disabled={isLoadingRedes}
-          name={"refNetworkId" as FormItem}
-          label="Red"
-          options={redes
-            .filter((red) => red.status === 1)
-            .map((red) => ({
-              text: red.label,
-              value: red.id.toString(),
-            }))}
+          name="control_status"
+          label="Control estado"
+          options={CRStatusEnumOptions.map((option) => ({
+            text: option.label,
+            value: option.value.toString(),
+          }))}
           fullWidth
         />
-        <Select
-          disabled={isLoadingFuentes}
-          name={"refSourceId" as FormItem}
-          label="Fuente"
-          options={fuentes
-            .filter((fuente) => fuente.status === 1)
-            .map((fuente) => ({
-              text: fuente.label,
-              value: fuente.id.toString(),
-            }))}
+        <TextField
+          name={"code" as FormItem}
+          label="Código"
           fullWidth
+          maxLength={255}
         />
+        <TextField
+          name={"name" as FormItem}
+          label="Nombre"
+          fullWidth
+          maxLength={255}
+        />
+        <TextField
+          name={"label" as FormItem}
+          label="Etiqueta"
+          fullWidth
+          maxLength={255}
+        />
+        <hr className="col-span-3" />
+        <SelectRegiones name={"regionId" as FormItem} />
         <Select
           name={"stationId" as FormItem}
           label="Estación"
@@ -201,21 +207,39 @@ export default function UpdateForm({
           ]}
           fullWidth
         />
-        <Select
-          disabled={isLoadingTC}
-          name={"refComponentTypeId" as FormItem}
-          label="Tipo de componente"
-          onChangeValue={(value) =>
-            setTipoComponente(tipoComponentes.find((tc) => tc.id === +value))
-          }
-          options={tipoComponentes
-            .filter((tc) => tc.status === 1)
-            .map((tc) => ({
-              text: tc.label,
-              value: tc.id.toString(),
-            }))}
-          fullWidth
+        <hr className="col-span-3" />
+        <SelectRedes
+          name={"refNetworkId" as FormItem}
+          componenteRed={componenteRed}
+          onChange={(red) => setRed(red)}
         />
+        <SelectTipoComponentes
+          name={"refComponentTypeId" as FormItem}
+          componenteRed={componenteRed}
+          onChange={(tc) => setTipoComponente(tc)}
+        />
+        <SelectFuentes name={"refSourceId" as FormItem} />
+        <hr className="col-span-3" />
+        <hgroup className="col-span-3" id="relacion-jerarquica">
+          <h4 className="text-[20px]">Relación jerarquica (opcional)</h4>
+          <p>En esta sección podra relacionar componentes de red entre si</p>
+        </hgroup>
+        <RelacionJerarquica
+          componenteRed={componenteRed}
+          tipoComponente={tipoComponente}
+          red={red}
+          onSelected={(componente) =>
+            setComponenteSeleted([...componenteSeleted, componente])
+          }
+          onDeselected={(componente) => {
+            setComponenteSeleted(
+              componenteSeleted.filter(
+                (selected) => selected.id !== componente.id,
+              ),
+            );
+          }}
+        />
+        <hr className="col-span-3" />
         <Select
           name={"status" as FormItem}
           label="Status"
@@ -225,38 +249,20 @@ export default function UpdateForm({
           }))}
           fullWidth
         />
-        <hr className="col-span-4" />
-        <hgroup className="col-span-4">
-          <h4 className="text-[20px]">Control</h4>
-          <p>
-            Asegurece de dejar todo el detalle de las observaciones previas
-            antes de la creación
-          </p>
-        </hgroup>
-        <TextField name="control_label" label="Control etiqueta" fullWidth />
-        <TextField name="control_name" label="Control nombre" fullWidth />
-        <Select
-          name="control_status"
-          label="Control estado"
-          options={CRStatusEnumOptions.map((option) => ({
-            text: option.label,
-            value: option.value.toString(),
-          }))}
-          fullWidth
-        />
         <ConfigAdicional
+          className="col-span-3"
           tipoComponente={tipoComponente}
           onAttributes={(name, value) => {
-            attribute[name] = value;
-            setAttribute({ ...attribute });
+            attribute[0][name] = value;
+            setAttribute([...attribute]);
           }}
           onServices={(name, value) => {
-            service[name] = value;
+            service[0][name] = value;
             setService({ ...service });
           }}
         />
-        <hr className="col-span-4" />
-        <hgroup className="col-span-4">
+        <hr className="col-span-3" />
+        <hgroup className="col-span-3" id="observacion">
           <h4 className="text-[20px]">Observación</h4>
           <p>
             Asegurece de dejar todo el detalle de las observaciones previas
@@ -264,7 +270,7 @@ export default function UpdateForm({
           </p>
         </hgroup>
 
-        <div className="col-span-4">
+        <div className="col-span-3">
           <TextField
             name={"observation" as FormItem}
             label="Observación"
@@ -273,7 +279,7 @@ export default function UpdateForm({
           />
         </div>
 
-        <footer className="grid gap-4 p-4 border-t-[1px] border-[#eee] col-span-4 justify-center">
+        <footer className="grid gap-4 p-4 border-t-[1px] border-[#eee] col-span-3 justify-center">
           <Button showSpinner={isSubmitting}>Guardar</Button>
         </footer>
       </Form>

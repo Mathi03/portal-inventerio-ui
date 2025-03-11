@@ -1,7 +1,13 @@
 "use client";
 import Table, { TableColumn } from "@/components/Table/Table";
-import Filter from "./Filter";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import Filter, { FormFilterType } from "./Filter";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import Button from "@/components/Button";
 import Icon from "@/components/Icon";
 import InputSearch from "@/components/InputSearch";
@@ -9,22 +15,25 @@ import ExportXLS from "./ExportXLS";
 import ShowColumns from "./ShowColumns";
 import useStorage from "@/hooks/useStorage";
 import MenuList from "./MenuList";
-import CrearComponenteRed from "./Crear";
-import Edit from "./Edit";
 import Pagination from "@/components/Pagination";
 import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
 import { ComponenteRedService } from "@/core/componente-red/componente-red.service";
 import { Tag, useDialog, useSnackbar } from "@telefonica/mistica";
 import Aprobar from "./Aprobar";
 import { useRouter } from "next/navigation";
+import DetalleTipoComponente from "../DetalleTipoComponente";
+import DetalleRed from "../DetalleRed";
+import DetalleFuente from "../DetalleFuente";
+import DetalleControl from "../DetalleControl";
+
+export const Context = createContext({});
 
 export default function ComponenteRedPage() {
+  const [search, setSearch] = useState<string | null>();
   const { confirm } = useDialog();
   const { openSnackbar } = useSnackbar();
   const router = useRouter();
   const [openFiter, setOpenFilter] = useState(true);
-  const [openCrear, setOpenCrear] = useState(false);
-  const [openEditar, setOpenEditar] = useState(false);
   const [openApprove, setOpenApprove] = useState(false);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<number>(10);
@@ -33,30 +42,52 @@ export default function ComponenteRedPage() {
   const [componenteRedes, setComponenteRedes] = useState<ComponenteRedType[]>(
     [],
   );
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [filter, setFilter] = useState({} as FormFilterType);
 
   const [selectedCR, setSelectedCR] = useState<ComponenteRedType | null>(null);
   const [showColumn, setShowColumn, isLoadingShowColumn] = useStorage(
     "filtro-componente-red",
     {
-      codigo: true,
-      componente_id: true,
-      nombre: true,
-      etiqueta: true,
-      tipo_componente: true,
-      red: true,
-      id_control: true,
-      id_estacion: true,
-      fuente: true,
-      status: true,
-    },
+      id: true,
+      name: true,
+      label: true,
+      regionId: true,
+      refComponentTypeId: true,
+      refNetworkId: true,
+      refSourceId: true,
+      controlId: true,
+      stationId: true,
+    } as Record<
+      keyof Pick<
+        ComponenteRedType,
+        | "id"
+        | "label"
+        | "name"
+        | "regionId"
+        | "refComponentTypeId"
+        | "refNetworkId"
+        | "refSourceId"
+        | "controlId"
+        | "stationId"
+      >,
+      boolean
+    >,
   );
 
   const getComponenteRedes = useCallback(async () => {
+    setIsLoading(true);
     const componenteRed = new ComponenteRedService();
-    const { data } = await componenteRed.findAll({ page, limit, q: "" });
+    const { data } = await componenteRed.findAll({
+      page,
+      limit,
+      q: "",
+      ...filter,
+    });
     setComponenteRedes(data.data.data);
     setItems(data.data.total);
-  }, [page, limit]);
+    setIsLoading(false);
+  }, [page, limit, filter]);
 
   const deteleRed = useCallback(
     async (id: number) => {
@@ -77,49 +108,47 @@ export default function ComponenteRedPage() {
       {
         title: "id",
         key: "id",
-        hidden: !showColumn.componente_id,
+        hidden: !showColumn.id,
       },
       {
         title: "Nombre",
         key: "name",
-        hidden: !showColumn.nombre,
+        hidden: !showColumn.name,
       },
       {
         title: "Etiqueta",
         key: "label",
-        hidden: !showColumn.etiqueta,
+        hidden: !showColumn.label,
       },
       {
         title: "Región",
-        hidden: !showColumn.etiqueta,
+        hidden: !showColumn.regionId,
         render: (row) => <Tag type="active">{row.regionId.toString()}</Tag>,
       },
       {
         title: "Tipo de componente",
-        render: (row) => (
-          <Tag type="active">{row.refComponentTypeId.toString()}</Tag>
-        ),
-        hidden: !showColumn.tipo_componente,
+        render: (row) => <DetalleTipoComponente id={row.refComponentTypeId} />,
+        hidden: !showColumn.refComponentTypeId,
       },
       {
         title: "Red",
-        render: (row) => <Tag type="active">{row.refNetworkId.toString()}</Tag>,
-        hidden: !showColumn.red,
+        render: (row) => <DetalleRed id={row.refNetworkId} />,
+        hidden: !showColumn.refNetworkId,
       },
       {
         title: "Fuente",
-        render: (row) => <Tag type="active">{row.refSourceId.toString()}</Tag>,
-        hidden: !showColumn.id_control,
+        render: (row) => <DetalleFuente id={row.refSourceId} />,
+        hidden: !showColumn.refSourceId,
       },
       {
         title: "Id Control",
-        render: (row) => <Tag type="active">{row.controlId.toString()}</Tag>,
-        hidden: !showColumn.id_control,
+        render: (row) => <DetalleControl id={row.controlId} />,
+        hidden: !showColumn.controlId,
       },
       {
         title: "Id Estación",
         render: (row) => <Tag type="active">{row.stationId.toString()}</Tag>,
-        hidden: !showColumn.id_estacion,
+        hidden: !showColumn.stationId,
       },
       {
         title: "Status",
@@ -128,7 +157,6 @@ export default function ComponenteRedPage() {
             {row.status === 1 ? "Activo" : "Inactivo"}
           </Tag>
         ),
-        hidden: !showColumn.status,
       },
       {
         maxWidth: "64px",
@@ -160,16 +188,17 @@ export default function ComponenteRedPage() {
     getComponenteRedes();
   }, [getComponenteRedes]);
   return (
-    <>
+    <Context.Provider value={{}}>
       <section className="flex p-2 gap-2 w-full h-full relative overflow-hidden">
-        {openFiter && <Filter />}
+        {openFiter && <Filter onFilter={(filter) => setFilter(filter)} />}
         <Table
           columns={columns}
           rows={componenteRedes}
-          isLoading={isLoadingShowColumn}
+          isLoading={isLoadingShowColumn || isLoading}
           header={
-            <header className="flex justify-between gap-4">
-              <InputSearch onSearch={console.log} />
+            <header className="grid grid-cols-[1fr_auto] justify-between gap-4">
+              <h1 className="col-span-2 text-[22px]">Componente de redes</h1>
+              <InputSearch onSearch={(value) => setSearch(value)} />
               <menu className="flex gap-4">
                 <ExportXLS />
                 <ShowColumns
@@ -187,7 +216,7 @@ export default function ComponenteRedPage() {
                 </Button>
                 <Button
                   StartIcon={() => <Icon icon="add" />}
-                  onClick={() => setOpenCrear(true)}
+                  onClick={() => router.push("crear-componente-red")}
                 >
                   Crear
                 </Button>
@@ -205,31 +234,6 @@ export default function ComponenteRedPage() {
           }
         />
       </section>
-      {openCrear && (
-        <CrearComponenteRed
-          onClose={() => setOpenCrear(false)}
-          onSuccess={() => {
-            openSnackbar({
-              message: "Componente de red creado exitosamente",
-              type: "INFORMATIVE",
-            });
-            getComponenteRedes();
-          }}
-        />
-      )}
-      {openEditar && (
-        <Edit
-          componenteRed={selectedCR}
-          onClose={() => setOpenEditar(false)}
-          onSuccess={() => {
-            openSnackbar({
-              message: "Componente de red aprobado",
-              type: "INFORMATIVE",
-            });
-            getComponenteRedes();
-          }}
-        />
-      )}
       {openApprove && (
         <Aprobar
           componenteRed={selectedCR}
@@ -243,6 +247,6 @@ export default function ComponenteRedPage() {
           }}
         />
       )}
-    </>
+    </Context.Provider>
   );
 }

@@ -18,6 +18,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { DateField } from "@telefonica/mistica";
 const chartData = [
   { browser: "chrome", visitors: 275, fill: "var(--color-chrome)" },
   { browser: "safari", visitors: 200, fill: "var(--color-safari)" },
@@ -54,16 +55,16 @@ const chartConfig = {
 
 export function Chart2() {
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col row-span-1 col-span-2">
       <CardHeader className="pb-0">
         <CardTitle>Mantenedor de red</CardTitle>
-        <CardDescription>January - June 2024</CardDescription>
+        <menu className="flex gap-2">
+          <DateField label="Fecha de inicio" />
+          <DateField label="Fecha de fin" />
+        </menu>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
-        <ChartContainer
-          config={chartConfig}
-          className="mx-auto aspect-square max-h-[250px]"
-        >
+        <ChartContainer config={chartConfig} className="mx-auto aspect-square">
           <PieChart>
             <ChartTooltip
               cursor={false}
@@ -73,7 +74,7 @@ export function Chart2() {
               data={chartData}
               dataKey="visitors"
               nameKey="browser"
-              innerRadius={30}
+              innerRadius={80}
               strokeWidth={5}
               activeIndex={0}
               activeShape={({

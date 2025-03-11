@@ -122,7 +122,8 @@ export default function MantenedorTipoComponentePage() {
           rows={redes}
           isLoading={isLoadingRedes || isLoadingShowColumn}
           header={
-            <header className="flex justify-between gap-4">
+            <header className="grid grid-cols-[1fr_auto] justify-between gap-4">
+              <h1 className="col-span-2 text-[22px]">Mantenedor de Redes</h1>
               <InputSearch onSearch={(value) => setSearch(value)} />
               <menu className="flex gap-4">
                 <ExportXLS />

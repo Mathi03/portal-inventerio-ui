@@ -24,8 +24,8 @@ export class TipoComponenteService {
     return response;
   }
 
-  public async getById() {
-    const {} = await bff.get("/v1/portal/ref-component-type");
+  public async getById(id: number) {
+    return await bff.get(`/v1/portal/ref-component-type/${id}`);
   }
 
   public async update(
@@ -40,5 +40,12 @@ export class TipoComponenteService {
 
   public async detele(id: number) {
     return await bff.delete(`/v1/portal/ref-component-type/${id}`);
+  }
+
+  public async approval(id: number, commentApproval: string) {
+    return await bff.patch(`/v1/portal/ref-component-type/approval/${id}`, {
+      status: 1,
+      commentApproval,
+    });
   }
 }
