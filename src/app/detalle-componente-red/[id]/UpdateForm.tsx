@@ -31,7 +31,7 @@ export default function UpdateForm({
   const [attribute, setAttribute] = useState<any>(
     JSON.parse(componenteRed.attribute),
   );
-  console.log(attribute);
+
   const [service, setService] = useState<any>(
     JSON.parse(componenteRed.service?.attribute as string),
   );

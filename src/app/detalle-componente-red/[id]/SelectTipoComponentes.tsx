@@ -28,7 +28,7 @@ export default function SelectTipoComponentes({
       )!,
     );
     setIsLoadingTC(false);
-  }, [componenteRed]);
+  }, [componenteRed, onChange]);
   useEffect(() => {
     getTipoComponente();
   }, [getTipoComponente]);

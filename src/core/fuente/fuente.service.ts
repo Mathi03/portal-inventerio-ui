@@ -29,7 +29,7 @@ export class FuenteService {
     return await bff.put(`/v1/portal/ref-sources/${id}`, updateFuente);
   }
 
-  public async detele(id: number) {
+  public async delete(id: number) {
     return await bff.delete(`/v1/portal/ref-sources/${id}`);
   }
 }

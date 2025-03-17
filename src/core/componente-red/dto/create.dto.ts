@@ -8,11 +8,8 @@ export type CreateComponenteRedDto = Pick<
   | "refNetworkId"
   | "stationId"
   | "refComponentTypeId"
-  | "code"
   | "observation"
   | "attribute"
-  | "componentId"
-  | "controlId"
   | "status"
   | "refSourceId"
->;
+> & { service: any; control: any };

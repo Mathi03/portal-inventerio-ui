@@ -1,7 +1,6 @@
-import { DateField, TextField } from "@telefonica/mistica";
-import Select from "./Select";
+import { DateField, Select, TextField } from "@telefonica/mistica";
 import { useCallback, useEffect, useState } from "react";
-import { bff } from "@/core/config";
+import { source } from "@/core/config";
 
 export interface InputDynamicProps {
   name: string;
@@ -33,19 +32,20 @@ export default function InputDynamic(props: InputDynamicProps) {
   const [loading, setLoading] = useState<boolean>(
     valores_posibles_source ? true : false,
   );
-  const [options, setOptions] =
-    useState<Array<{ text: string; value: string }>>();
+  const [options, setOptions] = useState<
+    Array<{ text: string; value: string }>
+  >([]);
 
   const getData = useCallback(async () => {
     if (!valores_posibles_source) return;
     setLoading(true);
-    const { data } = await bff.get(valores_posibles_source);
+    const { data } = await source.get(valores_posibles_source);
     setOptions(
       data.data.data.map((json: any) => {
         const [name, value] = valores_posibles_response;
         return {
           text: json[name!],
-          value: json[value!],
+          value: String(json[value!]),
         };
       }),
     );
@@ -67,11 +67,12 @@ export default function InputDynamic(props: InputDynamicProps) {
           disabled={loading}
           helperText={loading ? `cargando ${label}...` : undefined}
           options={
-            options ||
-            valores_posibles.map((valor) => ({
-              text: valor.name,
-              value: valor.value,
-            }))
+            valores_posibles_source
+              ? options!
+              : valores_posibles.map((valor) => ({
+                  text: valor.name,
+                  value: String(valor.value),
+                }))
           }
           fullWidth
         />

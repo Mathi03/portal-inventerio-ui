@@ -23,7 +23,7 @@ export default function SelectRedes({
     setRedes(data.data.data);
     onChange(data.data.data.find((r) => r.id === componenteRed.refNetworkId)!);
     setIsLoadingRed(false);
-  }, [componenteRed]);
+  }, [componenteRed, onChange]);
 
   useEffect(() => {
     getRedes();

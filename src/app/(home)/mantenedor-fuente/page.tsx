@@ -61,7 +61,7 @@ export default function MantenedorFuentePage() {
   const deteleRed = useCallback(
     async (id: number) => {
       const fuenteService = new FuenteService();
-      await fuenteService.detele(id);
+      await fuenteService.delete(id);
       getFuentes();
       openSnackbar({ message: "Mantenedor de fuente eliminado" });
     },

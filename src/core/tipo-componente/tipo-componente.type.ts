@@ -8,7 +8,6 @@ export interface TipoComponenteType {
   name: string; //nombre
   configAttributes: any[]; //atributos_config
   configServices: any[]; //servicios_config
-  configRelations: any; //relaciones_config
   status: TCStatusEnum; //estatus
   createdAt: string; //fecha_creacion
   updatedAt: string; //fecha_actualizacion

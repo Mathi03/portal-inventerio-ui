@@ -1,6 +1,7 @@
-import { ComponenteRedType } from "../componente-red.type";
+import { CreateComponenteRedDto } from "./create.dto";
 
-export type UpdateComponenteRedDto = Pick<
-  ComponenteRedType,
-  "label" | "name" | "status"
->;
+export type UpdateComponenteRedDto = CreateComponenteRedDto & {
+  serviceModified: boolean;
+  relationModified: boolean;
+  approvalComment: string;
+};

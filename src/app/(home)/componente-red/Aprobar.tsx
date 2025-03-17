@@ -20,7 +20,7 @@ export default function Aprobar({
       setIsSubmitting(true);
       const componenteRedService = new ComponenteRedService();
       await componenteRedService.approve(
-        componenteRed?.id!,
+        componenteRed?.id as number,
         form.approvalComment,
         form.observation,
       );

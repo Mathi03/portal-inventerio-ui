@@ -6,14 +6,13 @@ import { useCallback, useMemo } from "react";
 
 export default function Header() {
   const pathname = usePathname();
-  console.log(pathname);
   const router = useRouter();
   const navigations = useMemo(
     () => [
       "/",
       "/componente-red",
-      "/mantenedor-tipo-componente",
-      "/mantenedor-red",
+      "/tipo-componentes",
+      "/redes",
       "/mantenedor-fuente",
     ],
     [],
@@ -24,37 +23,39 @@ export default function Header() {
     },
     [router, navigations],
   );
-  return (
-    <header className="px-14 h-[60px] items-center grid grid-cols-[auto_1fr_auto_auto] gap-6 overflow-hidden bg-white sticky top-0 z-[2]">
-      <img src="/logo.svg" alt="telefonica" className="w-6" />
-      <Tabs
-        selectedIndex={navigations.findIndex((nav) => nav === pathname)}
-        onChange={onNavigate}
-        tabs={[
-          {
-            text: "Inicio",
-          },
-          {
-            text: "Componente de redes",
-          },
-          {
-            text: "Tipo componentes",
-          },
-          {
-            text: "Redes",
-          },
-          {
-            text: "Fuentes",
-          },
-        ]}
-      />
-      <IconButton icon="notifications_unread" />
-      <Avatar
-        initials="RM"
-        size={40}
-        backgroundColor="#0066FF"
-        textColor="white"
-      />
-    </header>
-  );
+  if (navigations.includes(pathname)) {
+    return (
+      <header className="px-14 h-[60px] items-center grid grid-cols-[auto_1fr_auto_auto] gap-6 overflow-hidden bg-white sticky top-0 z-[1]">
+        <img src="/logo.svg" alt="telefonica" className="w-6" />
+        <Tabs
+          selectedIndex={navigations.findIndex((nav) => nav === pathname)}
+          onChange={onNavigate}
+          tabs={[
+            {
+              text: "Inicio",
+            },
+            {
+              text: "Componente de redes",
+            },
+            {
+              text: "Tipo componentes",
+            },
+            {
+              text: "Redes",
+            },
+            {
+              text: "Fuentes",
+            },
+          ]}
+        />
+        <IconButton icon="notifications_unread" />
+        <Avatar
+          initials="RM"
+          size={40}
+          backgroundColor="#0066FF"
+          textColor="white"
+        />
+      </header>
+    );
+  }
 }

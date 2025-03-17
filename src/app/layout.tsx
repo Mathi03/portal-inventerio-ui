@@ -5,6 +5,7 @@ import { getTelefonicaSkin, ThemeContextProvider } from "@telefonica/mistica";
 import "@telefonica/mistica/css/mistica.css";
 import "material-symbols";
 import { Toaster } from "@/components/ui/toaster";
+import Link from "next/link";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -37,6 +38,7 @@ export default function RootLayout({
             skin: getTelefonicaSkin(),
             i18n: { locale: "es-ES", phoneNumberFormattingRegionCode: "ES" },
             colorScheme: "light",
+            Link: { type: "Next14", Component: Link },
           }}
         >
           {children}
