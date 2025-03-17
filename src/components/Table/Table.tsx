@@ -29,7 +29,7 @@ export default function Table({
 }) {
   return (
     <section
-      className={`w-full h-full bg-white grid grid-rows-[auto_1fr_auto] overflow-hidden ${!compact && "p-4"} gap-4 rounded-[8px]`}
+      className={`w-full h-full bg-white grid grid-rows-[auto_1fr_auto] overflow-hidden ${!compact && "p-4"} gap-4 rounded-[8px] isolate`}
     >
       {header}
       {isLoading && <TLoading />}

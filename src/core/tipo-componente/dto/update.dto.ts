@@ -7,6 +7,5 @@ export type UpdateTipoComponenteDto = Pick<
   | "status"
   | "configAttributes"
   | "configServices"
-  | "configRelations"
   | "commentApproval"
 >;

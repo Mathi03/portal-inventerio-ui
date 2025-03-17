@@ -15,6 +15,12 @@ export default function InputSearch({
         type="text"
         placeholder="Buscar"
         className="w-full h-full px-4 bg-transparent border-none focus:outline-none"
+        onKeyUp={(e) => {
+          if (e.code === "Enter") {
+            onSearch(search || "");
+            setSubmitted(true);
+          }
+        }}
         onChange={(e) => {
           setSearch(e.target.value);
           setSubmitted(false);

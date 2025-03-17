@@ -22,7 +22,6 @@ export default function RelacionJerarquica({
   const [componenteRedes, setComponenteRedes] = useState<ComponenteRedType[]>(
     [],
   );
-  console.log(componenteRed);
   const columns = useMemo<TableColumn<ComponenteRedType>[]>(() => {
     return [
       {
@@ -30,14 +29,9 @@ export default function RelacionJerarquica({
         render: (row) => (
           <Checkbox
             name="check"
-            defaultChecked={
-              componenteRed.relations?.parents?.data?.some(
-                (cr) => cr.id === row.id,
-              ) ||
-              componenteRed.relations?.children?.data?.some(
-                (cr) => cr.id === row.id,
-              )
-            }
+            defaultChecked={componenteRed.relations?.parents?.data?.some(
+              (cr: any) => cr.id === row.id,
+            )}
             onChange={(checked) =>
               checked ? onSelected(row) : onDeselected(row)
             }
@@ -57,14 +51,14 @@ export default function RelacionJerarquica({
         key: "label",
       },
     ];
-  }, [onSelected, onDeselected]);
+  }, [onSelected, onDeselected, componenteRed]);
   const getComponenteRedes = useCallback(async () => {
     if (!red) return;
     setIsLoading(true);
     const componenteRed = new ComponenteRedService();
     const { data } = await componenteRed.findAll({
       q: "",
-      ref_network_id: red.id,
+      ref_network_id: String(red.id),
     });
     setComponenteRedes(data.data.data);
     setIsLoading(false);

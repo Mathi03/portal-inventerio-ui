@@ -1,6 +1,6 @@
 {
   "name": "portal-inventario",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -14,7 +14,7 @@
     "@codemirror/lang-json": "^6.0.1",
     "@radix-ui/react-popover": "^1.1.4",
     "@radix-ui/react-toast": "^1.2.4",
-    "@telefonica/mistica": "16.14.0",
+    "@telefonica/mistica": "^16.15.0",
     "@uiw/react-codemirror": "^4.23.7",
     "@uiw/react-json-view": "^2.0.0-alpha.30",
     "axios": "^1.7.9",

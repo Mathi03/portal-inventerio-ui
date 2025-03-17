@@ -1,13 +1,7 @@
 "use client";
 import Table, { TableColumn } from "@/components/Table/Table";
 import Filter, { FormFilterType } from "./Filter";
-import {
-  createContext,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Button from "@/components/Button";
 import Icon from "@/components/Icon";
 import InputSearch from "@/components/InputSearch";
@@ -25,8 +19,6 @@ import DetalleTipoComponente from "../DetalleTipoComponente";
 import DetalleRed from "../DetalleRed";
 import DetalleFuente from "../DetalleFuente";
 import DetalleControl from "../DetalleControl";
-
-export const Context = createContext({});
 
 export default function ComponenteRedPage() {
   const [search, setSearch] = useState<string | null>();
@@ -81,13 +73,13 @@ export default function ComponenteRedPage() {
     const { data } = await componenteRed.findAll({
       page,
       limit,
-      q: "",
+      q: search,
       ...filter,
     });
     setComponenteRedes(data.data.data);
     setItems(data.data.total);
     setIsLoading(false);
-  }, [page, limit, filter]);
+  }, [page, limit, filter, search]);
 
   const deteleRed = useCallback(
     async (id: number) => {
@@ -188,7 +180,7 @@ export default function ComponenteRedPage() {
     getComponenteRedes();
   }, [getComponenteRedes]);
   return (
-    <Context.Provider value={{}}>
+    <>
       <section className="flex p-2 gap-2 w-full h-full relative overflow-hidden">
         {openFiter && <Filter onFilter={(filter) => setFilter(filter)} />}
         <Table
@@ -247,6 +239,6 @@ export default function ComponenteRedPage() {
           }}
         />
       )}
-    </Context.Provider>
+    </>
   );
 }

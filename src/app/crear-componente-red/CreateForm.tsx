@@ -53,6 +53,8 @@ export default function CreateForm() {
     [componenteSeleted],
   );
 
+  console.log(tipoComponente?.configAttributes);
+
   const onSubmit = useCallback(
     async (form: any) => {
       const {
@@ -120,6 +122,13 @@ export default function CreateForm() {
       <Form
         onSubmit={(value) => onSubmit(value as CreateComponenteRedDto)}
         className="grid grid-cols-3 content-start gap-4 px-6"
+        initialValues={{
+          regionId: "",
+          stationId: "",
+          refNetworkId: "",
+          refComponentTypeId: "",
+          refSourceId: "",
+        }}
       >
         <h1 className="col-span-3 text-xl" id="datos">
           Datos del componente de red

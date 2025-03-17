@@ -53,7 +53,7 @@ export default function RelacionJerarquica({
     const componenteRed = new ComponenteRedService();
     const { data } = await componenteRed.findAll({
       q: "",
-      ref_network_id: red.id,
+      ref_network_id: String(red.id),
     });
     setComponenteRedes(data.data.data);
     setIsLoading(false);
