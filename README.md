@@ -64,8 +64,8 @@ Este proyecto se integra con los siguientes servicios:
 
 ```env
 API_URL=http://localhost:8081
-API_URL_MS_DIRECCIONES="https://8ntvdg0q-8080.use2.devtunnels.ms"
-API_URL_ESTACIONES="https://8ntvdg0q-8090.use2.devtunnels.ms"
+API_URL_MS_DIRECCIONES=""
+API_URL_ESTACIONES=""
 ```
 
 ## Inicio Rápido
