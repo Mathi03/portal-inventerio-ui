@@ -33,8 +33,8 @@ export default function Table({
     >
       {header}
       {isLoading && <TLoading />}
-      {!isLoading && rows.length === 0 && <TEmpty />}
-      {!isLoading && rows.length !== 0 && (
+      {!isLoading && rows?.length === 0 && <TEmpty />}
+      {!isLoading && rows?.length !== 0 && (
         <table
           className="rounded-[12px] grid content-start overflow-auto border-[#D1D5E4] border-[1px] scroller"
           style={{ gridRow: "2/3" }}
