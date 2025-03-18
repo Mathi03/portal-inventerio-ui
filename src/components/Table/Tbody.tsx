@@ -9,7 +9,7 @@ export default function Tbody({
 }) {
   return (
     <tbody className="h-fit w-full text-base">
-      {rows.map((row, rowKey) => (
+      {rows?.map((row, rowKey) => (
         <tr key={rowKey} className="flex w-full even:bg-[#f5f5f5]">
           {columns.map(({ key, render, maxWidth, hidden }, columnKey) => (
             <td
