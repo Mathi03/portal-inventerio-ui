@@ -3,7 +3,8 @@ import Button from "@/components/Button";
 import Select from "@/components/Select";
 import { CreateRedDto } from "@/core/red/dto/create.dto";
 import { RedService } from "@/core/red/red.service";
-import { RedStatusEnumOptions } from "@/core/red/red.type";
+import { TCStatusEnumOptions } from "@/core/tipo-componente/tipo-componente.type";
+
 import { Form, TextField } from "@telefonica/mistica";
 import { useCallback, useState } from "react";
 
@@ -30,7 +31,7 @@ export default function Create({
   );
   return (
     <Aside
-      className="grid grid-rows-[auto_1fr_auto] overflow-auto"
+      className="grid grid-rows-[auto_1fr_auto] overflow-auto w-[520px]"
       onClose={onClose}
     >
       <header className="p-6 grid gap-4">
@@ -59,7 +60,7 @@ export default function Create({
         <Select
           name={"status" as FormItem}
           label="Estado"
-          options={RedStatusEnumOptions.map((option) => ({
+          options={TCStatusEnumOptions.map((option) => ({
             text: option.label,
             value: option.value.toString(),
           }))}

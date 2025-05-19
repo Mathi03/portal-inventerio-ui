@@ -33,7 +33,7 @@ export default function Edit({
   );
   return (
     <Aside
-      className="grid grid-rows-[auto_1fr_auto] overflow-auto"
+      className="grid grid-rows-[auto_1fr_auto] overflow-auto w-[520px]"
       onClose={onClose}
     >
       <header className="p-6 grid gap-4">

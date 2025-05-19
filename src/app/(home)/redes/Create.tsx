@@ -35,7 +35,7 @@ export default function Create({
   );
   return (
     <Aside
-      className="grid grid-rows-[auto_1fr_auto] overflow-auto"
+      className="grid grid-rows-[auto_1fr_auto] w-[520px] overflow-auto"
       onClose={onClose}
     >
       <header className="p-6 grid gap-4">

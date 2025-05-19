@@ -12,13 +12,12 @@ export default function Aside({
   return (
     <>
       <aside
-        className={`w-[520px] h-full fixed right-0 top-0 bg-white z-[1000] ${className}`}
+        className={`h-full fixed right-0 top-0 bg-white z-[1000] ${className}`}
       >
         {children}
       </aside>
       <div
         className="w-full bg-black/25 h-full fixed left-0 top-0 z-[999]"
-        onClick={onClose}
       />
     </>
   );
