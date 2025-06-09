@@ -14,6 +14,7 @@ export default function Aprobar({
   onSuccess: () => void;
   onClose: () => void;
 }) {
+  console.log("Aprobar", tc);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const onSubmit = useCallback(
     async (form: any) => {

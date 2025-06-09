@@ -1,11 +1,3 @@
-import { TipoComponenteType } from "../tipo-componente.type";
+import { CreateTipoComponenteRequest } from "../tipo-componente.type";
 
-export type CreateTipoComponenteDto = Pick<
-  TipoComponenteType,
-  | "label"
-  | "name"
-  | "status"
-  | "configAttributes"
-  | "configServices"
-  | "commentApproval"
->;
+export type CreateTipoComponenteDto = CreateTipoComponenteRequest;

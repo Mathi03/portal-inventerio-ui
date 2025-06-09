@@ -1,7 +1,7 @@
 import { CreateTipoComponenteDto } from "@/core/tipo-componente/dto/create.dto";
 import { UpdateTipoComponenteDto } from "@/core/tipo-componente/dto/update.dto";
 import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
-import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
+import { AllTipoComponenteResponse, TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
 import { useSnackbar } from "@telefonica/mistica";
 import { useCallback, useState } from "react";
 const tipoComponenteService = new TipoComponenteService();
@@ -11,28 +11,17 @@ export default function useTipoComponente() {
   const [tipoComponentes, setTipoComponentes] = useState<TipoComponenteType[]>(
     [],
   );
+  const [allTipoComponente, setAllTipoComponente] = useState<AllTipoComponenteResponse[]>(
+    [],
+  );
   const [tipoComponente, setTipoComponente] = useState<TipoComponenteType>();
   const [tipoComponenteCount, setTipoComponenteCount] = useState<number>(10);
   const [loadingTipoComponentes, setLoadingTipoComponentes] = useState(true);
 
   const createTipoComponente = useCallback(
-    async ({
-      label,
-      name,
-      configAttributes,
-      configServices,
-      commentApproval,
-      status,
-    }: CreateTipoComponenteDto) => {
+    async (dto: CreateTipoComponenteDto) => {
       await tipoComponenteService
-        .create({
-          label,
-          name,
-          configAttributes,
-          configServices,
-          commentApproval,
-          status: +status,
-        })
+        .create(dto)
         .then(() =>
           openSnackbar({
             message: `Tipo de componente "${name}" creado`,
@@ -71,27 +60,27 @@ export default function useTipoComponente() {
     [],
   );
 
+  const allTipoComponentes =  useCallback(
+    async ({
+     idList
+    }: {
+     idList :Number[]
+    }) => {
+      setLoadingTipoComponentes(true);
+      const { data } = await tipoComponenteService.All(
+       {idList:idList}
+      );
+      setAllTipoComponente(data);
+    },
+    [],
+  );
   const updateTipoComponente = useCallback(
     async (
       id: number,
-      {
-        label,
-        name,
-        configAttributes,
-        configServices,
-        commentApproval,
-        status,
-      }: UpdateTipoComponenteDto,
+      dto: CreateTipoComponenteDto,
     ) => {
       await tipoComponenteService
-        .update(id, {
-          label,
-          name,
-          configAttributes,
-          configServices,
-          commentApproval,
-          status: +status,
-        })
+        .update(id, dto)
         .then(() =>
           openSnackbar({
             message: `Tipo componente ${name} actualizado`,
@@ -134,5 +123,7 @@ export default function useTipoComponente() {
     createTipoComponente,
     updateTipoComponente,
     deleteTipoComponente,
+    allTipoComponentes,
+    allTipoComponente
   };
 }

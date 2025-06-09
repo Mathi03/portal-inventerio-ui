@@ -1,8 +1,8 @@
 export enum TCStatusEnum {
-  PORMODIFICAR = 3,
-  PORAPROBAR = 2,
+  PORMODIFICAR = 4,
+  PORAPROBAR = 3,
+  INACTIVO = 2,
   ACTIVO = 1,
-  INACTIVO = 0,
 }
 
 export enum TCTypeEnum {
@@ -13,14 +13,79 @@ export interface TipoComponenteType {
   id: number; //id
   label: string; //etiqueta
   name: string; //nombre
-  configAttributes: any[]; //atributos_config
-  configServices: any[]; //servicios_config
+  type: string; //tipo
+  flagAlone:boolean//posee componente padre?
   status: TCStatusEnum; //estatus
   createdAt: string; //fecha_creacion
   updatedAt: string; //fecha_actualizacion
   commentApproval?: string;
 }
 
+export interface CreateRefComponentTypeRequestDto {
+  label: string;
+  name: string;
+  status: number;
+  commentApproval: string;
+  tipo: string;
+  flagAlone: boolean;
+}
+
+export interface ConfigAttribute {
+  [key: string]: string;
+}
+
+export interface ConfigService {
+  [key: string]: string;
+}
+
+export interface CreateConfigDataRequestDto {
+  componentTypeId: number;
+  networkId: number;
+  status: number;
+  configAttributes: ConfigAttribute[];
+  configServices: ConfigService[];
+}
+
+export interface CreateConfigRelationRequestDto {
+  componentTypeId: number;
+  componentTypeFatherId: number;
+  networkId: number;
+  networkFatherId: number;
+  status: number;
+}
+
+export interface CreateTipoComponenteRequest {
+  createRefComponentTypeRequestDto: CreateRefComponentTypeRequestDto;
+  createConfigDataRequestDto: CreateConfigDataRequestDto[];
+  createConfigRelationRequestDto: CreateConfigRelationRequestDto[];
+}
+
+export interface AllTipoComponenteResponse {
+    id:              number;
+    label:           string;
+    name:            string;
+    status:          number;
+    commentApproval: string;
+    tipo:            string;
+    configData:      ConfigDatum[];
+    configRelation:  ConfigRelation[];
+}
+
+export interface ConfigDatum {
+    id:               number;
+    componentTypeId:  number;
+    networkId:        number;
+    status:           number;
+    configAttributes: any[];
+    configServices:   any[];
+}
+
+export interface ConfigRelation {
+    componentTypeId:       number;
+    componentTypeFatherId: number;
+    networkId:             number;
+    networkFatherId:       number;
+}
 export interface TipoComponenteRed {
   red: string; //etiqueta
   configAttributes: any[]; //atributos_config

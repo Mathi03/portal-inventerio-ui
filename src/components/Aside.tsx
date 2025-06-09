@@ -4,21 +4,28 @@ export default function Aside({
   children,
   className,
   onClose,
+  zIndex = 999
 }: {
   children?: ReactNode;
   className?: string;
   onClose?: () => void;
+  zIndex?: number;
 }) {
   return (
     <>
       <aside
-        className={`h-full fixed right-0 top-0 bg-white z-[1000] ${className}`}
+        className={`h-full fixed right-0 top-0 bg-white z-[${zIndex > 0 ? zIndex + 1 : 0}] ${className}`}
       >
         {children}
       </aside>
-      <div
-        className="w-full bg-black/25 h-full fixed left-0 top-0 z-[999]"
-      />
+      {
+        zIndex > 0 && (
+          <div
+          className={`w-full bg-black/25 h-full fixed left-0 top-0 z-[${zIndex} ]`}
+        />
+        )
+      }
+    
     </>
   );
 }

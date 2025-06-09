@@ -113,3 +113,7 @@ body > div {
     @apply bg-background text-foreground;
   }
 }
+
+[role="dialog"] {
+  z-index: 1000 !important;
+}
