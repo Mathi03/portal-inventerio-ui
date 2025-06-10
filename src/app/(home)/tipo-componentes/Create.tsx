@@ -254,6 +254,8 @@ const onCreate = useCallback(
     
     await createTipoComponente(dto);
     setCreating(false);
+    onSuccess()
+    onClose();
   },
   [
     onClose,
@@ -277,7 +279,7 @@ const onUpdate = useCallback(
       createRefComponentTypeRequestDto: {
         label,
         name,
-        status: 4,
+        status: 3,
         commentApproval: "",
         tipo,
         flagAlone: checked,
@@ -422,7 +424,7 @@ const deleteParentAssociation = (row:any) => {
                        onChangeValue={e => setTipo(e)}
                   fullWidth
                 />
-                {/* {
+                {
                   tipoComponente && (
                      <Select
                       name={"status" as FormItem}
@@ -434,9 +436,10 @@ const deleteParentAssociation = (row:any) => {
                       value={status}
                        onChangeValue={e => setStatus(e)}
                       fullWidth
+                      disabled
                     />
                   )
-                } */}
+                }
                  
         </div>
         <div className="grid grid-cols-2 gap-4 mb-4">
