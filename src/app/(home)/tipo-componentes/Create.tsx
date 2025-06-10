@@ -422,7 +422,7 @@ const deleteParentAssociation = (row:any) => {
                        onChangeValue={e => setTipo(e)}
                   fullWidth
                 />
-                {
+                {/* {
                   tipoComponente && (
                      <Select
                       name={"status" as FormItem}
@@ -436,7 +436,7 @@ const deleteParentAssociation = (row:any) => {
                       fullWidth
                     />
                   )
-                }
+                } */}
                  
         </div>
         <div className="grid grid-cols-2 gap-4 mb-4">
