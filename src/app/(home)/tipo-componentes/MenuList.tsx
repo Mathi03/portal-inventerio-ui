@@ -36,7 +36,7 @@ export default function MenuList({
           >
             Editar
           </li>
-          {tc.status === 3 && (
+          {tc.status > 2 && (
             <li
               className="hover:bg-[#0066FF]/10 hover:text-[#0066FF] py-2 px-4 cursor-pointer"
               onClick={onApproval}

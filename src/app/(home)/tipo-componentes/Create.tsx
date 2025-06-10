@@ -1,5 +1,4 @@
 "use client";
-import Aside from "@/components/Aside";
 import { CreateTipoComponenteDto } from "@/core/tipo-componente/dto/create.dto";
 import {
   ButtonPrimary,
@@ -22,6 +21,7 @@ import ParentAssociationWizardModal from "./ParentAssociationWizardModal";
 import IconButton from "@/components/IconButton";
 import SelectedRedModal from "./SelectedRedModal";
 import ConfigurationsModal from "./ConfigurationsModal";
+import AsideTypeComponent from "@/components/AsideTypeComponent";
 
 type FormItem = keyof Pick<
   CreateRefComponentTypeRequestDto,
@@ -52,7 +52,6 @@ export default function Create({
   const [label, setLabel] = useState('');
   const [tipo, setTipo] = useState<any>();
   const [status, setStatus] = useState<any>();
-
   const [searchParent, setSearchParent] = useState<string>();
   const { confirm } = useDialog();
 
@@ -81,6 +80,17 @@ useEffect(() => {
       })
   })
   setData(ConfigsData)
+
+  const formattedTechs = allTipoComponente[0].configData.reduce(
+  (acc: { [key: string]: { key: string; label: string } | undefined }, item) => {
+    acc[item.networkId] = { key: item.networkId.toString(), label: redes.find(t => t.id == item?.networkId)!.label };
+    return acc;
+  },
+  {}
+);
+
+setSelectedTechs(formattedTechs);
+
   let ConfigsRelation:any[] = []
     allTipoComponente[0].configRelation.map((configData) => {
       ConfigsRelation.push({
@@ -217,7 +227,6 @@ const onCreate = useCallback(
     tipo
   }: Pick<CreateRefComponentTypeRequestDto, "label" | "name" | "tipo">) => {
     setCreating(true);
-
     const dto: CreateTipoComponenteDto = {
       createRefComponentTypeRequestDto: {
         label,
@@ -242,7 +251,6 @@ const onCreate = useCallback(
         status: 0,
       })),
     };
-    console.log(dto, data, parentAssociations);
     
     await createTipoComponente(dto);
     setCreating(false);
@@ -260,28 +268,29 @@ const onUpdate = useCallback(
      async ({
     label,
     name,
-    tipo
+    tipo,
+    status
   }: Pick<CreateRefComponentTypeRequestDto, "label" | "name" | "tipo" | "status" >) => {
       setCreating(true);
-      
+
     const dto: CreateTipoComponenteDto = {
       createRefComponentTypeRequestDto: {
         label,
         name,
-        status: status,
+        status: 4,
         commentApproval: "",
         tipo,
         flagAlone: checked,
       },
       createConfigDataRequestDto: data.map(row => ({
-        componentTypeId: 0, 
+        componentTypeId: tipoComponente!.id, 
         networkId: row.id,
-        status: 0,
+        status: row.status,
         configAttributes: row.configAttributes ?? [],
         configServices: row.configServices ?? [],
       })),
       createConfigRelationRequestDto: parentAssociations.map(assoc => ({
-        componentTypeId: 0, 
+        componentTypeId: tipoComponente!.id, 
         componentTypeFatherId: assoc.parentId,
         networkId: assoc.childRedId,
         networkFatherId: assoc.parentRedId,
@@ -290,12 +299,17 @@ const onUpdate = useCallback(
     };
       await updateTipoComponente(tipoComponente!.id, dto);
       setCreating(false);
+      onSuccess()
       onClose();
     },
     [
+      data,
+      parentAssociations,
+      status,
       tipoComponente,
       onClose,
       updateTipoComponente,
+      onSuccess
     ],
   );
 
@@ -316,7 +330,6 @@ const handleSaveTechs = (selected: any[]) => {
 };
 
 const handleSaveConfig = (key: string, type: 'attributes' | 'services', value: any) => {
-  console.log(key, type, value);
   setData(prev =>
     prev.map(row =>
       row.id === key
@@ -328,11 +341,10 @@ const handleSaveConfig = (key: string, type: 'attributes' | 'services', value: a
         : row
     )
   );
-  console.log(data);
 };
 
-const deleteParentAssociation = (row:any) => {
 
+const deleteParentAssociation = (row:any) => {
     confirm({
         title: `Eliminar`,
         message: "¿Estás seguro de eliminar esta relación?",
@@ -342,8 +354,8 @@ const deleteParentAssociation = (row:any) => {
                         prev.filter(
                           (assoc) =>
                             !(
-                              assoc.parentId === row.parentId &&
-                              assoc.childKey === row.childKey
+                              assoc.parentRedId === row.parentRedId &&
+                              assoc.childRedId === row.childRedId
                             )
                         )
                       );
@@ -352,7 +364,7 @@ const deleteParentAssociation = (row:any) => {
 }
 
   return (
-    <Aside
+    <AsideTypeComponent
       className="grid grid-rows-[auto_1fr_auto] overflow-auto w-[100%]"
       onClose={onClose}
       zIndex={0}
@@ -458,7 +470,7 @@ const deleteParentAssociation = (row:any) => {
           )
         }
 
-        {parentAssociations.length > 0 && (
+        {parentAssociations?.length > 0 && (
           <>
               <div className="flex items-center justify-between mb-2">
               <h4 className="text-[28px]">Tipo de componente padre</h4>
@@ -529,6 +541,6 @@ const deleteParentAssociation = (row:any) => {
         parentAssociations={parentAssociations}
       />
     )}
-    </Aside>
+    </AsideTypeComponent>
   );
 }
