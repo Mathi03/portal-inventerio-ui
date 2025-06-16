@@ -146,13 +146,14 @@ export default function InputJson({
       </header>
       <Split
         mode="vertical"
-        className="min-h-[420px] bg-gray-100 px-4 py-6 rounded-[8px] overflow-auto rounded-t-none"
+        className=" bg-gray-100 px-4 py-6 rounded-[8px] overflow-y-auto h-full rounded-t-none"
       >
         <Split
           style={{
             flex: 1,
             height: "calc(100% - 32px)",
           }}
+          className="overflow-y-scroll"
         >
           {editor}
           {preview}
