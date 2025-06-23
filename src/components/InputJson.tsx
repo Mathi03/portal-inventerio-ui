@@ -8,10 +8,12 @@ export default function InputJson({
   codeDefault = "{}",
   label = "Label",
   onChange,
+  readonly,
 }: {
   codeDefault?: string;
   label?: string;
   onChange: (value: any) => void;
+  readonly?: boolean;
 }) {
   const [code, setCode] = React.useState(codeDefault);
   const [json, setJson] = React.useState();
@@ -79,6 +81,7 @@ export default function InputJson({
         style={{ overflow: "auto", height: "100%", boxSizing: "border-box" }}
       >
         <CodeMirror
+          readOnly={readonly}
           value={code}
           height="100%"
           style={{ height: "100%" }}

@@ -17,8 +17,10 @@ import ButtonFilter from "../ButtonFilter";
 import usePagination from "@/hooks/usePagination";
 import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
 import { useDialog } from "@telefonica/mistica";
+import { useRouter } from "next/navigation";
 
 export default function MantenedorRedPage() {
+  const router = useRouter()
   const { confirm } = useDialog();
   const { page, limit, setPage, setLimit } = usePagination();
   const {
@@ -54,7 +56,7 @@ export default function MantenedorRedPage() {
     (tipoComponente: TipoComponenteType) => {
       console.log( tipoComponente);
       setTipoComponente(tipoComponente);
-      setOpenApprove(true);
+      router.push('/tipo-componentes/aprobar/' + tipoComponente?.id)
     },
     [setTipoComponente],
   );
@@ -136,13 +138,13 @@ export default function MantenedorRedPage() {
           onClose={() => setOpenApprove(false)}
           onSuccess={onLoad}
         />
-      )}
+      )}  
       {openCreate && (
-        <Create onClose={() => setOpenCreate(false)} onSuccess={onLoad} />
+        <Create onClose={() => setOpenCreate(false)} onSuccess={onLoad}  />
       )}
 
         {openEdit && (
-        <Create onClose={() => setOpenEdit(false)} onSuccess={onLoad} tipoComponente={tipoComponente} />
+        <Create onClose={() => setOpenEdit(false)} onSuccess={onLoad} tipoComponente={tipoComponente} mode="edit" />
       )}
     </>
   );

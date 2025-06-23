@@ -18,11 +18,13 @@ function ConfigurationsModal({
   row,
   onClose,
   onSave,
+  mode,
 }: {
   type: "attributes" | "services";
   row: any;
   onClose: () => void;
   onSave: (key: string, type: "attributes" | "services", value: any) => void;
+  mode?: "view";
 }) {
   const [tempValue, setTempValue] = useState<any>(
     type === "attributes"
@@ -33,17 +35,16 @@ function ConfigurationsModal({
 
   const handleJsonChange = (value: string) => {
     console.log("value json", value);
-    
+
     const isValid = validateJson(value);
     if (!isValid) {
       setJsonError("JSON inválido");
     } else setJsonError("");
-    
+
     if (value) {
-        setTempValue(value);
-      }
-      // setJsonError(null);
-    
+      setTempValue(value);
+    }
+    // setJsonError(null);
   };
 
   return (
@@ -62,6 +63,7 @@ function ConfigurationsModal({
         </h3>
         <div className="flex flex-col h-full overflow-auto">
           <InputJson
+            readonly={mode === "view"}
             codeDefault={JSON.stringify(
               type === "attributes"
                 ? (row.configAttributes ?? [])
@@ -78,15 +80,17 @@ function ConfigurationsModal({
         </div>
         <div className="flex justify-end gap-2 mt-4">
           <ButtonSecondary onPress={onClose}>Cerrar</ButtonSecondary>
-          <ButtonPrimary
-            onPress={() => {
-              onSave(row.id, type, tempValue);
-              onClose();
-            }}
-            disabled={!!jsonError}
-          >
-            Guardar
-          </ButtonPrimary>
+          {mode !== "view" && (
+            <ButtonPrimary
+              onPress={() => {
+                onSave(row.id, type, tempValue);
+                onClose();
+              }}
+              disabled={!!jsonError}
+            >
+              Guardar
+            </ButtonPrimary>
+          )}
         </div>
       </div>
     </div>

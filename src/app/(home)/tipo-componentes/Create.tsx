@@ -28,6 +28,9 @@ import IconButton from "@/components/IconButton";
 import SelectedRedModal from "./SelectedRedModal";
 import ConfigurationsModal from "./ConfigurationsModal";
 import AsideTypeComponent from "@/components/AsideTypeComponent";
+import { UpdateTipoComponenteDto } from "@/core/tipo-componente/dto/updatev2.dto";
+import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
+import Pagination from "@/components/Pagination";
 
 const convertirFormato = (texto: string): string => {
   return texto
@@ -45,10 +48,12 @@ export default function Create({
   onSuccess,
   onClose,
   tipoComponente,
+  mode = "create",
 }: {
   onSuccess: () => void;
   onClose: () => void;
   tipoComponente?: TipoComponenteType;
+  mode?: "create" | "edit" | "approve";
 }) {
   const {
     createTipoComponente,
@@ -72,6 +77,7 @@ export default function Create({
     [key: string]: { key: string; label: string } | undefined;
   }>({});
   const [openParentModal, setOpenParentModal] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
   const [parentAssociations, setParentAssociations] = useState<any[]>([]);
   const [childName, setChildName] = useState("");
   const [label, setLabel] = useState("");
@@ -81,7 +87,7 @@ export default function Create({
   const { confirm } = useDialog();
 
   useEffect(() => {
-    if (tipoComponente) {
+    if (mode !== "create" && tipoComponente) {
       allTipoComponentes({
         idList: [tipoComponente.id],
       });
@@ -116,7 +122,7 @@ export default function Create({
         ) => {
           acc[item.networkId] = {
             key: item.networkId.toString(),
-            label: redes?.find((t) => t.id == item?.networkId)!.label,
+            label: redes?.find((t) => t.id == item?.networkId)?.label,
           };
           return acc;
         },
@@ -198,7 +204,7 @@ export default function Create({
               setEditConfigurationSelected({ type: "attributes", row })
             }
           >
-            Editar
+            {mode === "approve" ? "Ver" : "Editar"}
           </ButtonSecondary>
         ),
       },
@@ -211,7 +217,7 @@ export default function Create({
               setEditConfigurationSelected({ type: "services", row })
             }
           >
-            Editar
+            {mode === "approve" ? "Ver" : "Editar"}
           </ButtonSecondary>
         ),
       },
@@ -220,48 +226,56 @@ export default function Create({
   );
 
   const parentColumns = useCallback(
-    (render: any) => [
-      {
-        title: "Tipo de componente padre",
-        key: "parentType",
-        render: (row: any) => {
-          const parent = tipoComponentes.find(
-            (tc) => tc.id === Number(row.parentId)
-          );
-          return parent ? parent.label : "";
+    (renderAction?: (row: RowData) => JSX.Element) => {
+      const columns = [
+        {
+          title: "Tipo de componente padre",
+          key: "parentType",
+          render: (row: RowData) => {
+            const parent = tipoComponentes.find(
+              (tc) => tc.id === Number(row.parentId)
+            );
+            return parent?.label || "";
+          },
         },
-      },
-      {
-        title: "Red padre",
-        key: "parentRed",
-        render: (row: any) => {
-          const parentRedId = redes.find(
-            (tc) => tc.id === Number(row.parentRedId)
-          );
-          return parentRedId ? parentRedId.name : "";
+        {
+          title: "Red padre",
+          key: "parentRed",
+          render: (row: RowData) => {
+            const parentRed = redes.find(
+              (tc) => tc.id === Number(row.parentRedId)
+            );
+            return parentRed?.name || "";
+          },
         },
-      },
-      {
-        title: "Tipo de componente hijo",
-        key: "childType",
-        render: (row: any) => row.childType,
-      },
-      {
-        title: "Red hijo",
-        key: "childRed",
-        render: (row: any) => {
-          const childRedId = data.find(
-            (tc) => tc.id === Number(row.childRedId)
-          );
-          return childRedId ? childRedId.red : "";
+        {
+          title: "Tipo de componente hijo",
+          key: "childType",
+          render: (row: RowData) => row.childType,
         },
-      },
-      {
-        maxWidth: "64px",
-        render: render,
-      },
-    ],
-    [tipoComponentes, data]
+        {
+          title: "Red hijo",
+          key: "childRed",
+          render: (row: RowData) => {
+            const childRed = data.find(
+              (tc) => tc.id === Number(row.childRedId)
+            );
+            return childRed?.red || "";
+          },
+        },
+      ];
+
+      if (mode !== "approve" && renderAction) {
+        columns.push({
+          key: "actions",
+          maxWidth: "64px",
+          render: renderAction,
+        });
+      }
+
+      return columns;
+    },
+    [mode, tipoComponentes, data]
   );
 
   const onCreate = useCallback(
@@ -316,23 +330,24 @@ export default function Create({
     >) => {
       setCreating(true);
 
-      const dto: CreateTipoComponenteDto = {
-        createRefComponentTypeRequestDto: {
+      const dto: UpdateTipoComponenteDto = {
+        updateRefComponentTypeRequestDto: {
           label,
           name,
           status: 3,
           commentApproval: "",
           tipo,
           flagAlone: checked,
+          id: tipoComponente!.id,
         },
-        createConfigDataRequestDto: data.map((row) => ({
+        updateConfigDataRequestDto: data.map((row) => ({
           componentTypeId: tipoComponente!.id,
           networkId: row.id,
-          status: row.status,
+          status: row.status ?? 0,
           configAttributes: row.configAttributes ?? [],
           configServices: row.configServices ?? [],
         })),
-        createConfigRelationRequestDto: parentAssociations.map((assoc) => ({
+        updateConfigRelationRequestDto: parentAssociations.map((assoc) => ({
           componentTypeId: tipoComponente!.id,
           componentTypeFatherId: assoc.parentId,
           networkId: assoc.childRedId,
@@ -357,11 +372,15 @@ export default function Create({
   );
 
   const handleSaveTechs = (selected: any[]) => {
-    const selectedIds = selected.map((key) => key.key);
+    const selectedIds = selected.map((key) => key.key.toString());
 
-    const existingRows = data.filter((row) => selectedIds.includes(row.id));
+    const existingRows = data.filter((row) =>
+      selectedIds.includes(row.id.toString())
+    );
     const newRows = selected
-      .filter((key) => !data.some((row) => row.id === key.key))
+      .filter(
+        (key) => !data.some((row) => row.id.toString() === key.key.toString())
+      )
       .map((key) => ({
         id: redes.find((t) => t.id == key.key)?.id,
         red: redes.find((t) => t.id == key.key)?.label,
@@ -422,8 +441,41 @@ export default function Create({
   };
 
   const isValidConfiguration = data.every(
-  item => item.configAttributes.length > 0 || item.configServices.length > 0
-);
+    (item) => item.configAttributes.length > 0 || item.configServices.length > 0
+  );
+
+  const onApprove = async (value: CreateRefComponentTypeRequestDto) => {
+    console.log("onApprove", value);
+    const tipoComponenteService = new TipoComponenteService();
+    await tipoComponenteService.approval(
+      tipoComponente?.id as number,
+      value.commentApproval
+    );
+    onClose();
+    onSuccess();
+  };
+
+  const [commentPage, setCommentPage] = useState(1);
+  const [commentLimit, setCommentLimit] = useState(5);
+
+  const parsedComments =
+    allTipoComponente[0]?.commentApproval
+      ?.split("|")
+      .filter((entry) => entry.trim() !== "")
+      .map((entry, index) => {
+        const [date, userId, comment] = entry.split("$");
+        return {
+          id: index,
+          date: date?.trim(),
+          userId: userId?.trim(),
+          comment: comment?.replace(/\n/g, " ")?.trim(),
+        };
+      }) ?? [];
+
+  const paginatedComments = parsedComments.slice(
+    (commentPage - 1) * commentLimit,
+    commentPage * commentLimit
+  );
 
   return (
     <AsideTypeComponent
@@ -435,9 +487,11 @@ export default function Create({
 
       <Form
         onSubmit={(value) =>
-          tipoComponente
-            ? onUpdate(value as CreateRefComponentTypeRequestDto)
-            : onCreate(value as CreateRefComponentTypeRequestDto)
+          mode === "approve"
+            ? onApprove(value as CreateRefComponentTypeRequestDto)
+            : mode === "edit"
+              ? onUpdate(value as CreateRefComponentTypeRequestDto)
+              : onCreate(value as CreateRefComponentTypeRequestDto)
         }
         className="grid px-6 content-start"
         initialValues={{
@@ -447,7 +501,12 @@ export default function Create({
       >
         <div className="py-6 flex flex-col gap-2">
           <h4 className="text-[28px]">
-            {tipoComponente ? "Editar" : "Crear"} tipo de componente
+            {mode === "create"
+              ? "Crear"
+              : mode === "edit"
+                ? "Editar"
+                : "Validar"}{" "}
+            tipo de componente
           </h4>
           <p>
             Ingrese todo los datos correspondiente para crear con éxito un
@@ -462,6 +521,7 @@ export default function Create({
             fullWidth
             maxLength={255}
             onChange={handleInputName}
+            readOnly={mode === "approve"}
           />
 
           <TextField
@@ -471,6 +531,7 @@ export default function Create({
             fullWidth
             maxLength={255}
             onChange={handleInputLabel}
+            readOnly={mode === "approve"}
           />
         </div>
         <div className="grid grid-cols-2 gap-4 mb-4">
@@ -484,14 +545,15 @@ export default function Create({
             }))}
             onChangeValue={(e) => setTipo(e)}
             fullWidth
+            disabled={mode === "approve"}
           />
           {tipoComponente && (
             <Select
               name={"status" as FormItem}
               label="Estado"
               options={TCStatusEnumOptions.map((option) => ({
-                text: option.label,
-                value: option.label.toString(),
+                text: option?.label,
+                value: option?.label.toString(),
               }))}
               value={status}
               onChangeValue={(e) => setStatus(e)}
@@ -500,12 +562,14 @@ export default function Create({
             />
           )}
         </div>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div></div>
-          <ButtonSecondary onPress={() => setOpenTcAssociate(true)}>
-            Asociar tipo de componente a una red
-          </ButtonSecondary>
-        </div>
+        {mode !== "approve" && (
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div></div>
+            <ButtonSecondary onPress={() => setOpenTcAssociate(true)}>
+              Asociar tipo de componente a una red
+            </ButtonSecondary>
+          </div>
+        )}
 
         {data.length > 0 && (
           <div className="grid grid-cols-2 gap-4 mb-4">
@@ -514,6 +578,7 @@ export default function Create({
               onChange={(value: boolean, _) => {
                 setOpenParentModal(true);
               }}
+              disabled={mode === "approve"}
             >
               Posee tipo componente padre?
             </Switch>
@@ -557,12 +622,14 @@ export default function Create({
           <>
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-[28px]">Tipo de componente padre</h4>
-              <ButtonPrimary
-                size="small"
-                onPress={() => setOpenParentModal(true)}
-              >
-                Agregar asociación
-              </ButtonPrimary>
+              {mode !== "approve" && (
+                <ButtonPrimary
+                  size="small"
+                  onPress={() => setOpenParentModal(true)}
+                >
+                  Agregar asociación
+                </ButtonPrimary>
+              )}
             </div>
             <Table
               columns={parentColumns((row: any) => (
@@ -578,13 +645,71 @@ export default function Create({
           </>
         )}
 
+        {allTipoComponente[0]?.commentApproval && (
+          <>
+            <h4 className="text-[28px] mt-6">Historial de comentarios</h4>
+            <Table
+              columns={[
+                { title: "Fecha", render: (row: any) => row.date },
+                { title: "ID Usuario", render: (row: any) => row.userId },
+                { title: "Comentario", render: (row: any) => row.comment },
+              ]}
+              rows={paginatedComments}
+            />
+            <div className="mt-4">
+              <Pagination
+                page={commentPage}
+                limit={commentLimit}
+                items={parsedComments.length}
+                onChangePage={(p) => setCommentPage(p)}
+                onChangeLimit={(l) => {
+                  setCommentLimit(l);
+                  setCommentPage(1);
+                }}
+              />
+            </div>
+          </>
+        )}
+
+        {mode === "approve" && (
+          <>
+            <h4 className="text-[28px] mt-6">Agregar Comentario</h4>
+            <TextField
+              name={"commentApproval"}
+              label="Comentario de aprobación"
+              fullWidth
+              multiline
+              optional={isApproved}
+            />
+            <div className="mt-4" />
+            <Switch
+              name="isApproved"
+              checked={isApproved}
+              onChange={(value: boolean) => {
+                setIsApproved(!isApproved);
+              }}
+            >
+              Desea aprobar este tipo de componente?
+            </Switch>
+          </>
+        )}
+
         <br />
         <footer className="flex justify-end gap-2 p-4 border-t-[1px] border-[#eee]">
           <ButtonSecondary size="small" onPress={onClose}>
             Cancelar
           </ButtonSecondary>
-          <ButtonPrimary size="small" submit showSpinner={creating} disabled={!isValidConfiguration}>
-            {allTipoComponente[0] ? "Actualizar" : "Guardar"}
+          <ButtonPrimary
+            size="small"
+            submit
+            showSpinner={creating}
+            disabled={!isValidConfiguration}
+          >
+            {mode !== "create" && allTipoComponente[0]
+              ? mode === "edit"
+                ? "Actualizar"
+                : "Guardar"
+              : "Guardar"}
           </ButtonPrimary>
         </footer>
       </Form>
@@ -605,6 +730,7 @@ export default function Create({
           row={editConfigurationsSelected.row}
           onClose={() => setEditConfigurationSelected(null)}
           onSave={handleSaveConfig}
+          {...(mode === "approve" ? { mode: "view" } : {})}
         />
       )}
 
