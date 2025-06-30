@@ -2,7 +2,6 @@ import { bff } from "../config";
 import { PaginationDto } from "../pagination/dto/create.dto";
 import { CreateTipoComponenteDto } from "./dto/create.dto";
 import { QueryTipoComponenteDto } from "./dto/search.dto";
-import { UpdateTipoComponenteDto } from "./dto/update.dto";
 import { TipoComponenteType } from "./tipo-componente.type";
 
 export class TipoComponenteService {
@@ -27,14 +26,22 @@ export class TipoComponenteService {
   public async getById(id: number) {
     return await bff.get(`/v1/portal/ref-component-type/${id}`);
   }
+    public async All(
+    idList:any,
+  ) {
+    return await bff.post(
+      `/v1/portal/ref-component-type/ALL`,
+      idList,
+    );
+  }
 
   public async update(
     id: number,
-    updateTipoComponente: UpdateTipoComponenteDto,
+    dto: CreateTipoComponenteDto,
   ) {
     return await bff.put(
       `/v1/portal/ref-component-type/${id}`,
-      updateTipoComponente,
+      dto,
     );
   }
 
@@ -43,7 +50,7 @@ export class TipoComponenteService {
   }
 
   public async approval(id: number, commentApproval: string) {
-    return await bff.patch(`/v1/portal/ref-component-type/approval/${id}`, {
+    return await bff.patch(`/v1/portal/ref-component-type/${id}`, {
       status: 1,
       commentApproval,
     });

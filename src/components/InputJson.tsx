@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useEffect } from "react";
 import Split from "@uiw/react-split";
 import JsonViewer from "@uiw/react-json-view";
 import CodeMirror from "@uiw/react-codemirror";
@@ -17,48 +17,56 @@ export default function InputJson({
   const [json, setJson] = React.useState();
   const [message, setMessage] = React.useState("");
   const [linebar, setLinebar] = React.useState("");
-  const handleJson = useCallback(() => {
+
+  useEffect(() => {
+    setCode(codeDefault);
+    try {
+      const obj = JSON.parse(codeDefault);
+      setJson(obj);
+      setMessage("");
+    } catch {
+      setJson(undefined);
+      setMessage("JSON inválido");
+    }
+  }, [codeDefault]);
+
+  const handleEditorChange = (value: string) => {
+    setCode(value);
+    setMessage("");
+    try {
+      if (value) {
+        const obj = JSON.parse(value);
+        setJson(obj);
+        onChange(obj);
+      } else {
+        setJson(undefined);
+        onChange(undefined);
+      }
+    } catch (error) {
+      setJson(undefined);
+      onChange(undefined);
+      setMessage("JSON inválido");
+    }
+  };
+
+  const formatJson = (replacer = 2) => {
     setMessage("");
     try {
       if (code) {
         const obj = JSON.parse(code);
-        setJson(obj);
-        onChange(obj);
+        const str = JSON.stringify(obj, null, replacer);
+        setCode(str);
       }
     } catch (error) {
       if (error instanceof Error) {
         setMessage(error.message);
         setJson(undefined);
-        onChange(undefined);
       } else {
         throw error;
       }
     }
-  }, [code, onChange]);
+  };
 
-  const formatJson = useCallback(
-    (replacer = 2) => {
-      setMessage("");
-      try {
-        if (code) {
-          const obj = JSON.parse(code);
-          const str = JSON.stringify(obj, null, replacer);
-          setCode(str);
-        }
-      } catch (error) {
-        if (error instanceof Error) {
-          setMessage(error.message);
-          setJson(undefined);
-        } else {
-          throw error;
-        }
-      }
-    },
-    [code],
-  );
-  useEffect(() => {
-    handleJson();
-  }, [code, handleJson]);
   const editor = (
     <div
       style={{
@@ -81,11 +89,11 @@ export default function InputJson({
             setLinebar(
               `Linea ${line.number}/${cm.state.doc.lines}, Columna ${
                 cm.state.selection.main.head - line.from + 1
-              }`,
+              }`
             );
             const text = cm.state.sliceDoc(
               selection.main.from,
-              selection.main.to,
+              selection.main.to
             );
             if (text) {
               if (selection.ranges.length > 1) {
@@ -94,14 +102,12 @@ export default function InputJson({
                 setLinebar(
                   `${text.split("\n").length} lineas, ${
                     text.length
-                  } seleccione el caracter`,
+                  } seleccione el caracter`
                 );
               }
             }
           }}
-          onChange={(value) => {
-            setCode(value);
-          }}
+          onChange={handleEditorChange}
         />
       </div>
     </div>
@@ -136,7 +142,6 @@ export default function InputJson({
           >
             Formatear
           </div>
-          {/* <div className="px-6 py-1 border-[#0066FF] border-[1px] text-[#0066FF] w-fit rounded-full" onClick={() => formatJson(null, 0)}>Acortar</div> */}
         </menu>
       </header>
       <Split

@@ -5,6 +5,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
+import { SetStateAction } from "react";
 
 export default function MenuList({
   onApproval,
@@ -12,7 +13,7 @@ export default function MenuList({
   onDelete,
   tc,
 }: {
-  onApproval: () => void;
+  onApproval:  (value: SetStateAction<boolean>) => void;
   onEdit: () => void;
   onDelete?: () => void;
   tc: TipoComponenteType;
@@ -35,7 +36,7 @@ export default function MenuList({
           >
             Editar
           </li>
-          {tc.status === 0 && (
+          {tc.status > 2 && (
             <li
               className="hover:bg-[#0066FF]/10 hover:text-[#0066FF] py-2 px-4 cursor-pointer"
               onClick={onApproval}

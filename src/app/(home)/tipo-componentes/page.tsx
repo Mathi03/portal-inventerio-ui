@@ -9,7 +9,6 @@ import ExportXLS from "./ExportXLS";
 import ShowColumns from "./ShowColumns";
 import MenuList from "./MenuList";
 import Create from "./Create";
-import Edit from "./Edit";
 import Pagination from "@/components/Pagination";
 import Aprobar from "./Aprobar";
 import useTipoComponente from "./useTipoComponente";
@@ -51,6 +50,15 @@ export default function MantenedorRedPage() {
     [setTipoComponente],
   );
 
+    const onAprobal = useCallback(
+    (tipoComponente: TipoComponenteType) => {
+      console.log( tipoComponente);
+      setTipoComponente(tipoComponente);
+      setOpenApprove(true);
+    },
+    [setTipoComponente],
+  );
+
   const onDelete = useCallback(
     (tipoComponente: TipoComponenteType) => {
       const { id, name } = tipoComponente;
@@ -80,7 +88,7 @@ export default function MantenedorRedPage() {
             render: (row) => (
               <MenuList
                 tc={row}
-                onApproval={console.log}
+                onApproval={()=> onAprobal(row)}
                 onEdit={() => onEdit(row)}
                 onDelete={() => onDelete(row)}
               />
@@ -132,12 +140,9 @@ export default function MantenedorRedPage() {
       {openCreate && (
         <Create onClose={() => setOpenCreate(false)} onSuccess={onLoad} />
       )}
-      {openEdit && (
-        <Edit
-          tipoComponente={tipoComponente!}
-          onClose={() => setOpenEdit(false)}
-          onSuccess={onLoad}
-        />
+
+        {openEdit && (
+        <Create onClose={() => setOpenEdit(false)} onSuccess={onLoad} tipoComponente={tipoComponente} />
       )}
     </>
   );

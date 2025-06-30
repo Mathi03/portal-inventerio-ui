@@ -2,6 +2,7 @@
 import Button from "@/components/Button";
 import {
   TCStatusEnumOptions,
+  TCTypeEnumOptions,
   TipoComponenteType,
 } from "@/core/tipo-componente/tipo-componente.type";
 import { Form, Select, TextField } from "@telefonica/mistica";
