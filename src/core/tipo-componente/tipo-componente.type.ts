@@ -60,6 +60,12 @@ export interface CreateTipoComponenteRequest {
   createConfigRelationRequestDto: CreateConfigRelationRequestDto[];
 }
 
+export interface UpdateTipoComponenteRequest {
+  updateRefComponentTypeRequestDto: CreateRefComponentTypeRequestDto;
+  updateConfigDataRequestDto: CreateConfigDataRequestDto[];
+  updateConfigRelationRequestDto: CreateConfigRelationRequestDto[];
+}
+
 export interface AllTipoComponenteResponse {
     id:              number;
     label:           string;

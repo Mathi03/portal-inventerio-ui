@@ -1,7 +1,10 @@
 import { CreateTipoComponenteDto } from "@/core/tipo-componente/dto/create.dto";
-import { UpdateTipoComponenteDto } from "@/core/tipo-componente/dto/update.dto";
+import { UpdateTipoComponenteDto } from "@/core/tipo-componente/dto/updatev2.dto";
 import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
-import { AllTipoComponenteResponse, TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
+import {
+  AllTipoComponenteResponse,
+  TipoComponenteType,
+} from "@/core/tipo-componente/tipo-componente.type";
 import { useSnackbar } from "@telefonica/mistica";
 import { useCallback, useState } from "react";
 const tipoComponenteService = new TipoComponenteService();
@@ -9,11 +12,11 @@ const tipoComponenteService = new TipoComponenteService();
 export default function useTipoComponente() {
   const { openSnackbar } = useSnackbar();
   const [tipoComponentes, setTipoComponentes] = useState<TipoComponenteType[]>(
-    [],
+    []
   );
-  const [allTipoComponente, setAllTipoComponente] = useState<AllTipoComponenteResponse[]>(
-    [],
-  );
+  const [allTipoComponente, setAllTipoComponente] = useState<
+    AllTipoComponenteResponse[]
+  >([]);
   const [tipoComponente, setTipoComponente] = useState<TipoComponenteType>();
   const [tipoComponenteCount, setTipoComponenteCount] = useState<number>(10);
   const [loadingTipoComponentes, setLoadingTipoComponentes] = useState(true);
@@ -24,8 +27,8 @@ export default function useTipoComponente() {
         .create(dto)
         .then(() =>
           openSnackbar({
-            message: `Tipo de componente "${name}" creado`,
-          }),
+            message: `Tipo de componente "${dto.createRefComponentTypeRequestDto.name ?? ""}" creado`,
+          })
         )
         .catch(() => {
           openSnackbar({
@@ -34,7 +37,7 @@ export default function useTipoComponente() {
           });
         });
     },
-    [openSnackbar],
+    [openSnackbar]
   );
 
   const getTipoComponentes = useCallback(
@@ -57,43 +60,34 @@ export default function useTipoComponente() {
       setTipoComponenteCount(data.data.total);
       setLoadingTipoComponentes(false);
     },
-    [],
+    []
   );
 
-  const allTipoComponentes =  useCallback(
-    async ({
-     idList
-    }: {
-     idList :Number[]
-    }) => {
+  const allTipoComponentes = useCallback(
+    async ({ idList }: { idList: Number[] }) => {
       setLoadingTipoComponentes(true);
-      const { data } = await tipoComponenteService.All(
-       {idList:idList}
-      );
+      const { data } = await tipoComponenteService.All({ idList: idList });
       setAllTipoComponente(data);
     },
-    [],
+    []
   );
   const updateTipoComponente = useCallback(
-    async (
-      id: number,
-      dto: CreateTipoComponenteDto,
-    ) => {
+    async (id: number, dto: UpdateTipoComponenteDto) => {
       await tipoComponenteService
         .update(id, dto)
         .then(() =>
           openSnackbar({
-            message: `Tipo componente ${name} actualizado`,
-          }),
+            message: `Tipo componente "${dto.updateRefComponentTypeRequestDto.name ?? ''}" actualizado`,
+          })
         )
         .catch(() =>
           openSnackbar({
             message: `Ha ocurrido un error al momento de actualizar el tipo de componente "${name}"`,
             type: "CRITICAL",
-          }),
+          })
         );
     },
-    [openSnackbar],
+    [openSnackbar]
   );
 
   const deleteTipoComponente = useCallback(
@@ -101,16 +95,16 @@ export default function useTipoComponente() {
       await tipoComponenteService
         .detele(id)
         .then(() =>
-          openSnackbar({ message: `Tipo componente "${name}" eliminado` }),
+          openSnackbar({ message: `Tipo componente "${name}" eliminado` })
         )
         .catch(() =>
           openSnackbar({
             message: `Ha ocurrido un error al momento de eliminar el tipo componente "${name}"`,
             type: "CRITICAL",
-          }),
+          })
         );
     },
-    [openSnackbar],
+    [openSnackbar]
   );
 
   return {
@@ -124,6 +118,6 @@ export default function useTipoComponente() {
     updateTipoComponente,
     deleteTipoComponente,
     allTipoComponentes,
-    allTipoComponente
+    allTipoComponente,
   };
 }

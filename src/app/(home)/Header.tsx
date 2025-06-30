@@ -14,6 +14,7 @@ export default function Header() {
       "/tipo-componentes",
       "/redes",
       "/mantenedor-fuente",
+      "/mantenedor-tipo-fuentes",
     ],
     [],
   );
@@ -45,6 +46,9 @@ export default function Header() {
             },
             {
               text: "Fuentes",
+            },
+            {
+              text: "Tipo Fuentes",
             },
           ]}
         />
