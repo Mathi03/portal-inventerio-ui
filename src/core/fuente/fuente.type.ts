@@ -9,6 +9,7 @@ export interface FuenteType {
   status: FuenteStatusEnum; //estatus
   refNetworkId: number; //id_red
   refComponentTypeId: number; //id_tipo_componente
+  refTypeSourceId: number;
   version: string; //version
   attribute: string; //atributo
   createdAt: string; //fecha_creacion

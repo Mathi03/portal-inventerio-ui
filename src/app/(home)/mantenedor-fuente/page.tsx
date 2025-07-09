@@ -1,6 +1,6 @@
 "use client";
 import Table, { TableColumn } from "@/components/Table/Table";
-import Filter from "./Filter";
+import Filter, { FilterFormValues } from "./Filter";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Button from "@/components/Button";
 import Icon from "@/components/Icon";
@@ -17,12 +17,13 @@ import { FuenteType } from "@/core/fuente/fuente.type";
 import { FuenteService } from "@/core/fuente/fuente.service";
 import DetalleRed from "../DetalleRed";
 import DetalleTipoComponente from "../DetalleTipoComponente";
+import axios from "axios";
+import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
 
 export default function MantenedorFuentePage() {
   const { confirm } = useDialog();
   const { openSnackbar } = useSnackbar();
 
-  const [search, setSearch] = useState<string | null>();
   const [openFiter, setOpenFilter] = useState(true);
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
@@ -42,30 +43,49 @@ export default function MantenedorFuentePage() {
       refComponentTypeId: true,
       refNetworkId: true,
       version: true,
-    } as Record<ShowColumnType, boolean>,
+    } as Record<ShowColumnType, boolean>
   );
 
   const [fuentes, setFuentes] = useState<FuenteType[]>([]);
 
   const [selectedFuente, setSelectedFuente] = useState<FuenteType | null>(null);
+  const [filter, setFilter] = useState<FilterFormValues>(
+    {} as FilterFormValues
+  );
 
   const getFuentes = useCallback(async () => {
     setIsLoadingFuentes(true);
     const fuenteService = new FuenteService();
-    const { data } = await fuenteService.findAll({ page, limit, q: search });
+    const { data } = await fuenteService.findAll({ page, limit, ...filter });
     setFuentes(data.data.data);
     setItems(data.data.total);
     setIsLoadingFuentes(false);
-  }, [page, limit, search]);
+  }, [page, limit, filter]);
 
-  const deteleRed = useCallback(
+  const deleteFuente = useCallback(
     async (id: number) => {
       const fuenteService = new FuenteService();
-      await fuenteService.delete(id);
-      getFuentes();
-      openSnackbar({ message: "Mantenedor de fuente eliminado" });
+
+      try {
+        await fuenteService.delete(id);
+
+        getFuentes();
+        openSnackbar({ message: "Mantenedor de fuente eliminado" });
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response) {
+          openSnackbar({
+            message: errorMessageInAPI,
+            type: "CRITICAL",
+          });
+        } else {
+          openSnackbar({
+            message: errorGeneric,
+            type: "CRITICAL",
+          });
+        }
+      }
     },
-    [getFuentes, openSnackbar],
+    [getFuentes, openSnackbar]
   );
 
   const columns = useMemo<TableColumn<FuenteType>[]>(() => {
@@ -122,14 +142,14 @@ export default function MantenedorFuentePage() {
                 title: `Eliminar ${row.name}`,
                 message: "¿Estás seguro de eliminar este mantenedor de fuente?",
                 destructive: true,
-                onAccept: () => deteleRed(row.id),
+                onAccept: () => deleteFuente(row.id),
               });
             }}
           />
         ),
       },
     ];
-  }, [showColumn, confirm, deteleRed]);
+  }, [showColumn, confirm, deleteFuente]);
 
   useEffect(() => {
     getFuentes();
@@ -137,7 +157,7 @@ export default function MantenedorFuentePage() {
   return (
     <>
       <section className="flex p-2 gap-2 w-full h-full relative overflow-hidden">
-        {openFiter && <Filter onSubmit={console.log} />}
+        {openFiter && <Filter onSubmit={(filter) => setFilter(filter)} />}
         <Table
           columns={columns}
           rows={fuentes}
@@ -145,7 +165,19 @@ export default function MantenedorFuentePage() {
           header={
             <header className="grid grid-cols-[1fr_auto] justify-between gap-4">
               <h1 className="col-span-2 text-[22px]">Mantenedor de Fuentes</h1>
-              <InputSearch onSearch={(value) => setSearch(value)} />
+              <InputSearch
+                onSearch={(value) =>
+                  setFilter({
+                    label: "",
+                    name: value ?? "",
+                    status: "",
+                    version: "",
+                    refNetworkId: "",
+                    refComponentTypeId: "",
+                    refTypeSourceId: "",
+                  })
+                }
+              />
               <menu className="flex gap-4">
                 <ExportXLS />
                 <ShowColumns

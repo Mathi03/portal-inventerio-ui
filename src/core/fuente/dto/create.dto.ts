@@ -7,6 +7,7 @@ export type CreateFuenteDto = Pick<
   | "status"
   | "refNetworkId"
   | "refComponentTypeId"
+  | "refTypeSourceId"
   | "version"
   | "attribute"
 >;
