@@ -8,7 +8,11 @@ import { RedService } from "@/core/red/red.service";
 import { RedType } from "@/core/red/red.type";
 import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
 import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
-import { Form, TextField } from "@telefonica/mistica";
+import { TipoFuenteService } from "@/core/tipo-fuente/tipo-fuente.service";
+import { TipoFuenteType } from "@/core/tipo-fuente/tipo-fuente.type";
+import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
+import { Form, TextField, useSnackbar } from "@telefonica/mistica";
+import axios from "axios";
 import { useCallback, useEffect, useState } from "react";
 type FormItem = keyof UpdateFuenteDto;
 export default function Edit({
@@ -20,18 +24,25 @@ export default function Edit({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const { openSnackbar } = useSnackbar();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRedes, setIsLoadingRedes] = useState(true);
   const [isLoadingTC, setIsLoadingTC] = useState(true);
+  const [isLoadingTF, setIsLoadingTF] = useState(true);
   const [redes, setRedes] = useState<RedType[]>([]);
   const [tipoComponentes, setTipoComponentes] = useState<TipoComponenteType[]>(
-    [],
+    []
   );
+  const [tipoFuentes, setTipoFuentes] = useState<TipoFuenteType[]>([]);
+
   const getRedes = useCallback(async () => {
     setIsLoadingRedes(true);
     const redService = new RedService();
     const { data } = await redService.findAll({});
-    setRedes(data.data.data);
+    const sortedData = [...data.data.data].sort((a, b) =>
+      a.label.localeCompare(b.label)
+    );
+    setRedes(sortedData);
     setIsLoadingRedes(false);
   }, []);
 
@@ -39,37 +50,64 @@ export default function Edit({
     setIsLoadingTC(true);
     const tcService = new TipoComponenteService();
     const { data } = await tcService.findAll({});
-    setTipoComponentes(data.data.data);
+    const sortedData = [...data.data.data].sort((a, b) =>
+      a.label.localeCompare(b.label)
+    );
+    setTipoComponentes(sortedData);
     setIsLoadingTC(false);
+  }, []);
+
+  const getTipoFuente = useCallback(async () => {
+    setIsLoadingTF(true);
+    const tfService = new TipoFuenteService();
+    const { data } = await tfService.findAll({});
+    const sortedData = [...data.data.data].sort((a, b) =>
+      a.label.localeCompare(b.label)
+    );
+    setTipoFuentes(sortedData);
+    setIsLoadingTF(false);
   }, []);
 
   const onSubmit = useCallback(
     async (form: UpdateFuenteDto) => {
       setIsSubmitting(true);
       const fuenteService = new FuenteService();
-      await fuenteService
-        .update(fuente.id, {
+
+      try {
+        await fuenteService.update(fuente.id, {
           ...form,
           status: +form.status,
           refNetworkId: +form.refNetworkId,
           refComponentTypeId: +form.refComponentTypeId,
-        })
-        .finally(() => {
-          setIsSubmitting(false);
-          onSuccess();
-          onClose();
         });
+
+        onSuccess();
+        onClose();
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response) {
+          openSnackbar({
+            message: errorMessageInAPI,
+            type: "CRITICAL",
+          });
+        } else {
+          openSnackbar({
+            message: errorGeneric,
+            type: "CRITICAL",
+          });
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
     },
-    [fuente, onSuccess, onClose],
+    [fuente, onSuccess, onClose, openSnackbar]
   );
 
   useEffect(() => {
     getRedes();
-  }, [getRedes]);
-
-  useEffect(() => {
     getTipoComponente();
-  }, [getTipoComponente]);
+    getTipoFuente();
+  }, [getRedes, getTipoComponente, getTipoFuente]);
+
   return (
     <Aside
       className="grid grid-rows-[auto_1fr_auto] w-[520px] overflow-auto"
@@ -90,6 +128,7 @@ export default function Edit({
           status: fuente.status.toString(),
           refNetworkId: fuente.refNetworkId.toString(),
           refComponentTypeId: fuente.refComponentTypeId.toString(),
+          refTypeSourceId: fuente.refTypeSourceId.toString(),
         }}
       >
         <TextField
@@ -132,6 +171,16 @@ export default function Edit({
             value: option.value.toString(),
           }))}
           fullWidth
+        />
+        <Select
+          name="refTypeSourceId"
+          label="Tipo Fuente"
+          fullWidth
+          disabled={isLoadingTF}
+          options={tipoFuentes.map((red) => ({
+            text: red.label,
+            value: red.id.toString(),
+          }))}
         />
         <TextField name={"version" as FormItem} label="Versión" fullWidth />
         <TextField name={"attribute" as FormItem} label="Atributo" fullWidth />

@@ -1,11 +1,13 @@
 import Aside from "@/components/Aside";
 import Button from "@/components/Button";
-import { Form, TextField } from "@telefonica/mistica";
+import { Form, TextField, useSnackbar } from "@telefonica/mistica";
 import { useCallback, useState } from "react";
 import Select from "@/components/Select";
 import { TipoFuenteService } from "@/core/tipo-fuente/tipo-fuente.service";
 import { CreateTipoFuenteDto } from "@/core/tipo-fuente/dto/create.dto";
 import { TipoFuenteStatusEnumOptions } from "@/core/tipo-fuente/tipo-fuente.type";
+import axios from "axios";
+import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
 
 type FormItem = keyof CreateTipoFuenteDto;
 
@@ -16,25 +18,41 @@ export default function Create({
   onSuccess: () => void;
   onClose: () => void;
 }) {
+  const { openSnackbar } = useSnackbar();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onSubmit = useCallback(
     async ({ label, name, status }: CreateTipoFuenteDto) => {
       setIsSubmitting(true);
       const fuenteService = new TipoFuenteService();
-      await fuenteService
-        .create({
+
+      try {
+        await fuenteService.create({
           label,
           name,
           status: +status,
-        })
-        .finally(() => {
-          setIsSubmitting(false);
-          onSuccess();
-          onClose();
         });
+
+        onSuccess();
+        onClose();
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response) {
+          const errorMessage = errorMessageInAPI;
+          openSnackbar({
+            message: errorMessage,
+            type: "CRITICAL",
+          });
+        } else {
+          openSnackbar({
+            message: errorGeneric,
+            type: "CRITICAL",
+          });
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
     },
-    [onSuccess, onClose]
+    [onSuccess, onClose, openSnackbar]
   );
 
   return (
@@ -50,6 +68,11 @@ export default function Create({
         </p>
       </header>
       <Form
+        initialValues={{
+          label: "",
+          name: "",
+          status: TipoFuenteStatusEnumOptions[0]?.value.toString() ?? "1",
+        }}
         onSubmit={(value) => onSubmit(value as CreateTipoFuenteDto)}
         className="grid gap-4 px-6 content-start"
       >

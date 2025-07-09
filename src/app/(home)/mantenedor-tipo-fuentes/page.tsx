@@ -11,21 +11,25 @@ import Create from "./create";
 import Edit from "./Edit";
 import { Tag, useDialog, useSnackbar } from "@telefonica/mistica";
 import Pagination from "@/components/Pagination";
-import Filter from "./Filter";
+import Filter, { FilterFormValues } from "./Filter";
 import { TipoFuenteService } from "@/core/tipo-fuente/tipo-fuente.service";
 import { TipoFuenteType } from "@/core/tipo-fuente/tipo-fuente.type";
+import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
+import axios from "axios";
 
 export default function MantenedorFuentePage() {
   const { confirm } = useDialog();
   const { openSnackbar } = useSnackbar();
 
-  const [search, setSearch] = useState<string | null>();
   const [openFiter, setOpenFilter] = useState(true);
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<number>(10);
   const [limit, setLimit] = useState<number>(20);
+  const [filter, setFilter] = useState<FilterFormValues>(
+    {} as FilterFormValues
+  );
 
   const [isLoadingFuentes, setIsLoadingFuentes] = useState(true);
 
@@ -48,18 +52,38 @@ export default function MantenedorFuentePage() {
   const getTipoFuentes = useCallback(async () => {
     setIsLoadingFuentes(true);
     const fuenteService = new TipoFuenteService();
-    const { data } = await fuenteService.findAll({ page, limit, q: search });
+    const { data } = await fuenteService.findAll({
+      page,
+      limit,
+      ...filter,
+    });
     setFuentes(data.data.data);
     setItems(data.data.total);
     setIsLoadingFuentes(false);
-  }, [page, limit, search]);
+  }, [page, limit, filter]);
 
   const deteleRed = useCallback(
     async (id: number) => {
       const fuenteService = new TipoFuenteService();
-      await fuenteService.delete(id);
-      getTipoFuentes();
-      openSnackbar({ message: "Mantenedor de tipo fuente eliminado" });
+
+      try {
+        await fuenteService.delete(id);
+
+        getTipoFuentes();
+        openSnackbar({ message: "Mantenedor de tipo fuente eliminado" });
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response) {
+          openSnackbar({
+            message: errorMessageInAPI,
+            type: "CRITICAL",
+          });
+        } else {
+          openSnackbar({
+            message: errorGeneric,
+            type: "CRITICAL",
+          });
+        }
+      }
     },
     [getTipoFuentes, openSnackbar]
   );
@@ -119,7 +143,7 @@ export default function MantenedorFuentePage() {
   return (
     <>
       <section className="flex p-2 gap-2 w-full h-full relative overflow-hidden">
-        {openFiter && <Filter onSubmit={console.log} />}
+        {openFiter && <Filter onSubmit={(filter) => setFilter(filter)} />}
         <Table
           columns={columns}
           rows={fuentes}
@@ -129,7 +153,11 @@ export default function MantenedorFuentePage() {
               <h1 className="col-span-2 text-[22px]">
                 Mantenedor de Tipo Fuentes
               </h1>
-              <InputSearch onSearch={(value) => setSearch(value)} />
+              <InputSearch
+                onSearch={(value) =>
+                  setFilter({ label: "", name: value ?? "", status: "" })
+                }
+              />
               <menu className="flex gap-4">
                 <ShowColumns
                   showColumn={showColumn}

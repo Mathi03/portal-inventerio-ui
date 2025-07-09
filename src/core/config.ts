@@ -5,6 +5,7 @@ export const bff = axios.create({
   headers: {
     "X-APP-ID": "121",
     "X-USER-ID": "12",
+    "X-CORRELATION-ID": "1590|E11011|42424",
   },
 });
 
