@@ -56,8 +56,6 @@ export default function Edit({
         initialValues={{
           ...fuente,
           status: fuente.status.toString(),
-          refNetworkId: fuente.refNetworkId.toString(),
-          refComponentTypeId: fuente.refComponentTypeId.toString(),
         }}
       >
         <TextField
