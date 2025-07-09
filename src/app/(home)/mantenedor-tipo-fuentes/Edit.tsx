@@ -3,8 +3,13 @@ import Button from "@/components/Button";
 import Select from "@/components/Select";
 import { UpdateTipoFuenteDto } from "@/core/tipo-fuente/dto/update.dto";
 import { TipoFuenteService } from "@/core/tipo-fuente/tipo-fuente.service";
-import { TipoFuenteStatusEnumOptions, TipoFuenteType } from "@/core/tipo-fuente/tipo-fuente.type";
-import { Form, TextField } from "@telefonica/mistica";
+import {
+  TipoFuenteStatusEnumOptions,
+  TipoFuenteType,
+} from "@/core/tipo-fuente/tipo-fuente.type";
+import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
+import { Form, TextField, useSnackbar } from "@telefonica/mistica";
+import axios from "axios";
 import { useCallback, useState } from "react";
 
 type FormItem = keyof UpdateTipoFuenteDto;
@@ -19,23 +24,38 @@ export default function Edit({
   onSuccess: () => void;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { openSnackbar } = useSnackbar();
 
   const onSubmit = useCallback(
     async (form: UpdateTipoFuenteDto) => {
       setIsSubmitting(true);
       const fuenteService = new TipoFuenteService();
-      await fuenteService
-        .update(fuente.id, {
+
+      try {
+        await fuenteService.update(fuente.id, {
           ...form,
           status: +form.status,
-        })
-        .finally(() => {
-          setIsSubmitting(false);
-          onSuccess();
-          onClose();
         });
+
+        onSuccess();
+        onClose();
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response) {
+          openSnackbar({
+            message: errorMessageInAPI,
+            type: "CRITICAL",
+          });
+        } else {
+          openSnackbar({
+            message: errorGeneric,
+            type: "CRITICAL",
+          });
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
     },
-    [fuente, onSuccess, onClose]
+    [fuente, onSuccess, onClose, openSnackbar]
   );
 
   return (
