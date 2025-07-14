@@ -19,6 +19,7 @@ import DetalleRed from "../DetalleRed";
 import DetalleTipoComponente from "../DetalleTipoComponente";
 import axios from "axios";
 import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
+import DetalleTipoFuente from "../DetalleTipoFuente";
 
 export default function MantenedorFuentePage() {
   const { confirm } = useDialog();
@@ -49,14 +50,24 @@ export default function MantenedorFuentePage() {
   const [fuentes, setFuentes] = useState<FuenteType[]>([]);
 
   const [selectedFuente, setSelectedFuente] = useState<FuenteType | null>(null);
-  const [filter, setFilter] = useState<FilterFormValues>(
-    {} as FilterFormValues
-  );
+  const [filter, setFilter] = useState<any>({} as any);
 
   const getFuentes = useCallback(async () => {
     setIsLoadingFuentes(true);
     const fuenteService = new FuenteService();
-    const { data } = await fuenteService.findAll({ page, limit, ...filter });
+
+    const cleanedFilter: Partial<typeof filter> = Object.fromEntries(
+      Object.entries(filter).filter(
+        ([, value]) => value !== null && value !== ""
+      )
+    );
+
+    const { data } = await fuenteService.findAll({
+      page,
+      limit,
+      ...cleanedFilter,
+    });
+
     setFuentes(data.data.data);
     setItems(data.data.total);
     setIsLoadingFuentes(false);
@@ -116,6 +127,11 @@ export default function MantenedorFuentePage() {
         hidden: !showColumn.refNetworkId,
       },
       {
+        title: "Tipo fuente",
+        render: (row) => <DetalleTipoFuente id={row.refTypeSourceId} />,
+        hidden: !showColumn.refNetworkId,
+      },
+      {
         title: "Versión",
         key: "version",
         hidden: !showColumn.version,
@@ -168,8 +184,9 @@ export default function MantenedorFuentePage() {
               <InputSearch
                 onSearch={(value) =>
                   setFilter({
+                    q: value ?? "",
                     label: "",
-                    name: value ?? "",
+                    name: "",
                     status: "",
                     version: "",
                     refNetworkId: "",

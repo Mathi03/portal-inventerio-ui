@@ -79,6 +79,7 @@ export default function Edit({
           status: +form.status,
           refNetworkId: +form.refNetworkId,
           refComponentTypeId: +form.refComponentTypeId,
+          attribute: ""
         });
 
         onSuccess();
@@ -183,7 +184,6 @@ export default function Edit({
           }))}
         />
         <TextField name={"version" as FormItem} label="Versión" fullWidth />
-        <TextField name={"attribute" as FormItem} label="Atributo" fullWidth />
         <footer className="grid gap-4 p-4 border-t-[1px] border-[#eee]">
           <Button showSpinner={isSubmitting}>Guardar</Button>
           <Button variant="link" onClick={onClose}>

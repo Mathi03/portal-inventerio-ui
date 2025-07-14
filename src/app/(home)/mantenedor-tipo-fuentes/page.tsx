@@ -27,9 +27,7 @@ export default function MantenedorFuentePage() {
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<number>(10);
   const [limit, setLimit] = useState<number>(20);
-  const [filter, setFilter] = useState<FilterFormValues>(
-    {} as FilterFormValues
-  );
+  const [filter, setFilter] = useState<any>({} as any);
 
   const [isLoadingFuentes, setIsLoadingFuentes] = useState(true);
 
@@ -52,10 +50,16 @@ export default function MantenedorFuentePage() {
   const getTipoFuentes = useCallback(async () => {
     setIsLoadingFuentes(true);
     const fuenteService = new TipoFuenteService();
+    const cleanedFilter: Partial<typeof filter> = Object.fromEntries(
+      Object.entries(filter).filter(
+        ([, value]) => value !== null && value !== ""
+      )
+    );
+
     const { data } = await fuenteService.findAll({
       page,
       limit,
-      ...filter,
+      ...cleanedFilter,
     });
     setFuentes(data.data.data);
     setItems(data.data.total);
@@ -155,7 +159,7 @@ export default function MantenedorFuentePage() {
               </h1>
               <InputSearch
                 onSearch={(value) =>
-                  setFilter({ label: "", name: value ?? "", status: "" })
+                  setFilter({ name: "", label: "", q: value ?? "", status: "" })
                 }
               />
               <menu className="flex gap-4">
