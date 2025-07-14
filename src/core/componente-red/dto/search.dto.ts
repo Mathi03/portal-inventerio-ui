@@ -4,7 +4,7 @@ export interface QueryComponenteRedDto {
   q?: string | null;
   control_id?: string;
   id?: string;
-  label?: string;
+  controlLabel?: string;
   name?: string;
   ref_component_type_id?: string;
   ref_network_id?: string;

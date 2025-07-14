@@ -26,14 +26,88 @@ export default function CreateForm() {
 
   const [tipoComponente, setTipoComponente] =
     useState<TipoComponenteType | null>();
+
   const [red, setRed] = useState<RedType | null>(null);
 
   const [componenteSeleted, setComponenteSeleted] = useState<
     ComponenteRedType[]
   >([]);
 
+   //ojo validar con como se llama....
+  const [fuente, setFuente] =  useState<null>();
+
+
+
+
   const [attribute, setAttribute] = useState<any>({});
   const [service, setService] = useState<any>({});
+
+
+  interface NestedAttributes {
+    [key: string]: string;
+  }
+  
+  interface AttributesState {
+    [key: string]: string | NestedAttributes;
+  }
+
+  interface NestedServices {
+    [key: string]: string;
+  }
+  
+  interface ServicesState {
+    [key: string]: string | NestedServices;
+  }
+
+  const onAttributes = useCallback((name: string, value: any, parentName: string | null = null) => {
+    // ✨ SOLUCIÓN: Añadir el tipo a `prevAttributes`
+    console.log("estamos aclarando los atributos....")
+    setAttribute((prevAttributes: AttributesState) => {
+      const newAttributes: AttributesState = { ...prevAttributes };
+
+      if (parentName) {
+        // Es un atributo anidado
+        if (typeof newAttributes[parentName] === 'string') {
+          console.error(`Error: Expected object for ${parentName}, but found string.`);
+          return prevAttributes;
+        }
+        if (!newAttributes[parentName]) {
+          newAttributes[parentName] = {};
+        }
+        (newAttributes[parentName] as NestedAttributes)[name] = value;
+      } else {
+        // Es un atributo regular
+        newAttributes[name] = value;
+      }
+      console.log("estamos aclarando los services2222....", newAttributes)
+      return newAttributes;
+    });
+  }, []);
+
+  const onServices = useCallback((name: string, value: any, parentName: string | null = null) => {
+    // ✨ SOLUCIÓN: Añadir el tipo a `prevServices`
+    setService((prevServices: ServicesState) => {
+      const newServices: ServicesState = { ...prevServices };
+
+      if (parentName) {
+        // Es un atributo anidado
+        if (typeof newServices[parentName] === 'string') {
+          console.error(`Error: Expected object for ${parentName}, but found string.`);
+          return prevServices;
+        }
+        if (!newServices[parentName]) {
+          newServices[parentName] = {};
+        }
+        (newServices[parentName] as NestedServices)[name] = value;
+      } else {
+        // Es un atributo regular
+        newServices[name] = value;
+      }
+      return newServices;
+    });
+  }, []);
+
+  
 
   const createRelacionJerarquicas = useCallback(
     async (componenteRed: ComponenteRedType) => {
@@ -53,7 +127,7 @@ export default function CreateForm() {
     [componenteSeleted],
   );
 
-  console.log(tipoComponente?.configAttributes);
+  console.log(tipoComponente?.configData);
 
   const onSubmit = useCallback(
     async (form: any) => {
@@ -76,28 +150,26 @@ export default function CreateForm() {
       // setIsSubmitting(true);
       const componenteRedService = new ComponenteRedService();
       const { data } = await componenteRedService.create({
-        label,
-        name,
         stationId: +stationId,
-        refSourceId: +refSourceId,
+        refSourceId: 1, //guillermo...+refSourceId,
         refComponentTypeId: +refComponentTypeId,
         refNetworkId: +refNetworkId,
         regionId: +regionId,
         status: 0,
         // componentId: 1,
-        attribute: JSON.stringify([attribute]),
+        attribute:  [attribute],
         observation,
-        service: {
-          label: service_label,
-          name: service_name,
-          status: +service_status,
-          attribute: JSON.stringify([service]),
-        },
+        service: [service],
         control: {
-          label: control_label,
-          name: control_name,
-          status: +control_status,
+          id: 0, 
+          label: label,
+          name: name,
+          status: 0,
         },
+        codigo : "",
+        controlId : 1,
+        componentId: 1,
+   
       });
       createRelacionJerarquicas(data.data);
       setIsSubmitting(false);
@@ -121,6 +193,7 @@ export default function CreateForm() {
       </header>
       <Form
         onSubmit={(value) => onSubmit(value as CreateComponenteRedDto)}
+
         className="grid grid-cols-3 content-start gap-4 px-6"
         initialValues={{
           regionId: "",
@@ -133,7 +206,7 @@ export default function CreateForm() {
         <h1 className="col-span-3 text-xl" id="datos">
           Datos del componente de red
         </h1>
-        <TextField
+       {/* guillermo adaptando el formulario<TextField
           name="control_label"
           label="Control etiqueta"
           fullWidth
@@ -144,8 +217,37 @@ export default function CreateForm() {
           label="Control nombre"
           fullWidth
           maxLength={255}
+        />*/}
+        <TextField
+          name={"name" as FormItem}
+          label="Nombre"
+          fullWidth
+          maxLength={255}
         />
-        <Select
+
+        <TextField
+          name={"label" as FormItem}
+          label="Etiqueta"
+          fullWidth
+          maxLength={255}
+        />
+
+         <SelectRedes
+            name={"refNetworkId" as FormItem}
+            onChange={(red) => setRed(red)}
+          />
+
+          <SelectTipoComponentes
+              name={"refComponentTypeId" as FormItem}
+              onChange={(tc) => setTipoComponente(tc)}
+          />
+
+         <SelectFuentes name={"refSourceId" as FormItem}
+              // onChange={(fuente) => setFuente(fuente)}
+          />
+
+
+          {/*<Select
           name="control_status"
           label="Control estado"
           options={CRStatusEnumOptions.map((option) => ({
@@ -153,26 +255,16 @@ export default function CreateForm() {
             value: option.value.toString(),
           }))}
           fullWidth
-        />
-        <TextField
+        />*/}
+        {/*<TextField
           name={"code" as FormItem}
           label="Código"
           fullWidth
           maxLength={255}
-        />
-        <TextField
-          name={"name" as FormItem}
-          label="Nombre"
-          fullWidth
-          maxLength={255}
-        />
-        <TextField
-          name={"label" as FormItem}
-          label="Etiqueta"
-          fullWidth
-          maxLength={255}
-        />
-        <hr className="col-span-3" />
+        />*/}
+
+
+
         <SelectRegiones name={"regionId" as FormItem} />
         <Select
           name={"stationId" as FormItem}
@@ -185,15 +277,29 @@ export default function CreateForm() {
           ]}
           fullWidth
         />
-        <SelectRedes
-          name={"refNetworkId" as FormItem}
-          onChange={(red) => setRed(red)}
-        />
-        <SelectTipoComponentes
-          name={"refComponentTypeId" as FormItem}
-          onChange={(tc) => setTipoComponente(tc)}
-        />
+
+    
         <SelectFuentes name={"refSourceId" as FormItem} />
+ 
+        <hr className="col-span-3" />
+        <hgroup className="col-span-3" id="config-adicional">
+        </hgroup>
+       
+
+        <ConfigAdicional
+          className="col-span-full"
+          tipoComponente={tipoComponente}
+          attribute={attribute}
+          onAttributes={onAttributes}
+          service={service}
+          onServices={onServices}
+    
+        />
+
+
+
+
+
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="relacion-jerarquica">
           <h4 className="text-[20px]">Relación jerarquica (opcional)</h4>
@@ -210,18 +316,6 @@ export default function CreateForm() {
                 (selected) => selected.id !== componente.id,
               ),
             );
-          }}
-        />
-        <ConfigAdicional
-          className="col-span-3"
-          tipoComponente={tipoComponente}
-          onAttributes={(name, value) => {
-            attribute[name] = value;
-            setAttribute({ ...attribute });
-          }}
-          onServices={(name, value) => {
-            service[name] = value;
-            setService({ ...service });
           }}
         />
         <hr className="col-span-3" />

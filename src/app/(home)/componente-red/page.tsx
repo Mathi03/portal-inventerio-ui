@@ -44,6 +44,7 @@ export default function ComponenteRedPage() {
       id: true,
       name: true,
       label: true,
+      controlLabel :true,
       regionId: true,
       refComponentTypeId: true,
       refNetworkId: true,
@@ -54,14 +55,15 @@ export default function ComponenteRedPage() {
       keyof Pick<
         ComponenteRedType,
         | "id"
-        | "label"
-        | "name"
+        | "controlLabel"
         | "regionId"
         | "refComponentTypeId"
         | "refNetworkId"
         | "refSourceId"
         | "controlId"
         | "stationId"
+
+
       >,
       boolean
     >,
@@ -76,6 +78,7 @@ export default function ComponenteRedPage() {
       q: search,
       ...filter,
     });
+    console.log("este es la data", data)
     setComponenteRedes(data.data.data);
     setItems(data.data.total);
     setIsLoading(false);
@@ -105,12 +108,12 @@ export default function ComponenteRedPage() {
       {
         title: "Nombre",
         key: "name",
-        hidden: !showColumn.name,
+        hidden: !showColumn.controlLabel,
       },
       {
         title: "Etiqueta",
-        key: "label",
-        hidden: !showColumn.label,
+        key: "controlLabel",
+        hidden: !showColumn.controlLabel,
       },
       {
         title: "Región",
@@ -164,7 +167,7 @@ export default function ComponenteRedPage() {
             }}
             onDelete={() => {
               confirm({
-                title: `Eliminar ${row.name}`,
+                title: `Eliminar ${row.controlLabel}`,
                 message: "¿Estás seguro de eliminar este componente de red?",
                 destructive: true,
                 onAccept: () => deteleRed(row.id),

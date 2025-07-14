@@ -16,6 +16,7 @@ export interface InputDynamicProps {
   valores_posibles_source?: string;
   valores_posibles_response?: ["label", "id"];
   onChange?: (name: string, value: any) => void;
+  value?: string | number | boolean | null; // Added the 'value' prop
 }
 export default function InputDynamic(props: InputDynamicProps) {
   const {
@@ -40,6 +41,7 @@ export default function InputDynamic(props: InputDynamicProps) {
     if (!valores_posibles_source) return;
     setLoading(true);
     const { data } = await source.get(valores_posibles_source);
+    
     setOptions(
       data.data.data.map((json: any) => {
         const [name, value] = valores_posibles_response;

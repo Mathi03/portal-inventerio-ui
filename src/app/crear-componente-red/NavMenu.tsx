@@ -13,11 +13,12 @@ const navItems: Record<string, NavItem[]> = {
       title: "Datos del componente de red",
       href: "#datos",
     },
-    { title: "Relación jerarquica", href: "#relacion-jerarquica" },
+
     {
       title: "Configuración adicional",
       href: "#config-adicional",
     },
+    { title: "Relación jerarquica", href: "#relacion-jerarquica" },
     {
       title: "Observación",
       href: "#observacion",
