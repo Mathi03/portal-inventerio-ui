@@ -4,32 +4,35 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
-import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
+import { FuenteService } from "@/core/fuente/fuente.service";
+import { FuenteType } from "@/core/fuente/fuente.type";
+import { TipoFuenteService } from "@/core/tipo-fuente/tipo-fuente.service";
 import { Spinner, TextField } from "@telefonica/mistica";
 import dayjs from "dayjs";
 import { useCallback, useState } from "react";
-const tipoComponenteService = new TipoComponenteService();
-export default function DetalleTipoComponente({ id }: { id: number }) {
-  const [tipoComponente, setTipoComponente] = useState<TipoComponenteType>();
+const fuenteService = new FuenteService();
+
+export default function DetalleTipoFuente({ id }: { id: number }) {
+  const [fuente, setFuente] = useState<FuenteType>();
   const [loading, setLoading] = useState(true);
-  const getTipoComponente = useCallback(async () => {
+  const getFuente = useCallback(async () => {
     setLoading(true);
-    const { data } = await tipoComponenteService.getById(id);
-    setTipoComponente(data);
+    const tipoFuenteService = new TipoFuenteService()
+    const { data } = await tipoFuenteService.getById(id);
+    setFuente(data.data);
     setLoading(false);
   }, [id]);
   return (
-    <Popover onOpenChange={() => !tipoComponente && getTipoComponente()}>
+    <Popover onOpenChange={() => !fuente && getFuente()}>
       <PopoverTrigger asChild>
         <div className="bg-[#e5f0ff] text-[#0066ff] flex gap-2 py-1 px-4 items-center rounded-3xl">
-          {tipoComponente?.label || id.toString()}{" "}
+          {fuente?.label || id.toString()}{" "}
           <Icon icon="multimodal_hand_eye" style={{ fontSize: "16px" }} />
         </div>
       </PopoverTrigger>
       <PopoverContent className="w-[420px] bg-[white] rounded-[24px]">
         <header className="py-4">
-          <h1 className="text-xl">Detalle de tipo de componente</h1>
+          <h1 className="text-xl">Detalle de fuente</h1>
         </header>
         <section className="grid grid-cols-2 gap-2 w-full mt-4">
           {loading && (
@@ -42,28 +45,28 @@ export default function DetalleTipoComponente({ id }: { id: number }) {
               <TextField
                 name="label"
                 label="Etiqueta"
-                value={tipoComponente?.label}
+                value={fuente?.label}
                 disabled
                 fullWidth
               />
               <TextField
                 name="name"
                 label="Nombre"
-                value={tipoComponente?.name}
+                value={fuente?.name}
                 disabled
                 fullWidth
               />
               <TextField
                 name="id"
                 label="ID"
-                value={tipoComponente?.id.toString()}
+                value={fuente?.id.toString()}
                 disabled
                 fullWidth
               />
               <TextField
                 name="label"
                 label="Fecha de creación"
-                value={dayjs(tipoComponente?.createdAt).format("DD/MM/YYYY")}
+                value={dayjs(fuente?.createdAt).format("DD/MM/YYYY")}
                 disabled
                 fullWidth
               />
