@@ -9,7 +9,7 @@ export enum TCTypeEnum {
   FISICO = 1,
   LOGICO = 0,
 }
-export interface TipoComponenteType {
+/*export interface TipoComponenteType {
   id: number; //id
   label: string; //etiqueta
   name: string; //nombre
@@ -19,7 +19,63 @@ export interface TipoComponenteType {
   createdAt: string; //fecha_creacion
   updatedAt: string; //fecha_actualizacion
   commentApproval?: string;
+}*/
+
+export interface TipoComponenteType {
+  id:              number;
+  label:           string;
+  name:            string;
+  status:          number;
+  commentApproval: string;
+  tipo:            string;
+  configData:      ConfigData[];
+  configRelation:  ConfigRelation[];
 }
+
+interface ConfigData {
+  id: number;
+  componentTypeId: number;
+  networkId: number;
+  status: number;
+  configAttributes: ConfigDataAttribute[];
+  configServices: ConfigDataService[]; // Ajusta según la estructura real
+}
+
+interface ConfigDataAttribute {
+  name: string;
+  type: string;
+  label: string;
+  default: boolean;
+  required: boolean;
+  place_holder: string;
+  html_form_type: "input" | "select" | "date";
+  valores_posibles?: Array<{ name: string; value: string }>;
+  atribs_config: ConfigDataAtribs_config[]
+}
+
+interface ConfigDataService {
+  name: string;
+  type: string;
+  label: string;
+  default: boolean;
+  required: boolean;
+  place_holder: string;
+  html_form_type: "input" | "select" | "date";
+  valores_posibles?: Array<{ name: string; value: string }>;
+  atribs_config: ConfigDataAtribs_config[]
+}
+
+interface ConfigDataAtribs_config {
+  name: string;
+  type: string;
+  label: string;
+  default: boolean;
+  required: boolean;
+  place_holder: string;
+  html_form_type: "input" | "select" | "date";
+  valores_posibles?: Array<{ name: string; value: string }>;
+}
+
 
 export interface CreateRefComponentTypeRequestDto {
   label: string;
@@ -85,6 +141,9 @@ export interface ConfigDatum {
     configAttributes: any[];
     configServices:   any[];
 }
+
+
+
 
 export interface ConfigRelation {
     componentTypeId:       number;

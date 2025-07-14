@@ -35,7 +35,7 @@ export default function SelectTipoComponentes({
       options={tipoComponentes
         .filter((tc) => tc.status === 1)
         .map((tc) => ({
-          text: tc.label,
+          text: tc.label,  
           value: tc.id.toString(),
         }))}
       helperText={isLoadingTC ? "cargando tipo de componentes..." : undefined}

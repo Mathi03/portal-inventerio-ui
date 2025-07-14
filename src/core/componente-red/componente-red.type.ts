@@ -7,16 +7,16 @@ export enum CRStatusEnum {
 }
 export interface ComponenteRedType {
   id: number;
-  label: string;
-  name: string;
-  code: string;
+  codigo: string;
   controlId: number;
+  controlLabel : string;
   stationId: number;
   regionId: number;
   refNetworkId: number;
   refComponentTypeId: number;
   componentId: number;
   attribute: string;
+  service: string;
   approvalComment: string;
   observation: string;
   status: CRStatusEnum;
@@ -27,7 +27,6 @@ export interface ComponenteRedType {
   updatedBy: string;
   refSourceId: number;
   control?: ControlType;
-  service?: ServicioType;
   relations: any;
 }
 

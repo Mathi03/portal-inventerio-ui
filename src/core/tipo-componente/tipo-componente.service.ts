@@ -3,6 +3,7 @@ import { PaginationDto } from "../pagination/dto/create.dto";
 import { CreateTipoComponenteDto } from "./dto/create.dto";
 import { QueryTipoComponenteDto } from "./dto/search.dto";
 import { TipoComponenteType } from "./tipo-componente.type";
+import { AllTipoComponenteResponse } from "./tipo-componente.type";
 
 export class TipoComponenteService {
   public async create(createTipoComponente: CreateTipoComponenteDto) {
@@ -14,7 +15,7 @@ export class TipoComponenteService {
   }
 
   public async findAll(queryTipoComponente: QueryTipoComponenteDto) {
-    const response = await bff.get<PaginationDto<TipoComponenteType[]>>(
+    const response = await bff.get<PaginationDto<AllTipoComponenteResponse[]>>(
       "/v1/portal/ref-component-type",
       {
         params: queryTipoComponente,

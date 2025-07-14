@@ -43,7 +43,7 @@ export class ComponenteRedService {
       this.getRelations(componenteRed.id),
     ]);
     componenteRed.control = control;
-    componenteRed.service = services[0];
+    //GuillermocomponenteRed.service = services;
     componenteRed.relations = relations;
     return componenteRed;
   }
