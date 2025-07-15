@@ -17,6 +17,14 @@ export const msDirecciones = axios.create({
   },
 });
 
+export const cnr = axios.create({
+  baseURL: "/cnr",
+  headers: {
+    "X-CORRELATION-ID": "2|E11011|332928",
+    "X-TOKEN-ID": "12",
+  },
+});
+
 export const estaciones = axios.create({
   baseURL: "/estaciones",
   headers: {
