@@ -450,7 +450,7 @@ export default function Create({
     await tipoComponenteService.approval(
       tipoComponente?.id as number,
       value.commentApproval,
-      isApproved ? 1 : 3
+      isApproved ? 1 : 4
     );
     onClose();
     onSuccess();

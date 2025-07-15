@@ -40,8 +40,8 @@ export default function Filter({
           optional
         />
         <TextField
-          id="nombre"
-          name="nombre"
+          id="name"
+          name="name"
           label="Nombre"
           fullWidth
           optional
@@ -54,14 +54,26 @@ export default function Filter({
         />
         <SelectTipoComponentes name={"ref_component_type_id" as FilterType} />
         <SelectRedes name={"ref_network_id" as FilterType} />
+        <SelectFuentes name={"ref_source_id" as FilterType} />
         <SelectRegiones name={"region_id" as FilterType} />
+        <TextField
+          name={"client_id" as FilterType}
+          label="Id Cliente"
+          fullWidth
+          optional
+        />
         <TextField
           name={"control_id" as FilterType}
           label="Id Control"
           fullWidth
           optional
         />
-        <SelectFuentes name={"ref_source_id" as FilterType} />
+        <TextField
+          name={"station_id" as FilterType}
+          label="Id Estacion"
+          fullWidth
+          optional
+        />
       </section>
       <footer className="grid gap-4 grid-cols-2 p-4 border-t-[1px] border-[#eee]">
         <Button variant="secondary">Limpiar</Button>
