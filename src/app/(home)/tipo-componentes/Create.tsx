@@ -449,7 +449,8 @@ export default function Create({
     const tipoComponenteService = new TipoComponenteService();
     await tipoComponenteService.approval(
       tipoComponente?.id as number,
-      value.commentApproval
+      value.commentApproval,
+      isApproved ? 1 : 3
     );
     onClose();
     onSuccess();
@@ -686,7 +687,7 @@ export default function Create({
               name="isApproved"
               checked={isApproved}
               onChange={(value: boolean) => {
-                setIsApproved(!isApproved);
+                setIsApproved(value);
               }}
             >
               Desea aprobar este tipo de componente?

@@ -9,7 +9,7 @@ export class TipoComponenteService {
   public async create(createTipoComponente: CreateTipoComponenteDto) {
     const response = await bff.post(
       "/v1/portal/ref-component-type",
-      createTipoComponente,
+      createTipoComponente
     );
     return response;
   }
@@ -19,7 +19,7 @@ export class TipoComponenteService {
       "/v1/portal/ref-component-type",
       {
         params: queryTipoComponente,
-      },
+      }
     );
     return response;
   }
@@ -27,32 +27,21 @@ export class TipoComponenteService {
   public async getById(id: number) {
     return await bff.get(`/v1/portal/ref-component-type/${id}`);
   }
-    public async All(
-    idList:any,
-  ) {
-    return await bff.post(
-      `/v1/portal/ref-component-type/ALL`,
-      idList,
-    );
+  public async All(idList: any) {
+    return await bff.post(`/v1/portal/ref-component-type/ALL`, idList);
   }
 
-  public async update(
-    id: number,
-    dto: CreateTipoComponenteDto,
-  ) {
-    return await bff.put(
-      `/v1/portal/ref-component-type/${id}`,
-      dto,
-    );
+  public async update(id: number, dto: CreateTipoComponenteDto) {
+    return await bff.put(`/v1/portal/ref-component-type/${id}`, dto);
   }
 
   public async detele(id: number) {
     return await bff.delete(`/v1/portal/ref-component-type/${id}`);
   }
 
-  public async approval(id: number, commentApproval: string) {
+  public async approval(id: number, commentApproval: string, status: number) {
     return await bff.patch(`/v1/portal/ref-component-type/${id}`, {
-      status: 1,
+      status,
       commentApproval,
     });
   }
