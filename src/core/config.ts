@@ -47,3 +47,16 @@ export const source = axios.create({
     "X-TOKEN-ID": "12",
   },
 });
+
+function attachTokenInterceptor(client: ReturnType<typeof axios.create>) {
+  client.interceptors.request.use((config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers["X-TOKEN-ID"] = `Bearer ${token}`;
+    }
+    return config;
+  });
+}
+
+[bff, cnr, contacto].forEach(attachTokenInterceptor);
