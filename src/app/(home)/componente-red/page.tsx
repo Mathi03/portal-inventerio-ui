@@ -43,7 +43,8 @@ export default function ComponenteRedPage() {
       id: true,
       name: true,
       label: true,
-      controlLabel: true,
+      controlName :true,
+      controlLabel :true,
       regionId: true,
       refComponentTypeId: true,
       refNetworkId: true,
@@ -54,6 +55,7 @@ export default function ComponenteRedPage() {
       keyof Pick<
         ComponenteRedType,
         | "id"
+        | "controlName"
         | "controlLabel"
         | "regionId"
         | "refComponentTypeId"
@@ -132,8 +134,8 @@ export default function ComponenteRedPage() {
       },
       {
         title: "Nombre",
-        key: "name",
-        hidden: !showColumn.controlLabel,
+        key: "controlName",
+        hidden: !showColumn.controlName,
       },
       {
         title: "Etiqueta",

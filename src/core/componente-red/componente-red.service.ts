@@ -37,14 +37,15 @@ export class ComponenteRedService {
     } = await bff.get<{ data: ComponenteRedType }>(
       `/v1/portal/components/${id}`
     );
-    const [control, services, relations] = await Promise.all([
+    /*Guillermo ojooooo const [control, services, relations] = await Promise.all([
       this.controlService.findById(componenteRed.controlId),
       this.servicioService.findAll({ controlId: componenteRed.controlId }),
       this.getRelations(componenteRed.id),
     ]);
     componenteRed.control = control;
     //GuillermocomponenteRed.service = services;
-    componenteRed.relations = relations;
+    componenteRed.relations = relations;*/
+    console.log("getId ===> ", componenteRed)
     return componenteRed;
   }
 
