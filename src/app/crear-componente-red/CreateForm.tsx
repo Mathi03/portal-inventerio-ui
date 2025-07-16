@@ -133,7 +133,7 @@ export default function CreateForm() {
     async (form: any) => {
       const {
         label,
-        name,
+        name,    
         stationId,
         refSourceId,
         refComponentTypeId,
@@ -146,6 +146,7 @@ export default function CreateForm() {
         service_label,
         service_name,
         service_status,
+        codigo,
       } = form;
       // setIsSubmitting(true);
       const componenteRedService = new ComponenteRedService();
@@ -166,6 +167,7 @@ export default function CreateForm() {
           name: name,
           status: 0,
         },
+        code : "",
         codigo : "",
         controlId : 1,
         componentId: 1,
@@ -242,9 +244,7 @@ export default function CreateForm() {
               onChange={(tc) => setTipoComponente(tc)}
           />
 
-         <SelectFuentes name={"refSourceId" as FormItem}
-              // onChange={(fuente) => setFuente(fuente)}
-          />
+         <SelectFuentes name={"refSourceId" as FormItem} />
 
 
           {/*<Select
@@ -279,7 +279,6 @@ export default function CreateForm() {
         />
 
     
-        <SelectFuentes name={"refSourceId" as FormItem} />
  
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="config-adicional">
