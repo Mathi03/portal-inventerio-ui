@@ -21,12 +21,12 @@ const Aprobar = () => {
       const response = await tipoComponenteService.All({ idList: [id] });
       const tipoComponente = response?.data?.[0];
 
-      if (!tipoComponente || tipoComponente.status !== 3) {
-        router.back();
+      if (!tipoComponente || tipoComponente.status === 1) {
+        router.push("/tipo-componentes");
       }
     } catch (error) {
       console.error("Error al obtener el tipo de componente:", error);
-      router.back();
+      router.push("/tipo-componentes");
     }
   }, [id, tipoComponenteService, router]);
 
