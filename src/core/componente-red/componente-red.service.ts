@@ -13,7 +13,7 @@ export class ComponenteRedService {
   public async create(createComponenteRed: CreateComponenteRedDto) {
     const response = await bff.post(
       "/v1/portal/components",
-      createComponenteRed,
+      createComponenteRed
     );
     return response;
   }
@@ -23,10 +23,10 @@ export class ComponenteRedService {
       "/v1/portal/components",
       {
         params: queryComponenteRed,
-      },
+      }
     );
     response.data.data.data = response.data.data.data.filter(
-      (componente) => !componente.disabledAt,
+      (componente) => !componente.disabledAt
     );
     return response;
   }
@@ -35,16 +35,17 @@ export class ComponenteRedService {
     const {
       data: { data: componenteRed },
     } = await bff.get<{ data: ComponenteRedType }>(
-      `/v1/portal/components/${id}`,
+      `/v1/portal/components/${id}`
     );
-    const [control, services, relations] = await Promise.all([
+    /*Guillermo ojooooo const [control, services, relations] = await Promise.all([
       this.controlService.findById(componenteRed.controlId),
       this.servicioService.findAll({ controlId: componenteRed.controlId }),
       this.getRelations(componenteRed.id),
     ]);
     componenteRed.control = control;
     //GuillermocomponenteRed.service = services;
-    componenteRed.relations = relations;
+    componenteRed.relations = relations;*/
+    console.log("getId ===> ", componenteRed)
     return componenteRed;
   }
 
@@ -59,7 +60,7 @@ export class ComponenteRedService {
   public async approve(
     id: number,
     approvalComment: string,
-    observation: string,
+    observation: string
   ) {
     return await bff.patch(`/v1/portal/components/${id}`, {
       approvalComment,
@@ -73,5 +74,18 @@ export class ComponenteRedService {
       }>(`/v1/portal/components/${id}/relation`)
       .catch((err) => err);
     return data?.data;
+  }
+
+  public async getByClientId(id: number, params: QueryComponenteRedDto) {
+    const response = await bff.get<PaginationDto<ComponenteRedType[]>>(
+      `/v1/portal/components/${id}/client`,
+      {
+        params,
+      }
+    );
+    response.data.data.data = response.data.data.data.filter(
+      (componente) => !componente.disabledAt
+    );
+    return response;
   }
 }

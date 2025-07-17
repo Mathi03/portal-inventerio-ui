@@ -21,7 +21,6 @@ import DetalleFuente from "../DetalleFuente";
 import DetalleControl from "../DetalleControl";
 
 export default function ComponenteRedPage() {
-  const [search, setSearch] = useState<string | null>();
   const { confirm } = useDialog();
   const { openSnackbar } = useSnackbar();
   const router = useRouter();
@@ -32,7 +31,7 @@ export default function ComponenteRedPage() {
   const [limit, setLimit] = useState<number>(20);
 
   const [componenteRedes, setComponenteRedes] = useState<ComponenteRedType[]>(
-    [],
+    []
   );
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [filter, setFilter] = useState({} as FormFilterType);
@@ -44,6 +43,7 @@ export default function ComponenteRedPage() {
       id: true,
       name: true,
       label: true,
+      controlName :true,
       controlLabel :true,
       regionId: true,
       refComponentTypeId: true,
@@ -55,6 +55,7 @@ export default function ComponenteRedPage() {
       keyof Pick<
         ComponenteRedType,
         | "id"
+        | "controlName"
         | "controlLabel"
         | "regionId"
         | "refComponentTypeId"
@@ -62,27 +63,53 @@ export default function ComponenteRedPage() {
         | "refSourceId"
         | "controlId"
         | "stationId"
-
-
       >,
       boolean
-    >,
+    >
   );
 
   const getComponenteRedes = useCallback(async () => {
     setIsLoading(true);
     const componenteRed = new ComponenteRedService();
-    const { data } = await componenteRed.findAll({
-      page,
-      limit,
-      q: search,
-      ...filter,
-    });
-    console.log("este es la data", data)
-    setComponenteRedes(data.data.data);
-    setItems(data.data.total);
-    setIsLoading(false);
-  }, [page, limit, filter, search]);
+
+    const cleanedFilter: Partial<typeof filter> = Object.fromEntries(
+      Object.entries(filter).filter(
+        ([, value]) => value !== null && value !== ""
+      )
+    );
+
+    try {
+      let data;
+
+      if (cleanedFilter.client_id) {
+        const response = await componenteRed.getByClientId(
+          cleanedFilter.client_id,
+          {
+            page,
+            limit,
+          }
+        );
+        data = response.data.data;
+        console.log("clientes", data);
+      } else {
+        // Llamada normal
+        const response = await componenteRed.findAll({
+          page,
+          limit,
+          ...cleanedFilter,
+        });
+        data = response.data.data;
+      }
+
+      setComponenteRedes(data.data);
+      setItems(data.total);
+    } catch (error) {
+      console.error("Error al obtener componentes de red:", error);
+      openSnackbar({ message: "Error al cargar datos", type: "CRITICAL" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, limit, filter, openSnackbar]);
 
   const deteleRed = useCallback(
     async (id: number) => {
@@ -91,7 +118,7 @@ export default function ComponenteRedPage() {
       getComponenteRedes();
       openSnackbar({ message: "Componente de red eliminado" });
     },
-    [getComponenteRedes, openSnackbar],
+    [getComponenteRedes, openSnackbar]
   );
   const columns = useMemo<TableColumn<ComponenteRedType>[]>(() => {
     return [
@@ -107,8 +134,8 @@ export default function ComponenteRedPage() {
       },
       {
         title: "Nombre",
-        key: "name",
-        hidden: !showColumn.controlLabel,
+        key: "controlName",
+        hidden: !showColumn.controlName,
       },
       {
         title: "Etiqueta",
@@ -193,7 +220,23 @@ export default function ComponenteRedPage() {
           header={
             <header className="grid grid-cols-[1fr_auto] justify-between gap-4">
               <h1 className="col-span-2 text-[22px]">Componente de redes</h1>
-              <InputSearch onSearch={(value) => setSearch(value)} />
+              <InputSearch
+                onSearch={(value) =>
+                  setFilter({
+                    q: value ?? "",
+                    label: "",
+                    name: "",
+                    status: "",
+                    version: "",
+                    ref_component_type_id: "",
+                    ref_network_id: "",
+                    ref_source_id: "",
+                    region_id: "",
+                    station_id: "",
+                    client_id: "",
+                  })
+                }
+              />
               <menu className="flex gap-4">
                 <ExportXLS />
                 <ShowColumns

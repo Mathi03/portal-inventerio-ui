@@ -9,6 +9,7 @@ export type CreateComponenteRedDto = Pick<
   | "observation"
   | "status"
   | "refSourceId"
+  | "code"
   | "codigo"
   | "controlId"
   | "componentId"

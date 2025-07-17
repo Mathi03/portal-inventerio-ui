@@ -15,11 +15,13 @@ export default function DetalleComponenteRed() {
   const getComponenteRed = useCallback(async () => {
     const componenteRed = new ComponenteRedService();
     const data = await componenteRed.getById(+id!);
+    console.log("guillermo", data)
     setComponenteRed(data);
   }, [id]);
 
   useEffect(() => {
     getComponenteRed();
+
   }, [getComponenteRed]);
   return (
     <main className="grid grid-rows-[auto_1fr] w-full h-full grid-cols-1">

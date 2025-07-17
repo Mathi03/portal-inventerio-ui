@@ -21,6 +21,11 @@ const nextConfig: NextConfig = {
         destination: `${process.env.API_URL_ESTACIONES}/:path*`,
         basePath: false,
       },
+      {
+        source: "/cnr/:path*",
+        destination: `${process.env.API_URL_CNR}/:path*`,
+        basePath: false,
+      },
     ];
   },
 };

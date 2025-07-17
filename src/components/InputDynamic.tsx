@@ -17,6 +17,7 @@ export interface InputDynamicProps {
   valores_posibles_response?: ["label", "id"];
   onChange?: (name: string, value: any) => void;
   value?: string | number | boolean | null; // Added the 'value' prop
+  currentValue?: string; // Puedes ajustar el tipo según lo que esperas (ej. solo string para texto)
 }
 export default function InputDynamic(props: InputDynamicProps) {
   const {
@@ -28,6 +29,7 @@ export default function InputDynamic(props: InputDynamicProps) {
     valores_posibles_source,
     valores_posibles_response = [],
     onChange = () => {},
+    currentValue
   } = props;
 
   const [loading, setLoading] = useState<boolean>(
@@ -81,6 +83,7 @@ export default function InputDynamic(props: InputDynamicProps) {
       );
     }
     case "input": {
+      console.log("este es el name=======> ", name);
       return (
         <TextField
           name={name}
@@ -90,6 +93,7 @@ export default function InputDynamic(props: InputDynamicProps) {
           onChange={(e) => {
             onChange(name, e.target.value);
           }}
+          value = {currentValue}
           maxLength={255}
         />
       );

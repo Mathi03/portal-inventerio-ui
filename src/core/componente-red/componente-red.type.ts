@@ -7,8 +7,10 @@ export enum CRStatusEnum {
 }
 export interface ComponenteRedType {
   id: number;
+  code: string;
   codigo: string;
   controlId: number;
+  controlName : string;
   controlLabel : string;
   stationId: number;
   regionId: number;

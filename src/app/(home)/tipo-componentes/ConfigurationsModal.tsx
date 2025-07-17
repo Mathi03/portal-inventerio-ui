@@ -1,16 +1,28 @@
 import InputJson from "@/components/InputJson";
 import { ButtonSecondary, ButtonPrimary } from "@telefonica/mistica";
 import { useState } from "react";
-import { jsonSchema } from "./jsonSchema";
+import { jsonSchemaAttribute } from "./jsonSchemaAttribute";
+import { ZodError, ZodIssue } from "zod";
 
-const validateJson = (value: any) => {
-  const result = jsonSchema.safeParse(value);
+const validateJson = (value: any, type: "attributes" | "services") => {
+  const result =
+    type === "attributes"
+      ? jsonSchemaAttribute.safeParse(value)
+      : jsonSchemaAttribute.safeParse(value);
+
   if (!result.success) {
-    console.log("Errores de validación:", result.error.format());
-    return false;
+    const error = result.error;
+    return { success: false, error };
   }
-  console.log("Validación exitosa ✅");
-  return true;
+
+  return { success: true, error: null };
+};
+
+const traducirLiteral = (issue: ZodIssue) => {
+  if (issue.code === "invalid_literal") {
+    return `Valor no permitido. Se esperaba "${issue.expected}", pero se recibió "${issue.received}"`;
+  }
+  return issue.message;
 };
 
 function ConfigurationsModal({
@@ -34,17 +46,57 @@ function ConfigurationsModal({
   const [jsonError, setJsonError] = useState<string | null>(null);
 
   const handleJsonChange = (value: string) => {
-    console.log("value json", value);
+    try {
+      const { success, error } = validateJson(value, type);
+      console.log("error", error);
 
-    const isValid = validateJson(value);
-    if (!isValid) {
-      setJsonError("JSON inválido");
-    } else setJsonError("");
+      if (!success && error instanceof ZodError) {
+        const messages: string[] = [];
 
-    if (value) {
-      setTempValue(value);
+        error.errors.forEach((err) => {
+          const path =
+            err.path.length > 0 ? err.path.join(".") : "raíz del objeto";
+
+          if (err.code === "invalid_union" && "unionErrors" in err) {
+            const allLiterals = err.unionErrors.every((unionErr: ZodError) =>
+              unionErr.errors.every((issue) => issue.code === "invalid_literal")
+            );
+
+            if (allLiterals) {
+              const expectedValues = err.unionErrors.flatMap(
+                (unionErr: ZodError) =>
+                  unionErr.errors
+                    .filter((i) => i.code === "invalid_literal")
+                    .map((i) => `"${i.expected}"`)
+              );
+
+              const receivedValue = err.unionErrors[0]?.errors[0]?.received;
+
+              messages.push(
+                `- Error en "${path}": Valor no permitido.\n  Se esperaba uno de: ${[...new Set(expectedValues)].join(", ")}.\n  Se recibió: "${receivedValue}".`
+              );
+            } else {
+              const unionMessages = err.unionErrors.flatMap(
+                (unionErr: ZodError) =>
+                  unionErr.errors.map(
+                    (issue) => `- Error en "${path}": ${issue.message}`
+                  )
+              );
+              messages.push(...unionMessages);
+            }
+          } else {
+            messages.push(`- Error en "${path}": ${err.message}`);
+          }
+        });
+
+        setJsonError(messages.join("\n"));
+      } else {
+        setJsonError("");
+        setTempValue(value);
+      }
+    } catch (_e: any) {
+      setJsonError("El contenido no es un JSON válido.");
     }
-    // setJsonError(null);
   };
 
   return (
@@ -76,7 +128,7 @@ function ConfigurationsModal({
             }
             onChange={handleJsonChange}
           />
-          {jsonError && <div className="text-red-500 mt-2">{jsonError}</div>}
+          {jsonError && <div className="text-red-500 mt-2 whitespace-pre-line">{jsonError}</div>}
         </div>
         <div className="flex justify-end gap-2 mt-4">
           <ButtonSecondary onPress={onClose}>Cerrar</ButtonSecondary>
