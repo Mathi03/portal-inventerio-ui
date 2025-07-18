@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/cnr/:path*",
-        destination: `${process.env.API_URL_CNR}/:path*`,
+        destination: `${process.env.API_URL_CNR}/api/:path*`,
         basePath: false,
       },
     ];

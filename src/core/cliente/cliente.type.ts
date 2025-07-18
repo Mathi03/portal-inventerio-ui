@@ -4,15 +4,11 @@ export enum ClienteStatusEnum {
 }
 export interface ClienteType {
   id: number; //id
-  label: string; //etiqueta
-  name: string; //nombre
-  status: ClienteStatusEnum; //estatus
-  refNetworkId: number; //id_red
-  refComponentTypeId: number; //id_tipo_componente
-  refTypeSourceId: number;
-  version: string; //version
-  attribute: string; //atributo
-  createdAt: string; //fecha_creacion
+  idestatus: number;
+  nombreadministrativo: string;
+  rif: string;
+  nombrecomercial: string;
+  updatedBy: string; //fecha_creacion
   updatedAt: string; //fecha_actualizacion
 }
 

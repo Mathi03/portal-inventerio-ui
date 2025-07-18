@@ -53,7 +53,7 @@ function attachTokenInterceptor(client: ReturnType<typeof axios.create>) {
     const token = localStorage.getItem("token");
     if (token) {
       config.headers = config.headers || {};
-      config.headers["X-TOKEN-ID"] = `Bearer ${token}`;
+      config.headers["X-TOKEN-ID"] = `${token}`;
     }
     return config;
   });

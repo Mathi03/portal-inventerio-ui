@@ -1,7 +1,6 @@
 "use client";
 import Button from "@/components/Button";
-import { Form, TextField } from "@telefonica/mistica";
-import Select from "@/components/Select";
+import { TextField } from "@telefonica/mistica";
 import { useState, useEffect, useCallback } from "react";
 import { QueryComponenteRedDto } from "@/core/componente-red/dto/search.dto";
 import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
@@ -13,6 +12,8 @@ import { RegionType } from "@/core/region/region.type";
 import { FuenteType } from "@/core/fuente/fuente.type";
 import { FuenteService } from "@/core/fuente/fuente.service";
 import SearchableSelect from "@/components/SearchableSelect";
+import SearchClient from "@/components/SearchClient";
+import { useModalStore } from "@/hooks/modalStorage";
 
 export type FormFilterType = Omit<
   QueryComponenteRedDto,
@@ -36,7 +37,9 @@ export default function Filter({
 }: {
   onFilter: (form: FormFilterType) => void;
 }) {
+  const { openModal } = useModalStore();
   const [formValues, setFormValues] = useState<FormFilterType>(defaultValues);
+  const [clientName, setClientName] = useState("");
 
   const handleChange = (name: keyof FormFilterType, value: string) => {
     setFormValues((prev) => ({ ...prev, [name]: value }));
@@ -49,6 +52,7 @@ export default function Filter({
   const handleReset = () => {
     setFormValues(defaultValues);
     onFilter(defaultValues);
+    setClientName("");
   };
 
   // Estado y carga para selects
@@ -109,8 +113,11 @@ export default function Filter({
   }, [fetchTipoComponentes, fetchRedes, fetchRegiones, fetchFuentes]);
 
   return (
-    <Form
-      onSubmit={handleSubmit}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit();
+      }}
       className="max-w-[360px] bg-white rounded-[8px] grid grid-rows-[auto_1fr_auto] gap-4 overflow-hidden"
     >
       <header className="p-4 grid gap-4">
@@ -162,10 +169,7 @@ export default function Filter({
           }
           options={tipoComponentes
             .filter((tc) => tc.status === 1)
-            .map((tc) => ({
-              text: tc.label,
-              value: tc.id.toString(),
-            }))}
+            .map((tc) => ({ text: tc.label, value: tc.id.toString() }))}
           optional
           fullWidth
         />
@@ -179,10 +183,7 @@ export default function Filter({
           helperText={isLoadingRedes ? "Cargando redes..." : undefined}
           options={redes
             .filter((r) => r.status === 1)
-            .map((r) => ({
-              text: r.label,
-              value: r.id.toString(),
-            }))}
+            .map((r) => ({ text: r.label, value: r.id.toString() }))}
           optional
           fullWidth
         />
@@ -217,14 +218,32 @@ export default function Filter({
           fullWidth
         />
 
-        <TextField
-          name="client_id"
-          label="Id Cliente"
-          value={formValues.client_id}
-          onChange={(e) => handleChange("client_id", e.target.value)}
-          fullWidth
-          optional
-        />
+        <div
+          onClick={() => {
+            openModal(
+              <SearchClient
+                onSelected={(client) => {
+                  if (client.id && client.nombreadministrativo) {
+                    setFormValues((prev) => ({
+                      ...prev,
+                      client_id: client.id.toString(),
+                    }));
+                    setClientName(client.nombreadministrativo.toString());
+                  }
+                }}
+              />
+            );
+          }}
+        >
+          <TextField
+            id="client_id"
+            name="client_id"
+            label="Cliente"
+            fullWidth
+            value={clientName}
+            readOnly
+          />
+        </div>
         <TextField
           name="station_id"
           label="Id Estacion"
@@ -238,8 +257,8 @@ export default function Filter({
         <Button variant="secondary" onClick={handleReset}>
           Limpiar
         </Button>
-        <Button>Buscar</Button>
+        <Button variant="primary">Buscar</Button>
       </footer>
-    </Form>
+    </form>
   );
 }

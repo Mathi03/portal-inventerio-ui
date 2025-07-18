@@ -30,7 +30,8 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "uiw": "^4.22.3",
-    "zod": "^3.25.64"
+    "zod": "^3.25.64",
+    "zustand": "^5.0.6"
   },
   "devDependencies": {
     "@types/node": "^20",
