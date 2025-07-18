@@ -1,5 +1,6 @@
 import Aside from "@/components/Aside";
 import Button from "@/components/Button";
+import SearchableSelect from "@/components/SearchableSelect";
 import Select from "@/components/Select";
 import { UpdateFuenteDto } from "@/core/fuente/dto/update.dto";
 import { FuenteService } from "@/core/fuente/fuente.service";
@@ -144,7 +145,7 @@ export default function Edit({
           fullWidth
           maxLength={255}
         />
-        <Select
+        <SearchableSelect
           disabled={isLoadingTC}
           name={"refComponentTypeId" as FormItem}
           label="Tipo de componente"

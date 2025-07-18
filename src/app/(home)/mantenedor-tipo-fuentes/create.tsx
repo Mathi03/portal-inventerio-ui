@@ -1,15 +1,23 @@
 import Aside from "@/components/Aside";
 import Button from "@/components/Button";
-import { Form, TextField, useSnackbar } from "@telefonica/mistica";
+import { TextField, useSnackbar } from "@telefonica/mistica";
 import { useCallback, useState } from "react";
 import Select from "@/components/Select";
 import { TipoFuenteService } from "@/core/tipo-fuente/tipo-fuente.service";
 import { CreateTipoFuenteDto } from "@/core/tipo-fuente/dto/create.dto";
-import { TipoFuenteStatusEnumOptions } from "@/core/tipo-fuente/tipo-fuente.type";
+import {
+  TipoFuenteStatusEnum,
+  TipoFuenteStatusEnumOptions,
+} from "@/core/tipo-fuente/tipo-fuente.type";
 import axios from "axios";
 import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
 
-type FormItem = keyof CreateTipoFuenteDto;
+const convertirFormato = (texto: string): string => {
+  return texto
+    .split(" ")
+    .map((palabra) => palabra.toUpperCase())
+    .join("_");
+};
 
 export default function Create({
   onSuccess,
@@ -21,39 +29,59 @@ export default function Create({
   const { openSnackbar } = useSnackbar();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const onSubmit = useCallback(
-    async ({ label, name, status }: CreateTipoFuenteDto) => {
-      setIsSubmitting(true);
-      const fuenteService = new TipoFuenteService();
+  const [formData, setFormData] = useState<CreateTipoFuenteDto>({
+    name: "",
+    label: "",
+    status:
+      TipoFuenteStatusEnumOptions[0]?.value ?? TipoFuenteStatusEnum.ACTIVO,
+  });
 
-      try {
-        await fuenteService.create({
-          label,
-          name,
-          status: +status,
-        });
-
-        onSuccess();
-        onClose();
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
-          const errorMessage = errorMessageInAPI;
-          openSnackbar({
-            message: errorMessage,
-            type: "CRITICAL",
-          });
-        } else {
-          openSnackbar({
-            message: errorGeneric,
-            type: "CRITICAL",
-          });
-        }
-      } finally {
-        setIsSubmitting(false);
+  const handleChange = (key: keyof CreateTipoFuenteDto, value: string) => {
+    setFormData((prev) => {
+      if (key === "name") {
+        return {
+          ...prev,
+          name: value,
+          label: convertirFormato(value),
+        };
+      } else {
+        return {
+          ...prev,
+          [key]: value,
+        };
       }
-    },
-    [onSuccess, onClose, openSnackbar]
-  );
+    });
+  };
+
+  const onSubmit = useCallback(async () => {
+    setIsSubmitting(true);
+    const fuenteService = new TipoFuenteService();
+
+    try {
+      await fuenteService.create({
+        label: formData.label,
+        name: formData.name,
+        status: +formData.status,
+      });
+
+      onSuccess();
+      onClose();
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        openSnackbar({
+          message: errorMessageInAPI,
+          type: "CRITICAL",
+        });
+      } else {
+        openSnackbar({
+          message: errorGeneric,
+          type: "CRITICAL",
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [formData, onSuccess, onClose, openSnackbar]);
 
   return (
     <Aside
@@ -63,47 +91,49 @@ export default function Create({
       <header className="p-6 grid gap-4">
         <h4 className="text-[28px]">Crear mantenedor de tipo fuente</h4>
         <p>
-          Ingrese todo los datos correspondiente para crear con éxito un
+          Ingrese todos los datos correspondientes para crear con éxito un
           mantenedor de tipo fuente
         </p>
       </header>
-      <Form
-        initialValues={{
-          label: "",
-          name: "",
-          status: TipoFuenteStatusEnumOptions[0]?.value.toString() ?? "1",
-        }}
-        onSubmit={(value) => onSubmit(value as CreateTipoFuenteDto)}
-        className="grid gap-4 px-6 content-start"
-      >
+
+      <div className="grid gap-4 px-6 content-start">
         <TextField
-          name={"label" as FormItem}
-          label="Etiqueta"
-          fullWidth
-          maxLength={255}
-        />
-        <TextField
-          name={"name" as FormItem}
+          name="name"
           label="Nombre"
           fullWidth
           maxLength={255}
+          value={formData.name}
+          onChangeValue={(value) => handleChange("name", value)}
+        />
+        <TextField
+          name="label"
+          label="Etiqueta"
+          fullWidth
+          maxLength={255}
+          value={formData.label}
+          onChangeValue={(value) => handleChange("label", value)}
         />
         <Select
-          name={"status" as FormItem}
+          name="status"
           label="Estado"
           options={TipoFuenteStatusEnumOptions.map((option) => ({
             text: option.label,
             value: option.value.toString(),
           }))}
+          value={formData.status.toString()}
+          onChangeValue={(value) => handleChange("status", value)}
           fullWidth
         />
-        <footer className="grid gap-4 p-4 border-t-[1px] border-[#eee]">
-          <Button showSpinner={isSubmitting}>Guardar</Button>
-          <Button variant="link" onClick={onClose}>
-            Cerrar
-          </Button>
-        </footer>
-      </Form>
+      </div>
+
+      <footer className="grid gap-4 p-4 border-t-[1px] border-[#eee]">
+        <Button showSpinner={isSubmitting} onClick={onSubmit}>
+          Guardar
+        </Button>
+        <Button variant="link" onClick={onClose}>
+          Cerrar
+        </Button>
+      </footer>
     </Aside>
   );
 }

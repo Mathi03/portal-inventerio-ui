@@ -11,6 +11,7 @@ import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type"
 import { TextField } from "@telefonica/mistica";
 import { TipoFuenteService } from "@/core/tipo-fuente/tipo-fuente.service";
 import { TipoFuenteType } from "@/core/tipo-fuente/tipo-fuente.type";
+import SearchableSelect from "@/components/SearchableSelect";
 
 export type FormType = keyof Pick<
   FuenteType,
@@ -149,7 +150,7 @@ export default function Filter({
           value={formData.name}
           onChange={(e) => handleChange("name", e.target.value)}
         />
-        <Select
+        <SearchableSelect
           name="refComponentTypeId"
           label="Tipo de componente"
           fullWidth
@@ -162,7 +163,7 @@ export default function Filter({
             value: tc.id.toString(),
           }))}
         />
-        <Select
+        <SearchableSelect
           name="refNetworkId"
           label="Red"
           fullWidth
@@ -175,7 +176,7 @@ export default function Filter({
             value: red.id.toString(),
           }))}
         />
-        <Select
+        <SearchableSelect
           name="refTypeSourceId"
           label="Tipo Fuente"
           fullWidth

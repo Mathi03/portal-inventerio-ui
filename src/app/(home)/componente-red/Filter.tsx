@@ -10,6 +10,9 @@ import { msDirecciones } from "@/core/config";
 import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
 import { RedType } from "@/core/red/red.type";
 import { RegionType } from "@/core/region/region.type";
+import { FuenteType } from "@/core/fuente/fuente.type";
+import { FuenteService } from "@/core/fuente/fuente.service";
+import SearchableSelect from "@/components/SearchableSelect";
 
 export type FormFilterType = Omit<
   QueryComponenteRedDto,
@@ -60,6 +63,9 @@ export default function Filter({
   const [regiones, setRegiones] = useState<RegionType[]>([]);
   const [isLoadingRegiones, setIsLoadingRegiones] = useState(true);
 
+  const [fuentes, setFuentes] = useState<FuenteType[]>([]);
+  const [isLoadingFuentes, setIsLoadingFuentes] = useState(true);
+
   const fetchTipoComponentes = useCallback(async () => {
     setIsLoadingTC(true);
     const { data } = await new TipoComponenteService().findAll({});
@@ -72,6 +78,13 @@ export default function Filter({
     const { data } = await new RedService().findAll({});
     setRedes(data.data.data);
     setIsLoadingRedes(false);
+  }, []);
+
+  const fetchFuentes = useCallback(async () => {
+    setIsLoadingFuentes(true);
+    const { data } = await new FuenteService().findAll({});
+    setFuentes(data.data.data);
+    setIsLoadingFuentes(false);
   }, []);
 
   const fetchRegiones = useCallback(async () => {
@@ -92,7 +105,8 @@ export default function Filter({
     fetchTipoComponentes();
     fetchRedes();
     fetchRegiones();
-  }, [fetchTipoComponentes, fetchRedes, fetchRegiones]);
+    fetchFuentes();
+  }, [fetchTipoComponentes, fetchRedes, fetchRegiones, fetchFuentes]);
 
   return (
     <Form
@@ -135,7 +149,7 @@ export default function Filter({
           optional
         />
 
-        <Select
+        <SearchableSelect
           name="ref_component_type_id"
           label="Tipo de componente"
           value={formValues.ref_component_type_id}
@@ -156,7 +170,7 @@ export default function Filter({
           fullWidth
         />
 
-        <Select
+        <SearchableSelect
           name="ref_network_id"
           label="Red"
           value={formValues.ref_network_id}
@@ -173,7 +187,22 @@ export default function Filter({
           fullWidth
         />
 
-        <Select
+        <SearchableSelect
+          name="ref_source_id"
+          label="Fuente"
+          value={formValues.ref_source_id}
+          onChangeValue={(value) => handleChange("ref_source_id", value)}
+          disabled={isLoadingFuentes}
+          helperText={isLoadingFuentes ? "Cargando fuentes..." : undefined}
+          options={fuentes.map((r) => ({
+            text: r.label,
+            value: r.id.toString(),
+          }))}
+          optional
+          fullWidth
+        />
+
+        <SearchableSelect
           name="region_id"
           label="Región"
           value={formValues.region_id}
