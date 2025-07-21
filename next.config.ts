@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/estaciones/:path*",
-        destination: `${process.env.API_URL_ESTACIONES}/:path*`,
+        destination: `${process.env.API_URL_ESTACIONES}/api/:path*`,
         basePath: false,
       },
       {

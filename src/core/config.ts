@@ -28,7 +28,7 @@ export const cnr = axios.create({
 export const estaciones = axios.create({
   baseURL: "/estaciones",
   headers: {
-    "X-CORRELATION-ID": "111|11|1",
+    "X-CORRELATION-ID": "1445|E11011|332928",
     "X-USER-ID": "12",
   },
 });
@@ -59,4 +59,4 @@ function attachTokenInterceptor(client: ReturnType<typeof axios.create>) {
   });
 }
 
-[bff, cnr, contacto].forEach(attachTokenInterceptor);
+[bff, cnr, contacto, estaciones].forEach(attachTokenInterceptor);

@@ -14,6 +14,7 @@ import { FuenteService } from "@/core/fuente/fuente.service";
 import SearchableSelect from "@/components/SearchableSelect";
 import SearchClient from "@/components/SearchClient";
 import { useModalStore } from "@/hooks/modalStorage";
+import SearchEstacion from "@/components/SearchEstacion";
 
 export type FormFilterType = Omit<
   QueryComponenteRedDto,
@@ -242,16 +243,36 @@ export default function Filter({
             fullWidth
             value={clientName}
             readOnly
+            optional
           />
         </div>
-        <TextField
-          name="station_id"
-          label="Id Estacion"
-          value={formValues.station_id}
-          onChange={(e) => handleChange("station_id", e.target.value)}
-          fullWidth
-          optional
-        />
+        <div
+          onClick={() => {
+            openModal(
+              <SearchEstacion
+                onSelected={(client) => {
+                  if (client.id && client.nombre) {
+                    setFormValues((prev) => ({
+                      ...prev,
+                      station_id: client.id.toString(),
+                    }));
+                    //setClientName(client.nombre.toString());
+                  }
+                }}
+              />
+            );
+          }}
+        >
+          <TextField
+            id="station_id"
+            name="station_id"
+            label="Estacion"
+            fullWidth
+            value={formValues.station_id}
+            readOnly
+            optional
+          />
+        </div>
       </section>
       <footer className="grid gap-4 grid-cols-2 p-4 border-t-[1px] border-[#eee]">
         <Button variant="secondary" onClick={handleReset}>
