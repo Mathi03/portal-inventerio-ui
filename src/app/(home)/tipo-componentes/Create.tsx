@@ -83,7 +83,6 @@ export default function Create({
   const [label, setLabel] = useState("");
   const [tipo, setTipo] = useState<any>();
   const [status, setStatus] = useState<any>();
-  const [searchParent, setSearchParent] = useState<string>();
   const { confirm } = useDialog();
 
   useEffect(() => {
@@ -185,8 +184,6 @@ export default function Create({
       configServices: true,
     }
   );
-
-  console.log("data", data);
 
   const columns = useMemo<TableColumn<TipoComponenteRed>[]>(
     () => [
@@ -445,7 +442,6 @@ export default function Create({
   );
 
   const onApprove = async (value: CreateRefComponentTypeRequestDto) => {
-    console.log("onApprove", value);
     const tipoComponenteService = new TipoComponenteService();
     await tipoComponenteService.approval(
       tipoComponente?.id as number,
@@ -737,11 +733,8 @@ export default function Create({
 
       {openParentModal && data && (
         <ParentAssociationWizardModal
-          setSearchParent={setSearchParent}
-          searchParent={searchParent}
           onClose={() => {
             setOpenParentModal(false);
-            setSearchParent("");
           }}
           childName={childName}
           redesPadre={redes}
