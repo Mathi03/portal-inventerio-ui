@@ -1,5 +1,6 @@
 import { TextField, useFieldProps } from "@telefonica/mistica";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Icon from "./Icon";
 
 interface Option {
   value: string;
@@ -29,6 +30,7 @@ export default function SearchableSelect({
   fullWidth,
   optional,
 }: SearchableSelectProps) {
+  const [selectedText, setSelectedText] = useState("");
   const isControlled =
     controlledValue !== undefined && onChangeValue !== undefined;
 
@@ -80,6 +82,12 @@ export default function SearchableSelect({
   }, [value, options]);
 
   useEffect(() => {
+    if (isControlled && !controlledValue) {
+      setQuery("");
+    }
+  }, [controlledValue]);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         wrapperRef.current &&
@@ -95,6 +103,7 @@ export default function SearchableSelect({
   const handleSelect = (opt: Option) => {
     setValue(opt.value);
     setQuery(opt.text);
+    setSelectedText(opt.text);
     setShowList(false);
   };
 
@@ -110,6 +119,10 @@ export default function SearchableSelect({
         onChangeValue={(val) => {
           setQuery(val);
           setShowList(true);
+          if (selectedText && val !== selectedText) {
+            setValue("");
+            setSelectedText("");
+          }
         }}
         placeholder="Buscar..."
         helperText={error ? fieldHelperText : helperText}
@@ -118,10 +131,18 @@ export default function SearchableSelect({
         onFocus={() => setShowList(true)}
         optional={optional}
         autoComplete="off"
+        endIcon={
+          <Icon
+            icon="expand_more"
+            className={`transition-transform duration-200 ${
+              showList ? "rotate-180" : ""
+            }`}
+          />
+        }
       />
 
       {showList && (
-        <ul className="absolute top-full left-0 max-h-[200px] w-full overflow-auto border rounded shadow bg-white z-50">
+        <ul className="absolute top-full left-0 max-h-[200px] min-w-full w-max max-w-screen-md overflow-auto border rounded shadow bg-white z-50 overflow-x-hidden">
           {filteredOptions.map((opt) => (
             <li
               key={opt.value}

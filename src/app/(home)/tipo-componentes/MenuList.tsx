@@ -1,3 +1,4 @@
+import { useState } from "react";
 import IconButton from "@/components/IconButton";
 import {
   Popover,
@@ -13,13 +14,20 @@ export default function MenuList({
   onDelete,
   tc,
 }: {
-  onApproval:  (value: SetStateAction<boolean>) => void;
+  onApproval: (value: SetStateAction<boolean>) => void;
   onEdit: () => void;
   onDelete?: () => void;
   tc: TipoComponenteType;
 }) {
+  const [open, setOpen] = useState(false);
+
+  const handleAction = (action: () => void) => {
+    action();
+    setOpen(false);
+  };
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <div>
           <IconButton icon="more_vert" />
@@ -32,21 +40,21 @@ export default function MenuList({
         <ul className="grid gap-4 text-base font-medium">
           <li
             className="hover:bg-[#0066FF]/10 hover:text-[#0066FF] py-2 px-4 cursor-pointer"
-            onClick={onEdit}
+            onClick={() => handleAction(onEdit)}
           >
             Editar
           </li>
           {tc.status > 2 && (
             <li
               className="hover:bg-[#0066FF]/10 hover:text-[#0066FF] py-2 px-4 cursor-pointer"
-              onClick={onApproval}
+              onClick={() => handleAction(() => onApproval(true))}
             >
               Aprobar
             </li>
           )}
           <li
             className="hover:bg-[#0066FF]/10 hover:text-[#0066FF] py-2 px-4 cursor-pointer"
-            onClick={onDelete}
+            onClick={() => handleAction(onDelete!)}
           >
             Eliminar
           </li>

@@ -159,7 +159,7 @@ export default function Filter({
         <SearchableSelect
           name="ref_component_type_id"
           label="Tipo de componente"
-          value={formValues.ref_component_type_id}
+          value={formValues.ref_component_type_id?.toString()}
           onChangeValue={(value) =>
             handleChange("ref_component_type_id", value)
           }
