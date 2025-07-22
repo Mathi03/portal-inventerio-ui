@@ -147,16 +147,17 @@ export default function CreateForm() {
         service_name,
         service_status,
         codigo,
+        status,
       } = form;
       // setIsSubmitting(true);
       const componenteRedService = new ComponenteRedService();
       const { data } = await componenteRedService.create({
         stationId: +stationId,
-        refSourceId: 1, //guillermo...+refSourceId,
+        refSourceId: +refSourceId, //guillermo...+refSourceId,
         refComponentTypeId: +refComponentTypeId,
         refNetworkId: +refNetworkId,
         regionId: +regionId,
-        status: 0,
+        status: 1,
         // componentId: 1,
         attribute:  [attribute],
         observation,
@@ -183,6 +184,29 @@ export default function CreateForm() {
     },
     [attribute, service, router, openSnackbar, createRelacionJerarquicas],
   );
+
+  const [childName, setChildName] = useState("");
+  const [label, setLabel] = useState("");
+
+  const convertirFormato = (texto: string): string => {
+    return texto
+      .split(" ")
+      .map((palabra) => palabra.toUpperCase())
+      .join("_");
+  };
+  
+
+  const handleInputName = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nuevoValor = e.target.value;
+    setChildName(nuevoValor);
+    setLabel(convertirFormato(nuevoValor));
+  };
+
+  const handleInputLabel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nuevoValor = e.target.value;
+    setLabel(convertirFormato(nuevoValor));
+  };
+
 
   return (
     <section className="grid content-start overflow-auto bg-[white] w-full h-full rounded-[8px] scroller scroll-smooth">
@@ -223,15 +247,19 @@ export default function CreateForm() {
         <TextField
           name={"name" as FormItem}
           label="Nombre"
+          value={childName}
           fullWidth
           maxLength={255}
+          onChange={handleInputName}
         />
 
         <TextField
           name={"label" as FormItem}
           label="Etiqueta"
+          value={label}
           fullWidth
           maxLength={255}
+          onChange={handleInputLabel}
         />
 
          <SelectRedes

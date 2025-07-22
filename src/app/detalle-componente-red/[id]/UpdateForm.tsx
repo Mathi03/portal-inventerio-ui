@@ -17,6 +17,7 @@ import { ComponenteRedService } from "@/core/componente-red/componente-red.servi
 import ConfigAdicional from "./ConfigAdicional";
 import SelectRegiones from "./SelectRegiones";
 import { RelacionJerarquicaService } from "@/core/relacion-jerarquica/relacion-jerarquica.service";
+import { FuenteType } from "@/core/fuente/fuente.type";
 type FormItem = keyof CreateComponenteRedDto;
 export default function UpdateForm({
   componenteRed,
@@ -29,6 +30,7 @@ export default function UpdateForm({
     useState<TipoComponenteType | null>();
   //const [red, setRed] = useState<RedType | null>();
   const [red, setRed] = useState<RedType | null>(null); // Initialize with null
+  const [fuente, setFuente] = useState<FuenteType | null>(null); // Initialize with null
  
 
 /*  const [attribute, setAttribute] = useState<AttributesState>(() => {
@@ -115,28 +117,20 @@ const [attribute, setAttribute] = useState<AttributesState>(() => {
 
 const [service, setService] = useState<ServicesState>(() => {
   let parsedApiData2: any = {};
-  console.log('componenteRed en inicialización:', componenteRed); // <-- Añade esto
-  console.log('componenteRed.service en inicialización:', componenteRed?.service); // <-- Y esto
 
   if (componenteRed?.service && componenteRed.service !== '') {
     try {
       const tempParsed = JSON.parse(componenteRed.service);
-      console.log('tempParsed después de JSON.parse:', tempParsed); // <-- Y esto para ver el resultado del parseo
-
       if (Array.isArray(tempParsed) && tempParsed.length > 0) {
-        console.log('tempParsed es un array:', tempParsed); // Si habilitas la línea comentada
          parsedApiData2 = Object.assign({}, ...tempParsed);
       } else if (typeof tempParsed === 'object' && tempParsed !== null) {
-        console.log('tempParsed es un objeto:', tempParsed); // <-- Si entra aquí
         parsedApiData2 = tempParsed;
       }
     } catch (e) {
       console.error("Error al parsear componenteRed.attribute en inicialización:", e);
       // Puedes loguear el valor problemático aquí también
-      console.error("Valor problemático de componenteRed.service:", componenteRed.service);
     }
   }
-  console.log('Valor final de parsedApiData2:', parsedApiData2); // <-- Y esto para ver el valor inicial del estado
 
   return parsedApiData2;
 });
@@ -176,14 +170,10 @@ const [service, setService] = useState<ServicesState>(() => {
 
   const onAttributes = useCallback((name: string, value: any, parentName: string | null = null) => {
     // ✨ SOLUCIÓN: Añadir el tipo a `prevAttributes`
-    console.log("estamos aclarando los atributos....")
     setAttribute((prevAttributes: AttributesState) => {
       const newAttributes: AttributesState = { ...prevAttributes };
-
       if (parentName) {
-        // Es un atributo anidado
         if (typeof newAttributes[parentName] === 'string') {
-          console.error(`Error: Expected object for ${parentName}, but found string.`);
           return prevAttributes;
         }
         if (!newAttributes[parentName]) {
@@ -194,7 +184,6 @@ const [service, setService] = useState<ServicesState>(() => {
         // Es un atributo regular
         newAttributes[name] = value;
       }
-      console.log("estamos aclarando los services2222....", newAttributes)
       return newAttributes;
     });
   }, []);
@@ -207,7 +196,6 @@ const [service, setService] = useState<ServicesState>(() => {
       if (parentName) {
         // Es un atributo anidado
         if (typeof newServices[parentName] === 'string') {
-          console.error(`Error: Expected object for ${parentName}, but found string.`);
           return prevServices;
         }
         if (!newServices[parentName]) {
@@ -240,16 +228,17 @@ const [service, setService] = useState<ServicesState>(() => {
         service_label,
         service_name,
         service_status,
+        status,
       } = form;
       // setIsSubmitting(true);
       const componenteRedService = new ComponenteRedService();
       await componenteRedService.update(componenteRed.id, {
         stationId: +stationId,
-        refSourceId: 1, //guillermo...+refSourceId,
+        refSourceId: +refSourceId, //guillermo...+refSourceId,
         refComponentTypeId: +refComponentTypeId,
         refNetworkId: +refNetworkId,
         regionId: +regionId,
-        status: 0,
+        status: 1,
         // componentId: 1,
         attribute: [attribute],
         observation,
@@ -289,6 +278,21 @@ const [service, setService] = useState<ServicesState>(() => {
     // You might also need to update other form state here related to the red
   }, []);
 
+  const [initialStatus, setInitialStatus] = useState(''); // Or a default value
+
+  
+
+  useEffect(() => {
+    if (componenteRed?.status) {
+      setInitialStatus(componenteRed.status.toString());
+    }
+  }, [componenteRed]); // Re-run when componenteRed changes
+
+  // Optionally, only render once initialStatus is set
+  if (!initialStatus && componenteRed) { // Or add a loading spinner
+    return <div>Loading form...</div>;
+  }
+
   
 
 
@@ -319,7 +323,6 @@ const [service, setService] = useState<ServicesState>(() => {
           status: componenteRed?.status.toString(),
           control_label: componenteRed.controlLabel,
           control_name: componenteRed.controlName,
-          control_status: componenteRed.control?.status.toString(),
           /*    service_label: componenteRed.service?.label,
               service_name: componenteRed.service?.name,
               service_status: componenteRed.service?.status.toString(),
@@ -346,13 +349,17 @@ const [service, setService] = useState<ServicesState>(() => {
           fullWidth
           maxLength={255}
         />
+
+        
         <Select
-          name="status"
-          label="Estatus"
+          name={"status" as FormItem}
+          label="status"
+          value={initialStatus} // Value comes from state
           options={CRStatusEnumOptions.map((option) => ({
             text: option.label,
             value: option.value.toString(),
           }))}
+       
           fullWidth
         />
 
@@ -364,9 +371,11 @@ const [service, setService] = useState<ServicesState>(() => {
 
         <SelectTipoComponentes
           name={"refComponentTypeId" as FormItem}
-          componenteRed={componenteRed}
+               componenteRed={componenteRed}
           onChange={(tc) => setTipoComponente(tc)}
         />
+
+          
 
        <SelectFuentes name={"refSourceId" as FormItem} />
 

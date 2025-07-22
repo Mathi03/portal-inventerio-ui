@@ -83,7 +83,6 @@ export default function InputDynamic(props: InputDynamicProps) {
       );
     }
     case "input": {
-      console.log("este es el name=======> ", name);
       return (
         <TextField
           name={name}

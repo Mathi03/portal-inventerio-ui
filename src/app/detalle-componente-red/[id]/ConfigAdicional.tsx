@@ -105,8 +105,7 @@ export default function ConfigAdicional({
                   const regularAttributes = configData.configAttributes.filter(attr => !attr.atribs_config);
                   const nestedConfigAttributes = configData.configAttributes.filter(attr => attr.atribs_config);
 
-                  console.log("Estado actual de 'attribute' en la renderización:", attribute);
-                  return (
+                   return (
                     <div key={configDataKey} style={{ marginBottom: '15px' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
                         {/* Renderizar atributos regulares primero */}
