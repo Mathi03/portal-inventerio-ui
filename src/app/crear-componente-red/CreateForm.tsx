@@ -1,12 +1,10 @@
 import Select from "@/components/Select";
-import { Form, Switch, TextField, useSnackbar } from "@telefonica/mistica";
+import { Form, Switch, TextField } from "@telefonica/mistica";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Button from "@/components/Button";
 import { CreateComponenteRedDto } from "@/core/componente-red/dto/create.dto";
 import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
-import { ComponenteRedService } from "@/core/componente-red/componente-red.service";
 import ConfigAdicional from "@/app/(home)/componente-red/ConfigAdicional";
-import { useRouter } from "next/navigation";
 import RelacionJerarquica from "./Relatcion-jerarquica";
 import { RelacionJerarquicaService } from "@/core/relacion-jerarquica/relacion-jerarquica.service";
 
@@ -21,9 +19,8 @@ import { FuenteType } from "@/core/fuente/fuente.type";
 import { RegionType } from "@/core/region/region.type";
 import Table from "@/components/Table/Table";
 import Pagination from "@/components/Pagination";
-import axios from "axios";
-import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
 import { UpdateComponenteRedDto } from "@/core/componente-red/dto/update.dto";
+import { useComponenteRedForm } from "./hooks/useComponenteRedForm";
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -51,22 +48,12 @@ export default function CreateForm({
   mode = "create",
   componenteRed,
 }: CreateFormProps) {
-  const { openSnackbar } = useSnackbar();
-  const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [tipoComponente, setTipoComponente] =
     useState<TipoComponenteType | null>();
 
   const [red, setRed] = useState<RedType | null>(null);
 
-  const [componenteSeleted, setComponenteSeleted] = useState<
-    ComponenteRedType[]
-  >([]);
-
   //ojo validar con como se llama....
-  const [attribute, setAttribute] = useState<any>({});
-  const [service, setService] = useState<any>({});
 
   const [isLoadingRedes, setIsLoadingRedes] = useState(true);
   const [isLoadingTC, setIsLoadingTC] = useState(true);
@@ -82,7 +69,19 @@ export default function CreateForm({
 
   const [commentPage, setCommentPage] = useState(1);
   const [commentLimit, setCommentLimit] = useState(5);
-  const [isApproved, setIsApproved] = useState(false);
+
+  const {
+    isSubmitting,
+    attribute,
+    setAttribute,
+    service,
+    setService,
+    componenteSeleted,
+    setComponenteSeleted,
+    isApproved,
+    setIsApproved,
+    onSubmit,
+  } = useComponenteRedForm({ componenteRed, mode });
 
   interface NestedAttributes {
     [key: string]: string;
@@ -174,163 +173,6 @@ export default function CreateForm({
       );
     },
     [componenteSeleted]
-  );
-
-  const onCreate = useCallback(
-    async (form: CreateComponenteRedDto) => {
-      setIsSubmitting(true);
-      const componenteRedService = new ComponenteRedService();
-
-      try {
-        const payload: CreateComponenteRedDto = {
-          ...form,
-          stationId: Number(form.stationId),
-          refSourceId: Number(form.refSourceId),
-          refComponentTypeId: Number(form.refComponentTypeId),
-          refNetworkId: Number(form.refNetworkId),
-          regionId: Number(form.regionId),
-          status: 1,
-          attribute: [attribute],
-          service: [service],
-          control: {
-            id: 0,
-            label: form.controlLabel,
-            name: form.controlName,
-            status: 0,
-          },
-          code: "",
-          codigo: "",
-          controlId: 1,
-          componentId: 1,
-        };
-
-        const { data } = await componenteRedService.create(payload);
-        await createRelacionJerarquicas(data.data);
-
-        openSnackbar({
-          message: "Componente de red creado exitosamente",
-          type: "INFORMATIVE",
-        });
-
-        router.push("/componente-red");
-      } catch (err) {
-        console.error(err);
-        openSnackbar({
-          message:
-            axios.isAxiosError(err) && err.response
-              ? errorMessageInAPI
-              : errorGeneric,
-          type: "CRITICAL",
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [attribute, service, router, openSnackbar, createRelacionJerarquicas]
-  );
-
-  const onUpdate = useCallback(
-    async (form: UpdateComponenteRedDto) => {
-      setIsSubmitting(true);
-      const componenteRedService = new ComponenteRedService();
-
-      try {
-        const payload: UpdateComponenteRedDto = {
-          ...form,
-          stationId: Number(form.stationId),
-          refSourceId: Number(form.refSourceId),
-          refComponentTypeId: Number(form.refComponentTypeId),
-          refNetworkId: Number(form.refNetworkId),
-          regionId: Number(form.regionId),
-          status: 1,
-          attribute: [attribute],
-          service: [service],
-          control: {
-            id: 0,
-            label: form.controlLabel,
-            name: form.controlName,
-            status: 0,
-          },
-          code: "",
-          codigo: "",
-          controlId: 1,
-          componentId: 1,
-        };
-
-        const { data } = await componenteRedService.update(
-          componenteRed?.id as number,
-          payload
-        );
-        await createRelacionJerarquicas(data.data);
-
-        openSnackbar({
-          message: "Componente de red actualizado exitosamente",
-          type: "INFORMATIVE",
-        });
-
-        router.push("/componente-red");
-      } catch (err) {
-        console.error(err);
-        openSnackbar({
-          message:
-            axios.isAxiosError(err) && err.response
-              ? errorMessageInAPI
-              : errorGeneric,
-          type: "CRITICAL",
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [
-      componenteRed?.id,
-      attribute,
-      service,
-      router,
-      openSnackbar,
-      createRelacionJerarquicas,
-    ]
-  );
-
-  const onApprove = useCallback(
-    async (form: { commentApproval?: string }) => {
-      setIsSubmitting(true);
-      const componenteRedService = new ComponenteRedService();
-
-      try {
-        await componenteRedService.approve(
-          componenteRed?.id as number,
-          form.commentApproval ?? "",
-          isApproved ? 1 : 4
-        );
-
-        openSnackbar({
-          message: "Componente de red actualizo correctamente",
-          type: "INFORMATIVE",
-        });
-      } catch (err) {
-        console.error(err);
-        openSnackbar({
-          message:
-            axios.isAxiosError(err) && err.response
-              ? errorMessageInAPI
-              : errorGeneric,
-          type: "CRITICAL",
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [componenteRed?.id, isApproved, openSnackbar]
-  );
-
-  const onSubmit = useCallback(
-    async (form: FormValues) => {
-      if (mode === "create") return onCreate(form as CreateComponenteRedDto);
-      if (mode === "update") return onUpdate(form as UpdateComponenteRedDto);
-      if (mode === "approve") return onApprove(form);
-    },
-    [mode, onCreate, onUpdate, onApprove]
   );
 
   const [childName, setChildName] = useState(componenteRed?.controlName ?? "");
