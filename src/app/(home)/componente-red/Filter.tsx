@@ -113,12 +113,16 @@ export default function Filter({
     fetchFuentes();
   }, [fetchTipoComponentes, fetchRedes, fetchRegiones, fetchFuentes]);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        handleSubmit();
-      }}
+    <div
+      onKeyDown={handleKeyDown}
       className="max-w-[360px] bg-white rounded-[8px] grid grid-rows-[auto_1fr_auto] gap-4 overflow-hidden"
     >
       <header className="p-4 grid gap-4">
@@ -280,6 +284,6 @@ export default function Filter({
         </Button>
         <Button variant="primary">Buscar</Button>
       </footer>
-    </form>
+    </div>
   );
 }
