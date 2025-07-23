@@ -1,25 +1,56 @@
 import Select from "@/components/Select";
-import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
-import { Form, TextField, useSnackbar } from "@telefonica/mistica";
-import { useCallback, useState } from "react";
+import { Form, Switch, TextField, useSnackbar } from "@telefonica/mistica";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Button from "@/components/Button";
-import { RedType } from "@/core/red/red.type";
 import { CreateComponenteRedDto } from "@/core/componente-red/dto/create.dto";
-import {
-  ComponenteRedType,
-  CRStatusEnumOptions,
-} from "@/core/componente-red/componente-red.type";
+import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
 import { ComponenteRedService } from "@/core/componente-red/componente-red.service";
 import ConfigAdicional from "@/app/(home)/componente-red/ConfigAdicional";
 import { useRouter } from "next/navigation";
 import RelacionJerarquica from "./Relatcion-jerarquica";
 import { RelacionJerarquicaService } from "@/core/relacion-jerarquica/relacion-jerarquica.service";
-import SelectRegiones from "./SelectRegiones";
-import SelectRedes from "./SelectRedes";
-import SelectTipoComponentes from "./SelectTipoComponentes";
-import SelectFuentes from "./SelectFuentes";
+
+import { RedService } from "@/core/red/red.service";
+import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
+import { FuenteService } from "@/core/fuente/fuente.service";
+import { msDirecciones } from "@/core/config";
+
+import { RedType } from "@/core/red/red.type";
+import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
+import { FuenteType } from "@/core/fuente/fuente.type";
+import { RegionType } from "@/core/region/region.type";
+import Table from "@/components/Table/Table";
+import Pagination from "@/components/Pagination";
+import axios from "axios";
+import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
+import { UpdateComponenteRedDto } from "@/core/componente-red/dto/update.dto";
+
 type FormItem = keyof CreateComponenteRedDto;
-export default function CreateForm() {
+
+type FormValues = (CreateComponenteRedDto | UpdateComponenteRedDto) & {
+  commentApproval?: string;
+};
+
+interface BaseCreateFormProps {
+  mode?: "create" | "update" | "approve";
+}
+
+interface CreateModeProps extends BaseCreateFormProps {
+  mode?: "create";
+  componenteRed?: never;
+}
+
+interface UpdateOrApproveModeProps extends BaseCreateFormProps {
+  mode: "update" | "approve";
+  componenteRed: ComponenteRedType;
+}
+
+type CreateFormProps = CreateModeProps | UpdateOrApproveModeProps;
+
+export default function CreateForm({
+  mode = "create",
+  componenteRed,
+}: CreateFormProps) {
   const { openSnackbar } = useSnackbar();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,20 +64,30 @@ export default function CreateForm() {
     ComponenteRedType[]
   >([]);
 
-   //ojo validar con como se llama....
-  const [fuente, setFuente] =  useState<null>();
-
-
-
-
+  //ojo validar con como se llama....
   const [attribute, setAttribute] = useState<any>({});
   const [service, setService] = useState<any>({});
 
+  const [isLoadingRedes, setIsLoadingRedes] = useState(true);
+  const [isLoadingTC, setIsLoadingTC] = useState(true);
+  const [isLoadingFuentes, setIsLoadingFuentes] = useState(true);
+  const [isLoadingRegiones, setIsLoadingRegiones] = useState(true);
+
+  const [redes, setRedes] = useState<RedType[]>([]);
+  const [tipoComponentes, setTipoComponentes] = useState<TipoComponenteType[]>(
+    []
+  );
+  const [fuentes, setFuentes] = useState<FuenteType[]>([]);
+  const [regiones, setRegiones] = useState<RegionType[]>([]);
+
+  const [commentPage, setCommentPage] = useState(1);
+  const [commentLimit, setCommentLimit] = useState(5);
+  const [isApproved, setIsApproved] = useState(false);
 
   interface NestedAttributes {
     [key: string]: string;
   }
-  
+
   interface AttributesState {
     [key: string]: string | NestedAttributes;
   }
@@ -54,60 +95,68 @@ export default function CreateForm() {
   interface NestedServices {
     [key: string]: string;
   }
-  
+
   interface ServicesState {
     [key: string]: string | NestedServices;
   }
 
-  const onAttributes = useCallback((name: string, value: any, parentName: string | null = null) => {
-    // ✨ SOLUCIÓN: Añadir el tipo a `prevAttributes`
-    console.log("estamos aclarando los atributos....")
-    setAttribute((prevAttributes: AttributesState) => {
-      const newAttributes: AttributesState = { ...prevAttributes };
+  const onAttributes = useCallback(
+    (name: string, value: any, parentName: string | null = null) => {
+      // ✨ SOLUCIÓN: Añadir el tipo a `prevAttributes`
+      console.log("estamos aclarando los atributos....");
+      setAttribute((prevAttributes: AttributesState) => {
+        const newAttributes: AttributesState = { ...prevAttributes };
 
-      if (parentName) {
-        // Es un atributo anidado
-        if (typeof newAttributes[parentName] === 'string') {
-          console.error(`Error: Expected object for ${parentName}, but found string.`);
-          return prevAttributes;
+        if (parentName) {
+          // Es un atributo anidado
+          if (typeof newAttributes[parentName] === "string") {
+            console.error(
+              `Error: Expected object for ${parentName}, but found string.`
+            );
+            return prevAttributes;
+          }
+          if (!newAttributes[parentName]) {
+            newAttributes[parentName] = {};
+          }
+          (newAttributes[parentName] as NestedAttributes)[name] = value;
+        } else {
+          // Es un atributo regular
+          newAttributes[name] = value;
         }
-        if (!newAttributes[parentName]) {
-          newAttributes[parentName] = {};
-        }
-        (newAttributes[parentName] as NestedAttributes)[name] = value;
-      } else {
-        // Es un atributo regular
-        newAttributes[name] = value;
-      }
-      console.log("estamos aclarando los services2222....", newAttributes)
-      return newAttributes;
-    });
-  }, []);
+        console.log("estamos aclarando los services2222....", newAttributes);
+        return newAttributes;
+      });
+    },
+    []
+  );
 
-  const onServices = useCallback((name: string, value: any, parentName: string | null = null) => {
-    // ✨ SOLUCIÓN: Añadir el tipo a `prevServices`
-    setService((prevServices: ServicesState) => {
-      const newServices: ServicesState = { ...prevServices };
+  const onServices = useCallback(
+    (name: string, value: any, parentName: string | null = null) => {
+      // ✨ SOLUCIÓN: Añadir el tipo a `prevServices`
+      setService((prevServices: ServicesState) => {
+        const newServices: ServicesState = { ...prevServices };
 
-      if (parentName) {
-        // Es un atributo anidado
-        if (typeof newServices[parentName] === 'string') {
-          console.error(`Error: Expected object for ${parentName}, but found string.`);
-          return prevServices;
+        if (parentName) {
+          // Es un atributo anidado
+          if (typeof newServices[parentName] === "string") {
+            console.error(
+              `Error: Expected object for ${parentName}, but found string.`
+            );
+            return prevServices;
+          }
+          if (!newServices[parentName]) {
+            newServices[parentName] = {};
+          }
+          (newServices[parentName] as NestedServices)[name] = value;
+        } else {
+          // Es un atributo regular
+          newServices[name] = value;
         }
-        if (!newServices[parentName]) {
-          newServices[parentName] = {};
-        }
-        (newServices[parentName] as NestedServices)[name] = value;
-      } else {
-        // Es un atributo regular
-        newServices[name] = value;
-      }
-      return newServices;
-    });
-  }, []);
-
-  
+        return newServices;
+      });
+    },
+    []
+  );
 
   const createRelacionJerarquicas = useCallback(
     async (componenteRed: ComponenteRedType) => {
@@ -121,72 +170,171 @@ export default function CreateForm() {
             refNetworkId: componenteRed.refNetworkId,
             status: 1,
           });
-        }),
+        })
       );
     },
-    [componenteSeleted],
+    [componenteSeleted]
   );
 
-  console.log(tipoComponente?.configData);
+  const onCreate = useCallback(
+    async (form: CreateComponenteRedDto) => {
+      setIsSubmitting(true);
+      const componenteRedService = new ComponenteRedService();
+
+      try {
+        const payload: CreateComponenteRedDto = {
+          ...form,
+          stationId: Number(form.stationId),
+          refSourceId: Number(form.refSourceId),
+          refComponentTypeId: Number(form.refComponentTypeId),
+          refNetworkId: Number(form.refNetworkId),
+          regionId: Number(form.regionId),
+          status: 1,
+          attribute: [attribute],
+          service: [service],
+          control: {
+            id: 0,
+            label: form.controlLabel,
+            name: form.controlName,
+            status: 0,
+          },
+          code: "",
+          codigo: "",
+          controlId: 1,
+          componentId: 1,
+        };
+
+        const { data } = await componenteRedService.create(payload);
+        await createRelacionJerarquicas(data.data);
+
+        openSnackbar({
+          message: "Componente de red creado exitosamente",
+          type: "INFORMATIVE",
+        });
+
+        router.push("/componente-red");
+      } catch (err) {
+        console.error(err);
+        openSnackbar({
+          message:
+            axios.isAxiosError(err) && err.response
+              ? errorMessageInAPI
+              : errorGeneric,
+          type: "CRITICAL",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [attribute, service, router, openSnackbar, createRelacionJerarquicas]
+  );
+
+  const onUpdate = useCallback(
+    async (form: UpdateComponenteRedDto) => {
+      setIsSubmitting(true);
+      const componenteRedService = new ComponenteRedService();
+
+      try {
+        const payload: UpdateComponenteRedDto = {
+          ...form,
+          stationId: Number(form.stationId),
+          refSourceId: Number(form.refSourceId),
+          refComponentTypeId: Number(form.refComponentTypeId),
+          refNetworkId: Number(form.refNetworkId),
+          regionId: Number(form.regionId),
+          status: 1,
+          attribute: [attribute],
+          service: [service],
+          control: {
+            id: 0,
+            label: form.controlLabel,
+            name: form.controlName,
+            status: 0,
+          },
+          code: "",
+          codigo: "",
+          controlId: 1,
+          componentId: 1,
+        };
+
+        const { data } = await componenteRedService.update(
+          componenteRed?.id as number,
+          payload
+        );
+        await createRelacionJerarquicas(data.data);
+
+        openSnackbar({
+          message: "Componente de red actualizado exitosamente",
+          type: "INFORMATIVE",
+        });
+
+        router.push("/componente-red");
+      } catch (err) {
+        console.error(err);
+        openSnackbar({
+          message:
+            axios.isAxiosError(err) && err.response
+              ? errorMessageInAPI
+              : errorGeneric,
+          type: "CRITICAL",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [
+      componenteRed?.id,
+      attribute,
+      service,
+      router,
+      openSnackbar,
+      createRelacionJerarquicas,
+    ]
+  );
+
+  const onApprove = useCallback(
+    async (form: { commentApproval?: string }) => {
+      setIsSubmitting(true);
+      const componenteRedService = new ComponenteRedService();
+
+      try {
+        await componenteRedService.approve(
+          componenteRed?.id as number,
+          form.commentApproval ?? "",
+          isApproved ? 1 : 4
+        );
+
+        openSnackbar({
+          message: "Componente de red actualizo correctamente",
+          type: "INFORMATIVE",
+        });
+      } catch (err) {
+        console.error(err);
+        openSnackbar({
+          message:
+            axios.isAxiosError(err) && err.response
+              ? errorMessageInAPI
+              : errorGeneric,
+          type: "CRITICAL",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [componenteRed?.id, isApproved, openSnackbar]
+  );
 
   const onSubmit = useCallback(
-    async (form: any) => {
-      const {
-        label,
-        name,    
-        stationId,
-        refSourceId,
-        refComponentTypeId,
-        refNetworkId,
-        regionId,
-        observation,
-        control_label,
-        control_name,
-        control_status,
-        service_label,
-        service_name,
-        service_status,
-        codigo,
-        status,
-      } = form;
-      // setIsSubmitting(true);
-      const componenteRedService = new ComponenteRedService();
-      const { data } = await componenteRedService.create({
-        stationId: +stationId,
-        refSourceId: +refSourceId, //guillermo...+refSourceId,
-        refComponentTypeId: +refComponentTypeId,
-        refNetworkId: +refNetworkId,
-        regionId: +regionId,
-        status: 1,
-        // componentId: 1,
-        attribute:  [attribute],
-        observation,
-        service: [service],
-        control: {
-          id: 0, 
-          label: label,
-          name: name,
-          status: 0,
-        },
-        code : "",
-        codigo : "",
-        controlId : 1,
-        componentId: 1,
-   
-      });
-      createRelacionJerarquicas(data.data);
-      setIsSubmitting(false);
-      openSnackbar({
-        message: "Componente de red creado exitosamente",
-        type: "INFORMATIVE",
-      });
-      router.push("/componente-red");
+    async (form: FormValues) => {
+      if (mode === "create") return onCreate(form as CreateComponenteRedDto);
+      if (mode === "update") return onUpdate(form as UpdateComponenteRedDto);
+      if (mode === "approve") return onApprove(form);
     },
-    [attribute, service, router, openSnackbar, createRelacionJerarquicas],
+    [mode, onCreate, onUpdate, onApprove]
   );
 
-  const [childName, setChildName] = useState("");
-  const [label, setLabel] = useState("");
+  const [childName, setChildName] = useState(componenteRed?.controlName ?? "");
+  const [label, setLabel] = useState(componenteRed?.controlLabel ?? "");
 
   const convertirFormato = (texto: string): string => {
     return texto
@@ -194,7 +342,6 @@ export default function CreateForm() {
       .map((palabra) => palabra.toUpperCase())
       .join("_");
   };
-  
 
   const handleInputName = (e: React.ChangeEvent<HTMLInputElement>) => {
     const nuevoValor = e.target.value;
@@ -207,75 +354,221 @@ export default function CreateForm() {
     setLabel(convertirFormato(nuevoValor));
   };
 
+  const initialValues = useMemo(
+    () => ({
+      code: componenteRed?.code,
+      observation: componenteRed?.observation?.toString() || "",
+      regionId: componenteRed?.regionId?.toString() || "",
+      stationId: componenteRed?.stationId?.toString() || "",
+      refNetworkId: componenteRed?.refNetworkId?.toString() || "",
+      refComponentTypeId: componenteRed?.refComponentTypeId?.toString() || "",
+      refSourceId: componenteRed?.refSourceId?.toString() || "",
+      status: componenteRed?.status?.toString() || "",
+      label: componenteRed?.controlLabel,
+      name: componenteRed?.controlName,
+      ...(componenteRed?.attribute
+        ? JSON.parse(componenteRed.attribute)[0]
+        : {}),
+    }),
+    [componenteRed]
+  );
+
+  const getRedes = useCallback(async () => {
+    setIsLoadingRedes(true);
+    const redService = new RedService();
+    const { data } = await redService.findAll({});
+    setRedes(data.data.data.filter((r: RedType) => r.status === 1));
+    setIsLoadingRedes(false);
+  }, []);
+
+  const getTipoComponentes = useCallback(async () => {
+    setIsLoadingTC(true);
+    const tcService = new TipoComponenteService();
+    const { data } = await tcService.findAll({});
+    setTipoComponentes(
+      data.data.data.filter((t: TipoComponenteType) => t.status === 1)
+    );
+    setIsLoadingTC(false);
+  }, []);
+
+  const getFuentes = useCallback(async () => {
+    setIsLoadingFuentes(true);
+    const fuenteService = new FuenteService();
+    const { data } = await fuenteService.findAll({});
+    setFuentes(data.data.data.filter((f: FuenteType) => f.status === 1));
+    setIsLoadingFuentes(false);
+  }, []);
+
+  const getRegiones = useCallback(async () => {
+    setIsLoadingRegiones(true);
+    const { data } = await msDirecciones.get(
+      "/api/v1/direcciones/regiones",
+      {}
+    );
+    setRegiones(data?.data?.data || []);
+    setIsLoadingRegiones(false);
+  }, []);
+
+  useEffect(() => {
+    getRedes();
+    getTipoComponentes();
+    getFuentes();
+    getRegiones();
+  }, [getRedes, getTipoComponentes, getFuentes, getRegiones]);
+
+  useEffect(() => {
+    if (componenteRed?.refComponentTypeId && tipoComponentes.length > 0) {
+      const tipo = tipoComponentes.find(
+        (t) => t.id === +componenteRed.refComponentTypeId
+      );
+      setTipoComponente(tipo || null);
+    }
+  }, [componenteRed, tipoComponentes]);
+
+  useEffect(() => {
+    if (componenteRed) {
+      if (componenteRed.attribute) {
+        try {
+          const parsedAttr = JSON.parse(componenteRed.attribute);
+          if (Array.isArray(parsedAttr) && typeof parsedAttr[0] === "object") {
+            setAttribute(parsedAttr[0]);
+          }
+        } catch (err) {
+          console.error("Error al parsear atributo:", err);
+        }
+      }
+
+      if (componenteRed.service) {
+        try {
+          const parsedService = JSON.parse(componenteRed.service);
+          if (
+            Array.isArray(parsedService) &&
+            typeof parsedService[0] === "object"
+          ) {
+            setService(parsedService[0]);
+          }
+        } catch (err) {
+          console.error("Error al parsear service:", err);
+        }
+      }
+    }
+  }, [componenteRed]);
+
+  const parsedComments = useMemo(() => {
+    return (
+      componenteRed?.approvalComment
+        ?.split("|")
+        .filter((entry) => entry.trim() !== "")
+        .map((entry, index) => {
+          const [date, userId, comment] = entry.split("$");
+          return {
+            id: index,
+            date: date?.trim(),
+            userId: userId?.trim(),
+            comment: comment?.replace(/\n/g, " ")?.trim(),
+          };
+        }) ?? []
+    );
+  }, [componenteRed?.approvalComment]);
+
+  const paginatedComments = parsedComments.slice(
+    (commentPage - 1) * commentLimit,
+    commentPage * commentLimit
+  );
 
   return (
     <section className="grid content-start overflow-auto bg-[white] w-full h-full rounded-[8px] scroller scroll-smooth">
       <header className="p-6 grid gap-4">
-        <h4 className="text-[28px]">Creación de componente de red</h4>
+        <h4 className="text-[28px]">
+          {mode === "create" ? "Creación" : "Detalle"} de componente de red
+        </h4>
         <p>
           En esta sección, podrás crear y gestionar tus componentes de red de
           manera eficiente y personalizada.
         </p>
       </header>
       <Form
-        onSubmit={(value) => onSubmit(value as CreateComponenteRedDto)}
-
+        onSubmit={(value) => onSubmit(value as FormValues)}
         className="grid grid-cols-3 content-start gap-4 px-6"
-        initialValues={{
-          regionId: "",
-          stationId: "",
-          refNetworkId: "",
-          refComponentTypeId: "",
-          refSourceId: "",
-        }}
+        initialValues={initialValues}
       >
         <h1 className="col-span-3 text-xl" id="datos">
           Datos del componente de red
         </h1>
-       {/* guillermo adaptando el formulario<TextField
-          name="control_label"
-          label="Control etiqueta"
-          fullWidth
-          maxLength={255}
-        />
+
         <TextField
-          name="control_name"
-          label="Control nombre"
-          fullWidth
-          maxLength={255}
-        />*/}
-        <TextField
-          name={"name" as FormItem}
+          name={"controlName" as FormItem}
           label="Nombre"
           value={childName}
           fullWidth
           maxLength={255}
           onChange={handleInputName}
+          disabled={mode === "approve"}
+          optional={mode === "approve"}
         />
 
         <TextField
-          name={"label" as FormItem}
+          name={"controlLabel" as FormItem}
           label="Etiqueta"
           value={label}
           fullWidth
           maxLength={255}
           onChange={handleInputLabel}
+          disabled={mode === "approve"}
+          optional={mode === "approve"}
         />
 
-         <SelectRedes
-            name={"refNetworkId" as FormItem}
-            onChange={(red) => setRed(red)}
-          />
+        <Select
+          name={"refNetworkId" as FormItem}
+          label="Red"
+          disabled={mode === "approve" ? true : isLoadingRedes}
+          optional={mode === "approve"}
+          fullWidth
+          helperText={isLoadingRedes ? "Cargando redes..." : undefined}
+          options={redes.map((red) => ({
+            text: red.label,
+            value: red.id.toString(),
+          }))}
+          onChangeValue={(value) =>
+            setRed(redes.find((r) => r.id === +value) || null)
+          }
+        />
 
-          <SelectTipoComponentes
-              name={"refComponentTypeId" as FormItem}
-              onChange={(tc) => setTipoComponente(tc)}
-          />
+        <Select
+          name={"refComponentTypeId" as FormItem}
+          label="Tipo de componente"
+          disabled={mode === "approve" ? true : isLoadingTC}
+          optional={mode === "approve"}
+          fullWidth
+          helperText={
+            isLoadingTC ? "Cargando tipos de componente..." : undefined
+          }
+          options={tipoComponentes.map((tc) => ({
+            text: tc.label,
+            value: tc.id.toString(),
+          }))}
+          onChangeValue={(value) =>
+            setTipoComponente(
+              tipoComponentes.find((t) => t.id === +value) || null
+            )
+          }
+        />
 
-         <SelectFuentes name={"refSourceId" as FormItem} />
+        <Select
+          name={"refSourceId" as FormItem}
+          label="Fuente"
+          disabled={mode === "approve" ? true : isLoadingFuentes}
+          optional={mode === "approve"}
+          fullWidth
+          helperText={isLoadingFuentes ? "Cargando fuentes..." : undefined}
+          options={fuentes.map((f) => ({
+            text: f.label,
+            value: f.id.toString(),
+          }))}
+          // Si deseas setFuente puedes hacerlo aquí también
+        />
 
-
-          {/*<Select
+        {/*<Select
           name="control_status"
           label="Control estado"
           options={CRStatusEnumOptions.map((option) => ({
@@ -291,12 +584,24 @@ export default function CreateForm() {
           maxLength={255}
         />*/}
 
+        <Select
+          name={"regionId" as FormItem}
+          label="Región"
+          disabled={mode === "approve" ? true : isLoadingRegiones}
+          optional={mode === "approve"}
+          fullWidth
+          helperText={isLoadingRegiones ? "Cargando regiones..." : undefined}
+          options={regiones.map((r) => ({
+            text: r.nombre,
+            value: r.id.toString(),
+          }))}
+        />
 
-
-        <SelectRegiones name={"regionId" as FormItem} />
         <Select
           name={"stationId" as FormItem}
           label="Estación"
+          disabled={mode === "approve"}
+          optional={mode === "approve"}
           options={[
             {
               text: "Estación Caracas",
@@ -306,12 +611,8 @@ export default function CreateForm() {
           fullWidth
         />
 
-    
- 
         <hr className="col-span-3" />
-        <hgroup className="col-span-3" id="config-adicional">
-        </hgroup>
-       
+        <hgroup className="col-span-3" id="config-adicional"></hgroup>
 
         <ConfigAdicional
           className="col-span-full"
@@ -320,12 +621,7 @@ export default function CreateForm() {
           onAttributes={onAttributes}
           service={service}
           onServices={onServices}
-    
         />
-
-
-
-
 
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="relacion-jerarquica">
@@ -340,8 +636,8 @@ export default function CreateForm() {
           onDeselected={(componente) => {
             setComponenteSeleted(
               componenteSeleted.filter(
-                (selected) => selected.id !== componente.id,
-              ),
+                (selected) => selected.id !== componente.id
+              )
             );
           }}
         />
@@ -360,8 +656,65 @@ export default function CreateForm() {
             label="Observación"
             fullWidth
             multiline
+            disabled={mode === "approve"}
+            optional={mode === "approve"}
           />
         </div>
+
+        {componenteRed?.approvalComment && (
+          <>
+            <h4 className="text-[20px] mt-6 col-span-3">
+              Historial de comentarios
+            </h4>
+            <div className="flex col-span-3 flex-col">
+              <Table
+                columns={[
+                  { title: "Fecha", render: (row: any) => row.date },
+                  { title: "ID Usuario", render: (row: any) => row.userId },
+                  { title: "Comentario", render: (row: any) => row.comment },
+                ]}
+                rows={paginatedComments}
+              />
+              <div className="mt-4">
+                <Pagination
+                  page={commentPage}
+                  limit={commentLimit}
+                  items={parsedComments.length}
+                  onChangePage={(p) => setCommentPage(p)}
+                  onChangeLimit={(l) => {
+                    setCommentLimit(l);
+                    setCommentPage(1);
+                  }}
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {mode === "approve" && (
+          <>
+            <h4 className="text-[20px] mt-6 col-span-3">Agregar Comentario</h4>
+            <div className="col-span-3">
+              <TextField
+                name={"commentApproval"}
+                label="Comentario de aprobación"
+                fullWidth
+                multiline
+                optional={isApproved}
+              />
+              <div className="mt-4" />
+              <Switch
+                name="isApproved"
+                checked={isApproved}
+                onChange={(value: boolean) => {
+                  setIsApproved(value);
+                }}
+              >
+                Desea aprobar este tipo de componente?
+              </Switch>
+            </div>
+          </>
+        )}
 
         <footer className="grid gap-4 p-4 border-t-[1px] border-[#eee] col-span-3 justify-center">
           <Button showSpinner={isSubmitting}>Guardar</Button>

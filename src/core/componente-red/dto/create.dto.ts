@@ -13,4 +13,6 @@ export type CreateComponenteRedDto = Pick<
   | "codigo"
   | "controlId"
   | "componentId"
+  | "controlLabel"
+  | "controlName"
 > & { attribute:any, service: any; control: any };

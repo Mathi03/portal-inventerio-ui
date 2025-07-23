@@ -60,11 +60,11 @@ export class ComponenteRedService {
   public async approve(
     id: number,
     approvalComment: string,
-    observation: string
+    status: number
   ) {
     return await bff.patch(`/v1/portal/components/${id}`, {
       approvalComment,
-      observation,
+      status,
     });
   }
   public async getRelations(id: number) {

@@ -4,6 +4,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useState } from "react";
 
 export default function MenuList({
   status,
@@ -16,8 +17,14 @@ export default function MenuList({
   onEdit: () => void;
   onDelete?: () => void;
 }) {
+  const [open, setOpen] = useState(false);
+
+  const handleAction = (action: () => void) => {
+    action();
+    setOpen(false);
+  };
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <div>
           <IconButton icon="more_vert" />
@@ -31,7 +38,7 @@ export default function MenuList({
           {status !== 1 && (
             <li
               className="hover:bg-[#0066FF]/10 hover:text-[#0066FF] py-2 px-4"
-              onClick={onApprove}
+              onClick={() => handleAction(onApprove)}
             >
               Aprobar
             </li>
@@ -39,13 +46,13 @@ export default function MenuList({
 
           <li
             className="hover:bg-[#0066FF]/10 hover:text-[#0066FF] py-2 px-4"
-            onClick={onEdit}
+            onClick={() => handleAction(onEdit)}
           >
             Editar
           </li>
           <li
             className="hover:bg-[#0066FF]/10 hover:text-[#0066FF] py-2 px-4"
-            onClick={onDelete}
+            onClick={() => handleAction(onDelete)}
           >
             Eliminar
           </li>

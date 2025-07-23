@@ -1,14 +1,14 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import Header from "./Header";
 import { ComponenteRedService } from "@/core/componente-red/componente-red.service";
 import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
 import { useParams } from "next/navigation";
-import UpdateForm from "./UpdateForm";
-import NavMenu from "./NavMenu";
+import Header from "@/app/detalle-componente-red/[id]/Header";
+import NavMenu from "@/app/detalle-componente-red/[id]/NavMenu";
+import UpdateForm from "@/app/detalle-componente-red/[id]/UpdateForm";
 import CreateForm from "@/app/crear-componente-red/CreateForm";
 
-export default function DetalleComponenteRed() {
+export default function AprobarComponenteRed() {
   const { id } = useParams();
   const [componenteRed, setComponenteRed] = useState<ComponenteRedType | null>(
     null,
@@ -29,7 +29,7 @@ export default function DetalleComponenteRed() {
       <Header componenteRed={componenteRed} />
       <section className="w-full h-full grid gap-2 grid-cols-[280px_1fr] overflow-hidden p-2">
         <NavMenu />
-        {componenteRed && <CreateForm mode="update" componenteRed={componenteRed} />}
+        {componenteRed && <CreateForm componenteRed={componenteRed} mode="approve"/>}
       </section>
     </main>
   );

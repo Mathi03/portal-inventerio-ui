@@ -189,8 +189,7 @@ export default function ComponenteRedPage() {
               router.push(`/detalle-componente-red/${row.id}`);
             }}
             onApprove={() => {
-              setSelectedCR(row);
-              setOpenApprove(true);
+              router.push(`/componente-red/aprobar/${row.id}`);
             }}
             onDelete={() => {
               confirm({
