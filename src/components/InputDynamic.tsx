@@ -1,5 +1,10 @@
-import { DateField, Select, TextField } from "@telefonica/mistica";
-import { useCallback, useEffect, useState } from "react";
+import {
+  DateField,
+  Select,
+  TextField,
+  useFieldProps,
+} from "@telefonica/mistica";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { source } from "@/core/config";
 
 export interface InputDynamicProps {
@@ -18,6 +23,8 @@ export interface InputDynamicProps {
   onChange?: (name: string, value: any) => void;
   value?: string | number | boolean | null; // Added the 'value' prop
   currentValue?: string; // Puedes ajustar el tipo según lo que esperas (ej. solo string para texto)
+  loading?: boolean;
+  dynamicOptions?: Array<{ text: string; value: string }>;
 }
 export default function InputDynamic(props: InputDynamicProps) {
   const {
@@ -29,11 +36,15 @@ export default function InputDynamic(props: InputDynamicProps) {
     valores_posibles_source,
     valores_posibles_response = [],
     onChange = () => {},
-    currentValue
+    currentValue,
+    dynamicOptions,
+    value,
   } = props;
+  //console.log("render", name, value, valores_posibles);
+  const [valueController, setValueController] = useState(value?.toString() ?? "");
 
   const [loading, setLoading] = useState<boolean>(
-    valores_posibles_source ? true : false,
+    valores_posibles_source ? true : false
   );
   const [options, setOptions] = useState<
     Array<{ text: string; value: string }>
@@ -43,7 +54,7 @@ export default function InputDynamic(props: InputDynamicProps) {
     if (!valores_posibles_source) return;
     setLoading(true);
     const { data } = await source.get(valores_posibles_source);
-    
+
     setOptions(
       data.data.data.map((json: any) => {
         const [name, value] = valores_posibles_response;
@@ -51,7 +62,7 @@ export default function InputDynamic(props: InputDynamicProps) {
           text: json[name!],
           value: String(json[value!]),
         };
-      }),
+      })
     );
     setLoading(false);
   }, [valores_posibles_source, valores_posibles_response]);
@@ -66,17 +77,23 @@ export default function InputDynamic(props: InputDynamicProps) {
         <Select
           name={name}
           label={label}
+          value={valueController}
           optional={!required}
-          onChangeValue={(value) => onChange(name, value)}
+          onChangeValue={(value) => {
+            // console.log("onChangeValue", name, value);
+            onChange(name, value);
+            setValueController(value);
+          }}
           disabled={loading}
           helperText={loading ? `cargando ${label}...` : undefined}
           options={
-            valores_posibles_source
-              ? options!
+            dynamicOptions ??
+            (valores_posibles_source
+              ? options
               : valores_posibles.map((valor) => ({
                   text: valor.name,
-                  value: String(valor.value),
-                }))
+                  value: valor.value.toString(),
+                })))
           }
           fullWidth
         />
@@ -92,7 +109,7 @@ export default function InputDynamic(props: InputDynamicProps) {
           onChange={(e) => {
             onChange(name, e.target.value);
           }}
-          value = {currentValue}
+          value={currentValue}
           maxLength={255}
         />
       );

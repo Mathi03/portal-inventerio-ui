@@ -282,7 +282,9 @@ export default function Filter({
         <Button variant="secondary" onClick={handleReset}>
           Limpiar
         </Button>
-        <Button variant="primary">Buscar</Button>
+        <Button variant="primary" onClick={() => handleSubmit()}>
+          Buscar
+        </Button>
       </footer>
     </div>
   );

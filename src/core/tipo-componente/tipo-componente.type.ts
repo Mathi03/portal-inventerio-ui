@@ -22,14 +22,14 @@ export enum TCTypeEnum {
 }*/
 
 export interface TipoComponenteType {
-  id:              number;
-  label:           string;
-  name:            string;
-  status:          number;
+  id: number;
+  label: string;
+  name: string;
+  status: number;
   commentApproval: string;
-  tipo:            string;
-  configData:      ConfigData[];
-  configRelation:  ConfigRelation[];
+  tipo: string;
+  configData: ConfigData[];
+  configRelation: ConfigRelation[];
 }
 
 interface ConfigData {
@@ -39,6 +39,11 @@ interface ConfigData {
   status: number;
   configAttributes: ConfigDataAttribute[];
   configServices: ConfigDataService[]; // Ajusta según la estructura real
+}
+interface OnChange {
+  target_name: string;
+  valores_posibles_source: string;
+  valores_posibles_response: string[];
 }
 
 interface ConfigDataAttribute {
@@ -50,7 +55,11 @@ interface ConfigDataAttribute {
   place_holder: string;
   html_form_type: "input" | "select" | "date";
   valores_posibles?: Array<{ name: string; value: string }>;
-  atribs_config: ConfigDataAtribs_config[]
+  valores_posibles_source?: string;
+  valores_posibles_response?: string[];
+  on_change?: OnChange;
+  depend_of?: string;
+  atribs_config: ConfigDataAtribs_config[];
 }
 
 interface ConfigDataService {
@@ -62,7 +71,11 @@ interface ConfigDataService {
   place_holder: string;
   html_form_type: "input" | "select" | "date";
   valores_posibles?: Array<{ name: string; value: string }>;
-  atribs_config: ConfigDataAtribs_config[]
+  valores_posibles_source?: string;
+  valores_posibles_response?: string[];
+  on_change?: OnChange;
+  depend_of?: string;
+  atribs_config: ConfigDataAtribs_config[];
 }
 
 interface ConfigDataAtribs_config {
@@ -74,8 +87,9 @@ interface ConfigDataAtribs_config {
   place_holder: string;
   html_form_type: "input" | "select" | "date";
   valores_posibles?: Array<{ name: string; value: string }>;
+  valores_posibles_source?: string;
+  valores_posibles_response?: ["label", "id"];
 }
-
 
 export interface CreateRefComponentTypeRequestDto {
   label: string;
@@ -123,33 +137,30 @@ export interface UpdateTipoComponenteRequest {
 }
 
 export interface AllTipoComponenteResponse {
-    id:              number;
-    label:           string;
-    name:            string;
-    status:          number;
-    commentApproval: string;
-    tipo:            string;
-    configData:      ConfigDatum[];
-    configRelation:  ConfigRelation[];
+  id: number;
+  label: string;
+  name: string;
+  status: number;
+  commentApproval: string;
+  tipo: string;
+  configData: ConfigDatum[];
+  configRelation: ConfigRelation[];
 }
 
 export interface ConfigDatum {
-    id:               number;
-    componentTypeId:  number;
-    networkId:        number;
-    status:           number;
-    configAttributes: any[];
-    configServices:   any[];
+  id: number;
+  componentTypeId: number;
+  networkId: number;
+  status: number;
+  configAttributes: any[];
+  configServices: any[];
 }
 
-
-
-
 export interface ConfigRelation {
-    componentTypeId:       number;
-    componentTypeFatherId: number;
-    networkId:             number;
-    networkFatherId:       number;
+  componentTypeId: number;
+  componentTypeFatherId: number;
+  networkId: number;
+  networkFatherId: number;
 }
 export interface TipoComponenteRed {
   red: string; //etiqueta
@@ -166,14 +177,14 @@ export const TCStatusEnumOptions = [
     label: "Inactivo",
     value: TCStatusEnum.INACTIVO,
   },
-    {
+  {
     label: "Por aprobar",
     value: TCStatusEnum.PORAPROBAR,
   },
-    {
+  {
     label: "Por modificar",
     value: TCStatusEnum.PORMODIFICAR,
-  }
+  },
 ];
 export const TCTypeEnumOptions = [
   {
@@ -183,5 +194,5 @@ export const TCTypeEnumOptions = [
   {
     label: "Fisico",
     value: TCTypeEnum.LOGICO,
-  }
+  },
 ];

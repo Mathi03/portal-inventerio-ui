@@ -41,21 +41,27 @@ export default function useTipoComponente() {
   );
 
   const getTipoComponentes = useCallback(
-    async ({
-      search,
-      page,
-      limit,
-    }: {
+    async (params: {
       search?: string | null;
       page?: number;
       limit?: number;
+      [key: string]: any;
     }) => {
       setLoadingTipoComponentes(true);
+
+      const { search, ...restFilters } = params;
+
+      const cleanedFilters = Object.fromEntries(
+        Object.entries(restFilters).filter(
+          ([, value]) => value !== "" && value !== null
+        )
+      );
+
       const { data } = await tipoComponenteService.findAll({
-        page,
-        limit,
         q: search,
+        ...cleanedFilters,
       });
+
       setTipoComponentes(data.data.data);
       setTipoComponenteCount(data.data.total);
       setLoadingTipoComponentes(false);
@@ -77,7 +83,7 @@ export default function useTipoComponente() {
         .update(id, dto)
         .then(() =>
           openSnackbar({
-            message: `Tipo componente "${dto.updateRefComponentTypeRequestDto.name ?? ''}" actualizado`,
+            message: `Tipo componente "${dto.updateRefComponentTypeRequestDto.name ?? ""}" actualizado`,
           })
         )
         .catch(() =>

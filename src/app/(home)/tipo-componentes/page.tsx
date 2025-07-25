@@ -1,6 +1,6 @@
 "use client";
 import Table from "@/components/Table/Table";
-import Filter from "./Filter";
+import Filter, { FormType } from "./Filter";
 import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/Button";
 import Icon from "@/components/Icon";
@@ -20,7 +20,7 @@ import { useDialog } from "@telefonica/mistica";
 import { useRouter } from "next/navigation";
 
 export default function MantenedorRedPage() {
-  const router = useRouter()
+  const router = useRouter();
   const { confirm } = useDialog();
   const { page, limit, setPage, setLimit } = usePagination();
   const {
@@ -34,31 +34,54 @@ export default function MantenedorRedPage() {
   } = useTipoComponente();
   const { columns, showColumn, setShowColumn } = useColumn();
 
+  const [reloadKey, setReloadKey] = useState(Date.now());
   const [search, setSearch] = useState<string | null>();
   const [openFilter, setOpenFilter] = useState(true);
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [openApprove, setOpenApprove] = useState(false);
 
+  const [filter, setFilter] = useState<Record<FormType, string>>({
+    label: "",
+    name: "",
+    status: "",
+  });
+
   const onLoad = useCallback(() => {
-    getTipoComponentes({ search, page, limit });
-  }, [search, page, limit, getTipoComponentes]);
+    if (search && search.trim() !== "") {
+      getTipoComponentes({
+        search,
+        page,
+        limit,
+      });
+    } else {
+      const cleanedFilters = Object.fromEntries(
+        Object.entries(filter).filter(([, value]) => value !== "")
+      );
+
+      getTipoComponentes({
+        page,
+        limit,
+        ...cleanedFilters,
+      });
+    }
+  }, [search, page, limit, filter, reloadKey, getTipoComponentes]);
 
   const onEdit = useCallback(
     (tipoComponente: TipoComponenteType) => {
       setTipoComponente(tipoComponente);
       setOpenEdit(true);
     },
-    [setTipoComponente],
+    [setTipoComponente]
   );
 
-    const onAprobal = useCallback(
+  const onAprobal = useCallback(
     (tipoComponente: TipoComponenteType) => {
-      console.log( tipoComponente);
+      console.log(tipoComponente);
       setTipoComponente(tipoComponente);
-      router.push('/tipo-componentes/aprobar/' + tipoComponente?.id)
+      router.push("/tipo-componentes/aprobar/" + tipoComponente?.id);
     },
-    [setTipoComponente],
+    [setTipoComponente]
   );
 
   const onDelete = useCallback(
@@ -74,7 +97,7 @@ export default function MantenedorRedPage() {
         },
       });
     },
-    [deleteTipoComponente, confirm, onLoad],
+    [deleteTipoComponente, confirm, onLoad]
   );
 
   useEffect(() => {
@@ -83,14 +106,23 @@ export default function MantenedorRedPage() {
   return (
     <>
       <section className="flex p-2 gap-2 w-full h-full relative overflow-hidden">
-        {openFilter && <Filter onSubmit={console.log} />}
+        {openFilter && (
+          <Filter
+            onSubmit={(values) => {
+              setSearch(null);
+              setFilter(values);
+              setPage(1);
+              setReloadKey(Date.now());
+            }}
+          />
+        )}
         <Table
           columns={columns({
             maxWidth: "64px",
             render: (row) => (
               <MenuList
                 tc={row}
-                onApproval={()=> onAprobal(row)}
+                onApproval={() => onAprobal(row)}
                 onEdit={() => onEdit(row)}
                 onDelete={() => onDelete(row)}
               />
@@ -101,7 +133,12 @@ export default function MantenedorRedPage() {
           header={
             <header className="grid grid-cols-[1fr_auto] justify-between gap-4">
               <h1 className="col-span-2 text-[22px]">Tipo de componentes</h1>
-              <InputSearch onSearch={(value) => setSearch(value)} />
+              <InputSearch
+                onSearch={(value) => {
+                  setSearch(value);
+                  setPage(1);
+                }}
+              />
               <menu className="flex gap-4">
                 <ExportXLS />
                 <ShowColumns
@@ -138,13 +175,18 @@ export default function MantenedorRedPage() {
           onClose={() => setOpenApprove(false)}
           onSuccess={onLoad}
         />
-      )}  
+      )}
       {openCreate && (
-        <Create onClose={() => setOpenCreate(false)} onSuccess={onLoad}  />
+        <Create onClose={() => setOpenCreate(false)} onSuccess={onLoad} />
       )}
 
-        {openEdit && (
-        <Create onClose={() => setOpenEdit(false)} onSuccess={onLoad} tipoComponente={tipoComponente} mode="edit" />
+      {openEdit && (
+        <Create
+          onClose={() => setOpenEdit(false)}
+          onSuccess={onLoad}
+          tipoComponente={tipoComponente}
+          mode="edit"
+        />
       )}
     </>
   );

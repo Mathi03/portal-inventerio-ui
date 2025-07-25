@@ -6,8 +6,6 @@ import { CreateComponenteRedDto } from "@/core/componente-red/dto/create.dto";
 import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
 import ConfigAdicional from "@/app/(home)/componente-red/ConfigAdicional";
 import RelacionJerarquica from "./Relatcion-jerarquica";
-import { RelacionJerarquicaService } from "@/core/relacion-jerarquica/relacion-jerarquica.service";
-
 import { RedService } from "@/core/red/red.service";
 import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
 import { FuenteService } from "@/core/fuente/fuente.service";
@@ -21,6 +19,7 @@ import Table from "@/components/Table/Table";
 import Pagination from "@/components/Pagination";
 import { UpdateComponenteRedDto } from "@/core/componente-red/dto/update.dto";
 import { useComponenteRedForm } from "./hooks/useComponenteRedForm";
+import SearchableSelect from "@/components/SearchableSelect";
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -57,7 +56,7 @@ export default function CreateForm({
 
   const [isLoadingRedes, setIsLoadingRedes] = useState(true);
   const [isLoadingTC, setIsLoadingTC] = useState(true);
-  const [isLoadingFuentes, setIsLoadingFuentes] = useState(true);
+  const [isLoadingFuentes, setIsLoadingFuentes] = useState(false);
   const [isLoadingRegiones, setIsLoadingRegiones] = useState(true);
 
   const [redes, setRedes] = useState<RedType[]>([]);
@@ -102,7 +101,6 @@ export default function CreateForm({
   const onAttributes = useCallback(
     (name: string, value: any, parentName: string | null = null) => {
       // ✨ SOLUCIÓN: Añadir el tipo a `prevAttributes`
-      console.log("estamos aclarando los atributos....");
       setAttribute((prevAttributes: AttributesState) => {
         const newAttributes: AttributesState = { ...prevAttributes };
 
@@ -122,7 +120,6 @@ export default function CreateForm({
           // Es un atributo regular
           newAttributes[name] = value;
         }
-        console.log("estamos aclarando los services2222....", newAttributes);
         return newAttributes;
       });
     },
@@ -155,24 +152,6 @@ export default function CreateForm({
       });
     },
     []
-  );
-
-  const createRelacionJerarquicas = useCallback(
-    async (componenteRed: ComponenteRedType) => {
-      const relacionJerarquicaService = new RelacionJerarquicaService();
-      await Promise.all(
-        componenteSeleted.map(async (selected) => {
-          relacionJerarquicaService.create({
-            controlId: componenteRed.controlId,
-            superiorControlId: selected.controlId,
-            refComponentTypeId: componenteRed.refComponentTypeId,
-            refNetworkId: componenteRed.refNetworkId,
-            status: 1,
-          });
-        })
-      );
-    },
-    [componenteSeleted]
   );
 
   const [childName, setChildName] = useState(componenteRed?.controlName ?? "");
@@ -236,10 +215,13 @@ export default function CreateForm({
   const getFuentes = useCallback(async () => {
     setIsLoadingFuentes(true);
     const fuenteService = new FuenteService();
-    const { data } = await fuenteService.findAll({});
+    const { data } = await fuenteService.findAll({
+      refComponentTypeId: tipoComponente?.id,
+      refNetworkId: red?.id,
+    });
     setFuentes(data.data.data.filter((f: FuenteType) => f.status === 1));
     setIsLoadingFuentes(false);
-  }, []);
+  }, [tipoComponente, red]);
 
   const getRegiones = useCallback(async () => {
     setIsLoadingRegiones(true);
@@ -253,10 +235,25 @@ export default function CreateForm({
 
   useEffect(() => {
     getRedes();
-    getTipoComponentes();
-    getFuentes();
     getRegiones();
-  }, [getRedes, getTipoComponentes, getFuentes, getRegiones]);
+    getTipoComponentes();
+  }, [getRedes, getRegiones, getTipoComponentes]);
+
+  const isValidToSearch =
+    red && red !== null && tipoComponente && tipoComponente !== null;
+
+  useEffect(() => {
+    if (isValidToSearch) {
+      getFuentes();
+    }
+  }, [red, tipoComponente]);
+
+  // useEffect(() => {
+  //   getRedes();
+  //   getTipoComponentes();
+  //   getFuentes();
+  //   getRegiones();
+  // }, [getRedes, getTipoComponentes, getFuentes, getRegiones]);
 
   useEffect(() => {
     if (componenteRed?.refComponentTypeId && tipoComponentes.length > 0) {
@@ -360,7 +357,7 @@ export default function CreateForm({
           optional={mode === "approve"}
         />
 
-        <Select
+        <SearchableSelect
           name={"refNetworkId" as FormItem}
           label="Red"
           disabled={mode === "approve" ? true : isLoadingRedes}
@@ -376,7 +373,7 @@ export default function CreateForm({
           }
         />
 
-        <Select
+        <SearchableSelect
           name={"refComponentTypeId" as FormItem}
           label="Tipo de componente"
           disabled={mode === "approve" ? true : isLoadingTC}
@@ -396,10 +393,16 @@ export default function CreateForm({
           }
         />
 
-        <Select
+        <SearchableSelect
           name={"refSourceId" as FormItem}
           label="Fuente"
-          disabled={mode === "approve" ? true : isLoadingFuentes}
+          disabled={
+            mode === "approve"
+              ? true
+              : !isValidToSearch
+                ? true
+                : isLoadingFuentes
+          }
           optional={mode === "approve"}
           fullWidth
           helperText={isLoadingFuentes ? "Cargando fuentes..." : undefined}
