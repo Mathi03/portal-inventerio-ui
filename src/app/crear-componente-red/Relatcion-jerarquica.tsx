@@ -6,22 +6,26 @@ import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type"
 import { Checkbox } from "@telefonica/mistica";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-export default function RelacionJerarquica({
-  red,
-  onSelected,
-  onDeselected,
-}: {
+interface RelacionJerarquicaProps {
   tipoComponente?: TipoComponenteType | null;
   red?: RedType | null;
   onSelected: (componente: ComponenteRedType) => void;
   onDeselected: (componente: ComponenteRedType) => void;
-}) {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+}
+
+export default function RelacionJerarquica({
+  tipoComponente,
+  red,
+  onSelected,
+  onDeselected,
+}: RelacionJerarquicaProps) {
+  const [isLoading, setIsLoading] = useState(false);
   const [componenteRedes, setComponenteRedes] = useState<ComponenteRedType[]>(
-    [],
+    []
   );
-  const columns = useMemo<TableColumn<ComponenteRedType>[]>(() => {
-    return [
+
+  const columns = useMemo<TableColumn<ComponenteRedType>[]>(
+    () => [
       {
         maxWidth: "64px",
         render: (row) => (
@@ -39,28 +43,38 @@ export default function RelacionJerarquica({
       },
       {
         title: "Nombre",
-        key: "name",
+        key: "controlName",
       },
       {
         title: "Etiqueta",
-        key: "label",
+        key: "controlLabel",
       },
-    ];
-  }, [onSelected, onDeselected]);
+    ],
+    [onSelected, onDeselected]
+  );
+
   const getComponenteRedes = useCallback(async () => {
     if (!red) return;
     setIsLoading(true);
     const componenteRed = new ComponenteRedService();
-    const { data } = await componenteRed.findAll({
+    const query: Record<string, string> = {
       q: "",
       ref_network_id: String(red.id),
-    });
+    };
+
+    if (tipoComponente?.id) {
+      query.ref_component_type_id = String(tipoComponente.id);
+    }
+
+    const { data } = await componenteRed.findAll(query);
     setComponenteRedes(data.data.data);
     setIsLoading(false);
-  }, [red]);
+  }, [red, tipoComponente]);
+
   useEffect(() => {
     getComponenteRedes();
   }, [getComponenteRedes]);
+
   return (
     <div className="col-span-3 h-[50svh] grid grid-rows-[1fr]">
       <Table

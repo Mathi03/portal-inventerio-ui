@@ -1,6 +1,6 @@
 import Select from "@/components/Select";
 import { Form, Switch, TextField } from "@telefonica/mistica";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "@/components/Button";
 import { CreateComponenteRedDto } from "@/core/componente-red/dto/create.dto";
 import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
@@ -19,7 +19,9 @@ import Table from "@/components/Table/Table";
 import Pagination from "@/components/Pagination";
 import { UpdateComponenteRedDto } from "@/core/componente-red/dto/update.dto";
 import { useComponenteRedForm } from "./hooks/useComponenteRedForm";
-import SearchableSelect from "@/components/SearchableSelect";
+import SearchableSelect, {
+  SearchableSelectHandle,
+} from "@/components/SearchableSelect";
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -47,6 +49,7 @@ export default function CreateForm({
   mode = "create",
   componenteRed,
 }: CreateFormProps) {
+  const networkInputRef = useRef<SearchableSelectHandle>(null);
   const [tipoComponente, setTipoComponente] =
     useState<TipoComponenteType | null>();
 
@@ -248,6 +251,27 @@ export default function CreateForm({
     }
   }, [red, tipoComponente]);
 
+  const getConfigRelation = async () => {
+    const tcService = new TipoComponenteService();
+    const { data } = await tcService.All({ idList: [tipoComponente?.id] });
+    if (data?.length > 0 && data[0].configRelation?.length > 0) {
+      const networkId = data[0].configRelation[0].networkId;
+      const findNetwork = redes.find((r) => r.id === networkId);
+
+      if (findNetwork) {
+        networkInputRef.current?.setValue(networkId.toString());
+        networkInputRef.current?.setQuery(findNetwork?.label ?? "");
+        setRed(findNetwork);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (tipoComponente) {
+      getConfigRelation();
+    }
+  }, [tipoComponente]);
+
   // useEffect(() => {
   //   getRedes();
   //   getTipoComponentes();
@@ -358,6 +382,7 @@ export default function CreateForm({
         />
 
         <SearchableSelect
+          ref={networkInputRef}
           name={"refNetworkId" as FormItem}
           label="Red"
           disabled={mode === "approve" ? true : isLoadingRedes}
@@ -475,6 +500,7 @@ export default function CreateForm({
         </hgroup>
         <RelacionJerarquica
           red={red}
+          tipoComponente={tipoComponente}
           onSelected={(componente) =>
             setComponenteSeleted([...componenteSeleted, componente])
           }
