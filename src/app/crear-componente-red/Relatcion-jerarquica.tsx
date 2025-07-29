@@ -2,23 +2,26 @@ import Table, { TableColumn } from "@/components/Table/Table";
 import { ComponenteRedService } from "@/core/componente-red/componente-red.service";
 import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
 import { RedType } from "@/core/red/red.type";
-import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
-import { Checkbox } from "@telefonica/mistica";
+import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
+import { Checkbox, useSnackbar } from "@telefonica/mistica";
+import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface RelacionJerarquicaProps {
-  tipoComponente?: TipoComponenteType | null;
+  // tipoComponente?: TipoComponenteType | null;
+  tipoComponenteId?: number | null;
   red?: RedType | null;
   onSelected: (componente: ComponenteRedType) => void;
   onDeselected: (componente: ComponenteRedType) => void;
 }
 
 export default function RelacionJerarquica({
-  tipoComponente,
+  tipoComponenteId,
   red,
   onSelected,
   onDeselected,
 }: RelacionJerarquicaProps) {
+  const { openSnackbar } = useSnackbar();
   const [isLoading, setIsLoading] = useState(false);
   const [componenteRedes, setComponenteRedes] = useState<ComponenteRedType[]>(
     []
@@ -54,22 +57,36 @@ export default function RelacionJerarquica({
   );
 
   const getComponenteRedes = useCallback(async () => {
-    if (!red) return;
+    if (!red || !tipoComponenteId) return;
+
     setIsLoading(true);
     const componenteRed = new ComponenteRedService();
-    const query: Record<string, string> = {
-      q: "",
-      ref_network_id: String(red.id),
-    };
 
-    if (tipoComponente?.id) {
-      query.ref_component_type_id = String(tipoComponente.id);
+    try {
+      const query: Record<string, string> = {
+        q: "",
+        ref_network_id: String(red.id),
+        ref_component_type_id: String(tipoComponenteId),
+      };
+
+      const { data } = await componenteRed.findAll(query);
+      setComponenteRedes(data.data.data);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        openSnackbar({
+          message: errorMessageInAPI,
+          type: "CRITICAL",
+        });
+      } else {
+        openSnackbar({
+          message: errorGeneric,
+          type: "CRITICAL",
+        });
+      }
+    } finally {
+      setIsLoading(false);
     }
-
-    const { data } = await componenteRed.findAll(query);
-    setComponenteRedes(data.data.data);
-    setIsLoading(false);
-  }, [red, tipoComponente]);
+  }, [red, tipoComponenteId, openSnackbar]);
 
   useEffect(() => {
     getComponenteRedes();

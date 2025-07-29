@@ -52,6 +52,9 @@ export default function CreateForm({
   const networkInputRef = useRef<SearchableSelectHandle>(null);
   const [tipoComponente, setTipoComponente] =
     useState<TipoComponenteType | null>();
+  const [componentTypeFatherId, setComponentTypeFatherId] = useState<
+    number | null
+  >(null);
 
   const [red, setRed] = useState<RedType | null>(null);
 
@@ -255,14 +258,20 @@ export default function CreateForm({
     const tcService = new TipoComponenteService();
     const { data } = await tcService.All({ idList: [tipoComponente?.id] });
     if (data?.length > 0 && data[0].configRelation?.length > 0) {
-      const networkId = data[0].configRelation[0].networkId;
-      const findNetwork = redes.find((r) => r.id === networkId);
+      const networkFatherId = data[0].configRelation[0].networkFatherId;
+      const componentTypeFatherId =
+        data[0].configRelation[0].componentTypeFatherId;
+      const findNetwork = redes.find((r) => r.id === networkFatherId);
 
       if (findNetwork) {
-        networkInputRef.current?.setValue(networkId.toString());
+        networkInputRef.current?.setValue(networkFatherId.toString());
         networkInputRef.current?.setQuery(findNetwork?.label ?? "");
         setRed(findNetwork);
+        setComponentTypeFatherId(componentTypeFatherId);
       }
+    } else {
+      setRed(null);
+      setComponentTypeFatherId(null);
     }
   };
 
@@ -500,7 +509,7 @@ export default function CreateForm({
         </hgroup>
         <RelacionJerarquica
           red={red}
-          tipoComponente={tipoComponente}
+          tipoComponenteId={componentTypeFatherId}
           onSelected={(componente) =>
             setComponenteSeleted([...componenteSeleted, componente])
           }
