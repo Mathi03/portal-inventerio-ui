@@ -8,6 +8,7 @@ import {
   msDirecciones,
   source,
 } from "@/core/config";
+import { RedType } from "@/core/red/red.type";
 import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
 import { Box, Tabs } from "@telefonica/mistica";
 import { AxiosInstance } from "axios";
@@ -58,6 +59,7 @@ interface ServicesState {
 // }
 
 export default function ConfigAdicional({
+  red,
   tipoComponente,
   onAttributes,
   onServices,
@@ -66,6 +68,7 @@ export default function ConfigAdicional({
   service,
 }: {
   tipoComponente?: TipoComponenteType | null;
+  red?: RedType | null;
   onAttributes?: (name: string, value: any, parentName?: string | null) => void;
   onServices?: (name: string, value: any, parentName?: string | null) => void;
   className?: string;
@@ -293,6 +296,9 @@ export default function ConfigAdicional({
                               dynamicOptions={
                                 dynamicOptions[attributeConfig.name]?.options
                               }
+                              isCreate={true}
+                              red={red}
+                              tipoComponente={tipoComponente}
                             />
                           </div>
                         ))}

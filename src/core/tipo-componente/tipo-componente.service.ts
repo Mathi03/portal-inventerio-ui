@@ -27,6 +27,11 @@ export class TipoComponenteService {
   public async getById(id: number) {
     return await bff.get(`/v1/portal/ref-component-type/${id}`);
   }
+
+  public async getByNetworkId(id: number) {
+    return await bff.get(`/v1/portal/ref-component-type/ByNetwork/${id}`);
+  }
+
   public async All(idList: any) {
     return await bff.post(`/v1/portal/ref-component-type/ALL`, idList);
   }

@@ -22,6 +22,7 @@ import { useComponenteRedForm } from "./hooks/useComponenteRedForm";
 import SearchableSelect, {
   SearchableSelectHandle,
 } from "@/components/SearchableSelect";
+import { useModalStore } from "@/hooks/modalStorage";
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -31,6 +32,9 @@ type FormValues = (CreateComponenteRedDto | UpdateComponenteRedDto) & {
 
 interface BaseCreateFormProps {
   mode?: "create" | "update" | "approve";
+  isModal?: boolean;
+  networkId?: number;
+  componentTypeId?: number;
 }
 
 interface CreateModeProps extends BaseCreateFormProps {
@@ -48,7 +52,12 @@ type CreateFormProps = CreateModeProps | UpdateOrApproveModeProps;
 export default function CreateForm({
   mode = "create",
   componenteRed,
+  isModal,
+  networkId,
+  componentTypeId,
 }: CreateFormProps) {
+  const { closeModal } = useModalStore();
+
   const networkInputRef = useRef<SearchableSelectHandle>(null);
   const [tipoComponente, setTipoComponente] =
     useState<TipoComponenteType | null>();
@@ -57,11 +66,12 @@ export default function CreateForm({
   >(null);
 
   const [red, setRed] = useState<RedType | null>(null);
+  const [redFather, setRedFather] = useState<RedType | null>(null);
 
   //ojo validar con como se llama....
 
   const [isLoadingRedes, setIsLoadingRedes] = useState(true);
-  const [isLoadingTC, setIsLoadingTC] = useState(true);
+  const [isLoadingTC, setIsLoadingTC] = useState(false);
   const [isLoadingFuentes, setIsLoadingFuentes] = useState(false);
   const [isLoadingRegiones, setIsLoadingRegiones] = useState(true);
 
@@ -183,12 +193,16 @@ export default function CreateForm({
 
   const initialValues = useMemo(
     () => ({
+      componentId: componenteRed?.componentId,
       code: componenteRed?.code,
       observation: componenteRed?.observation?.toString() || "",
       regionId: componenteRed?.regionId?.toString() || "",
       stationId: componenteRed?.stationId?.toString() || "",
-      refNetworkId: componenteRed?.refNetworkId?.toString() || "",
-      refComponentTypeId: componenteRed?.refComponentTypeId?.toString() || "",
+      refNetworkId:
+        componenteRed?.refNetworkId?.toString() || networkId?.toString(),
+      refComponentTypeId:
+        componenteRed?.refComponentTypeId?.toString() ||
+        componentTypeId?.toString(),
       refSourceId: componenteRed?.refSourceId?.toString() || "",
       status: componenteRed?.status?.toString() || "",
       label: componenteRed?.controlLabel,
@@ -197,26 +211,41 @@ export default function CreateForm({
         ? JSON.parse(componenteRed.attribute)[0]
         : {}),
     }),
-    [componenteRed]
+    [componenteRed, networkId, componentTypeId]
   );
 
   const getRedes = useCallback(async () => {
     setIsLoadingRedes(true);
     const redService = new RedService();
     const { data } = await redService.findAll({});
-    setRedes(data.data.data.filter((r: RedType) => r.status === 1));
+    const activeNetworks = data.data.data.filter(
+      (r: RedType) => r.status === 1
+    );
+    setRedes(activeNetworks);
+    if (networkId) {
+      setRed(activeNetworks.find((r) => r.id === networkId) ?? null);
+    }
     setIsLoadingRedes(false);
-  }, []);
+  }, [networkId]);
 
   const getTipoComponentes = useCallback(async () => {
+    if (!red) return;
     setIsLoadingTC(true);
     const tcService = new TipoComponenteService();
-    const { data } = await tcService.findAll({});
-    setTipoComponentes(
-      data.data.data.filter((t: TipoComponenteType) => t.status === 1)
+    const { data } = await tcService.getByNetworkId(red?.id);
+    const activeComponenteTypes = data.filter(
+      (t: TipoComponenteType) => t.status === 1
     );
+    setTipoComponentes(activeComponenteTypes);
+    if (componentTypeId) {
+      setTipoComponente(
+        activeComponenteTypes.find(
+          (r: TipoComponenteType) => r.id === componentTypeId
+        ) ?? null
+      );
+    }
     setIsLoadingTC(false);
-  }, []);
+  }, [red]);
 
   const getFuentes = useCallback(async () => {
     setIsLoadingFuentes(true);
@@ -242,8 +271,11 @@ export default function CreateForm({
   useEffect(() => {
     getRedes();
     getRegiones();
+  }, [getRedes, getRegiones]);
+
+  useEffect(() => {
     getTipoComponentes();
-  }, [getRedes, getRegiones, getTipoComponentes]);
+  }, [getTipoComponentes]);
 
   const isValidToSearch =
     red && red !== null && tipoComponente && tipoComponente !== null;
@@ -266,11 +298,11 @@ export default function CreateForm({
       if (findNetwork) {
         networkInputRef.current?.setValue(networkFatherId.toString());
         networkInputRef.current?.setQuery(findNetwork?.label ?? "");
-        setRed(findNetwork);
+        setRedFather(findNetwork);
         setComponentTypeFatherId(componentTypeFatherId);
       }
     } else {
-      setRed(null);
+      setRedFather(null);
       setComponentTypeFatherId(null);
     }
   };
@@ -350,15 +382,25 @@ export default function CreateForm({
 
   return (
     <section className="grid content-start overflow-auto bg-[white] w-full h-full rounded-[8px] scroller scroll-smooth">
-      <header className="p-6 grid gap-4">
-        <h4 className="text-[28px]">
-          {mode === "create" ? "Creación" : "Detalle"} de componente de red
-        </h4>
-        <p>
-          En esta sección, podrás crear y gestionar tus componentes de red de
-          manera eficiente y personalizada.
-        </p>
-      </header>
+      <div className="flex justify-between">
+        <header className="p-6 grid gap-4">
+          <h4 className="text-[28px]">
+            {mode === "create" ? "Creación" : "Detalle"} de componente de red
+          </h4>
+          <p>
+            En esta sección, podrás crear y gestionar tus componentes de red de
+            manera eficiente y personalizada.
+          </p>
+        </header>
+        {isModal && (
+          <div className="p-6">
+            <Button variant="primary" onClick={() => closeModal()}>
+              Cerrar
+            </Button>
+          </div>
+        )}
+      </div>
+
       <Form
         onSubmit={(value) => onSubmit(value as FormValues)}
         className="grid grid-cols-3 content-start gap-4 px-6"
@@ -386,6 +428,15 @@ export default function CreateForm({
           fullWidth
           maxLength={255}
           onChange={handleInputLabel}
+          disabled={mode === "approve"}
+          optional={mode === "approve"}
+        />
+
+        <TextField
+          name={"componentId" as FormItem}
+          label="Componente ID"
+          fullWidth
+          maxLength={255}
           disabled={mode === "approve"}
           optional={mode === "approve"}
         />
@@ -496,6 +547,7 @@ export default function CreateForm({
         <ConfigAdicional
           className="col-span-full"
           tipoComponente={tipoComponente}
+          red={red}
           attribute={attribute}
           onAttributes={onAttributes}
           service={service}
@@ -508,7 +560,7 @@ export default function CreateForm({
           <p>En esta sección podra relacionar componentes de red entre si</p>
         </hgroup>
         <RelacionJerarquica
-          red={red}
+          red={redFather}
           tipoComponenteId={componentTypeFatherId}
           onSelected={(componente) =>
             setComponenteSeleted([...componenteSeleted, componente])

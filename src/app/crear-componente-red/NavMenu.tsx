@@ -29,7 +29,7 @@ const navItems: Record<string, NavItem[]> = {
 export default function NavMenu() {
   return (
     <nav className="w-full h-full bg-white border-[#dddd] border-[1px] border-solid overflow-auto content-start rounded-[8px] scroller">
-      <header className="px-4 py-6 border-[#dddd] border-b-[1px] border-solid sticky top-0 bg-white z-10">
+      <header className="px-4 py-6 border-[#dddd] border-b-[1px] border-solid sticky top-0 bg-white">
         <h5 className="text-2xl">Navegacion</h5>
       </header>
       <Accordion defaultIndex={0}>

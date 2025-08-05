@@ -73,7 +73,7 @@ export function useComponenteRedForm({
         code: "",
         codigo: "",
         controlId: 1,
-        componentId: 1,
+        componentId: Number(form.componentId),
       };
 
       if (isUpdate) {
