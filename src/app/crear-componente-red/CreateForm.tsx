@@ -23,6 +23,7 @@ import SearchableSelect, {
   SearchableSelectHandle,
 } from "@/components/SearchableSelect";
 import { useModalStore } from "@/hooks/modalStorage";
+import ConfigData from "../(home)/componente-red/ConfigData";
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -84,6 +85,8 @@ export default function CreateForm({
 
   const [commentPage, setCommentPage] = useState(1);
   const [commentLimit, setCommentLimit] = useState(5);
+
+  const [selectedTab, setSelectedTab] = useState(0);
 
   const {
     isSubmitting,
@@ -543,6 +546,14 @@ export default function CreateForm({
 
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="config-adicional"></hgroup>
+
+        <ConfigData
+          tipoComponente={tipoComponente ?? null}
+          // attribute={attribute}
+          // onAttributes={onAttributes}
+          // service={service}
+          // onServices={onServices}
+        />
 
         <ConfigAdicional
           className="col-span-full"

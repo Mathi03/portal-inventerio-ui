@@ -44,7 +44,7 @@ const atribsConfigSchema = z.object({
   name: z.string(),
   label: z.string(),
   type: TypeEnum,
-  html_form_type: HtmlFormTypeEnum,
+  html_form_type: HtmlFormTypeEnum.optional(),
   place_holder: z.string().optional(),
   required: z.boolean(),
   default: z.boolean(),
@@ -84,6 +84,7 @@ const itemSchema = z.object({
   depend_of: z.string().optional(),
   atribs_config: z.array(atribsConfigSchema).optional(),
   status: z.union([z.string(), z.number()]).optional(),
+  is_create: z.boolean().optional()
 });
 
 export const jsonSchemaAttribute = z.array(itemSchema);
