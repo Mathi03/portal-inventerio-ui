@@ -17,6 +17,7 @@ import {
   msDirecciones,
   source,
 } from "@/core/config";
+import { RELACIONES_TIPO_CIRCUITO } from "@/core/config/relacionesServicios";
 
 const urlClientMap: Record<string, AxiosInstance> = {
   [process.env.NEXT_PUBLIC_API_URL!]: bff,
@@ -54,6 +55,10 @@ export default function ConfigData({
     {}
   );
 
+  const [filteredConfigServices, setFilteredConfigServices] = useState<
+    ConfigDataAttribute[]
+  >([]);
+
   const configDataItem = tipoComponente ? tipoComponente.configData?.[0] : null;
   const configAttributes = configDataItem?.configAttributes ?? [];
   const configServices = configDataItem?.configServices ?? [];
@@ -89,16 +94,8 @@ export default function ConfigData({
       setFormData((prev) => {
         // Obtenemos el array actual (o lo inicializamos con un objeto vacío)
         const existingGroup = prev[groupKey] ?? [{}];
-
-        const updatedGroup = {
-          ...existingGroup[0],
-          [fieldKey]: value,
-        };
-
-        return {
-          ...prev,
-          [groupKey]: [updatedGroup],
-        };
+        const updatedGroup = { ...existingGroup[0], [fieldKey]: value };
+        return { ...prev, [groupKey]: [updatedGroup] };
       });
     } else {
       // Si no contiene #, se guarda normalmente
@@ -118,20 +115,27 @@ export default function ConfigData({
 
       // Reemplazar @value con el valor seleccionado
       const targetUrl = valores_posibles_source.replace("@value", value);
-
       const options = await fetchOptions(targetUrl, valores_posibles_response);
 
       // Guardar opciones en el select dependiente
-      setDynamicOptions((prev) => ({
-        ...prev,
-        [target_name]: options,
-      }));
+      setDynamicOptions((prev) => ({ ...prev, [target_name]: options }));
 
       // Limpiar valor del dependiente
-      setFormData((prev) => ({
-        ...prev,
-        [target_name]: "",
-      }));
+      setFormData((prev) => ({ ...prev, [target_name]: "" }));
+    }
+
+    if (name === "id_tipo_circuito") {
+      const relacion = RELACIONES_TIPO_CIRCUITO.find(
+        (r) => r.id === parseInt(value)
+      );
+      if (relacion) {
+        const serviciosFiltrados = configServices.filter((service) =>
+          relacion.servicios_asociados.some((s) => s.name === service.name)
+        );
+        setFilteredConfigServices(serviciosFiltrados);
+      } else {
+        setFilteredConfigServices([]);
+      }
     }
   };
 
@@ -203,7 +207,7 @@ export default function ConfigData({
     }
 
     setAttributes(newAttributes);
-    setServices(newServices);
+    setServices(filteredConfigServices);
   }, [formData]);
 
   const renderInputs = (attributes: ConfigDataAttribute[], namePrefix = "") =>
@@ -270,7 +274,12 @@ export default function ConfigData({
     },
     {
       title: "Servicios",
-      content: () => renderTabContent(configServices),
+      content: () =>
+        renderTabContent(
+          filteredConfigServices.length > 0
+            ? filteredConfigServices
+            : configServices
+        ),
     },
   ];
 
