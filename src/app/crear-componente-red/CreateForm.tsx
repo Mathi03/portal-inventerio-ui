@@ -117,62 +117,6 @@ export default function CreateForm({
     [key: string]: string | NestedServices;
   }
 
-  const onAttributes = useCallback(
-    (name: string, value: any, parentName: string | null = null) => {
-      // ✨ SOLUCIÓN: Añadir el tipo a `prevAttributes`
-      setAttribute((prevAttributes: AttributesState) => {
-        const newAttributes: AttributesState = { ...prevAttributes };
-
-        if (parentName) {
-          // Es un atributo anidado
-          if (typeof newAttributes[parentName] === "string") {
-            console.error(
-              `Error: Expected object for ${parentName}, but found string.`
-            );
-            return prevAttributes;
-          }
-          if (!newAttributes[parentName]) {
-            newAttributes[parentName] = {};
-          }
-          (newAttributes[parentName] as NestedAttributes)[name] = value;
-        } else {
-          // Es un atributo regular
-          newAttributes[name] = value;
-        }
-        return newAttributes;
-      });
-    },
-    []
-  );
-
-  const onServices = useCallback(
-    (name: string, value: any, parentName: string | null = null) => {
-      // ✨ SOLUCIÓN: Añadir el tipo a `prevServices`
-      setService((prevServices: ServicesState) => {
-        const newServices: ServicesState = { ...prevServices };
-
-        if (parentName) {
-          // Es un atributo anidado
-          if (typeof newServices[parentName] === "string") {
-            console.error(
-              `Error: Expected object for ${parentName}, but found string.`
-            );
-            return prevServices;
-          }
-          if (!newServices[parentName]) {
-            newServices[parentName] = {};
-          }
-          (newServices[parentName] as NestedServices)[name] = value;
-        } else {
-          // Es un atributo regular
-          newServices[name] = value;
-        }
-        return newServices;
-      });
-    },
-    []
-  );
-
   const [childName, setChildName] = useState(componenteRed?.controlName ?? "");
   const [label, setLabel] = useState(componenteRed?.controlLabel ?? "");
 
@@ -213,6 +157,7 @@ export default function CreateForm({
       ...(componenteRed?.attribute
         ? JSON.parse(componenteRed.attribute)[0]
         : {}),
+      ...(componenteRed?.service ? JSON.parse(componenteRed.service)[0] : {}),
     }),
     [componenteRed, networkId, componentTypeId]
   );
@@ -549,20 +494,14 @@ export default function CreateForm({
 
         <ConfigData
           tipoComponente={tipoComponente ?? null}
+          setAttributes={setAttribute}
+          setServices={setService}
+          attributes={attribute}
+          services={service}
           // attribute={attribute}
           // onAttributes={onAttributes}
           // service={service}
           // onServices={onServices}
-        />
-
-        <ConfigAdicional
-          className="col-span-full"
-          tipoComponente={tipoComponente}
-          red={red}
-          attribute={attribute}
-          onAttributes={onAttributes}
-          service={service}
-          onServices={onServices}
         />
 
         <hr className="col-span-3" />

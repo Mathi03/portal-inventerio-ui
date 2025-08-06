@@ -8,10 +8,13 @@ interface InputDynamicProps {
   label: string;
   required?: boolean;
   html_form_type: "input" | "select" | "date";
-  value: string;
+  value?: string;
   onChange: (name: string, value: string) => void;
-  is_create?: boolean;
-  selectOptions?: { value: string; text: string }[];
+  isCreate?: boolean;
+  selectOptions?: Array<{
+    text: string;
+    value: string;
+  }>;
   loading?: boolean;
   networkId?: number;
   componentTypeId?: number;
@@ -22,25 +25,20 @@ export default function InputDynamic({
   label,
   required = true,
   html_form_type,
-  value,
+  value = "",
   onChange,
-  is_create,
+  isCreate,
   selectOptions = [],
   loading = false,
   networkId,
   componentTypeId,
 }: InputDynamicProps) {
   const { openModal } = useModalStore();
-  const [valueController, setValueController] = useState(value);
-
-  useEffect(() => {
-    setValueController(value);
-  }, [value]);
 
   const renderButton = () => (
-    <button className="px-6 py-3 bg-blue-500 text-white rounded-full"
-      onClick={(e) =>
-      {
+    <button
+      className="px-6 py-3 bg-blue-600 text-white rounded-full"
+      onClick={(e) => {
         e.preventDefault();
         openModal(
           <CreateForm
@@ -48,9 +46,8 @@ export default function InputDynamic({
             networkId={networkId}
             componentTypeId={componentTypeId}
           />
-        )
-      }
-      }
+        );
+      }}
     >
       Crear
     </button>
@@ -61,10 +58,9 @@ export default function InputDynamic({
       name={name}
       label={label}
       optional={!required}
-      value={valueController}
+      value={value?.toString()}
       onChangeValue={(val) => {
         onChange(name, val);
-        setValueController(val);
       }}
       disabled={loading}
       helperText={loading ? `Cargando ${label}...` : undefined}
@@ -78,13 +74,12 @@ export default function InputDynamic({
       name={name}
       optional={!required}
       label={label}
-      value={valueController}
+      value={value}
       fullWidth
       maxLength={255}
       onChange={(e) => {
         const val = e.target.value;
         onChange(name, val);
-        setValueController(val);
       }}
     />
   );
@@ -94,11 +89,10 @@ export default function InputDynamic({
       name={name}
       optional={!required}
       label={label}
-      value={valueController}
+      value={value}
       fullWidth
       onChange={(val) => {
-        onChange(name, val);
-        setValueController(val);
+        onChange(name, val?.target?.value ?? "");
       }}
     />
   );
@@ -112,11 +106,11 @@ export default function InputDynamic({
       case "date":
         return renderDate();
       default:
-        throw new Error(`html_form_type inválido: ${html_form_type}`);
+        return <div>Error: tipo no soportado</div>;
     }
-  }, [html_form_type, valueController, loading, selectOptions]);
+  }, [html_form_type, loading, selectOptions]);
 
-  if (is_create) {
+  if (isCreate) {
     return (
       <div className="flex gap-2 items-start">
         {field}

@@ -5,8 +5,8 @@ const urlConIPRegex = new RegExp(
 );
 
 const posiblesValoresSchema = z.object({
-  name: z.string(),
-  value: z.string(),
+  name: z.union([z.string(), z.number()]),
+  value: z.union([z.string(), z.number()]),
 });
 const TypeEnum = z.union(
   [
@@ -61,7 +61,7 @@ const itemSchema = z.object({
     invalid_type_error: "El campo 'label' debe ser una cadena",
   }),
   type: TypeEnum,
-  html_form_type: HtmlFormTypeEnum, // si es select = valores_posibles o valores_posibles_sources
+  html_form_type: HtmlFormTypeEnum.optional(), // si es select = valores_posibles o valores_posibles_sources
   place_holder: z.string().optional(),
   required: z.boolean({
     required_error: "El campo 'required' es obligatorio",

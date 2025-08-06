@@ -38,7 +38,7 @@ interface ConfigData {
   networkId: number;
   status: number;
   configAttributes: ConfigDataAttribute[];
-  configServices: ConfigDataService[]; // Ajusta según la estructura real
+  configServices: ConfigDataAttribute[]; // Ajusta según la estructura real
 }
 interface OnChange {
   target_name: string;
@@ -46,7 +46,7 @@ interface OnChange {
   valores_posibles_response: string[];
 }
 
-interface ConfigDataAttribute {
+export interface ConfigDataAttribute {
   name: string;
   type: string;
   label: string;
@@ -59,7 +59,8 @@ interface ConfigDataAttribute {
   valores_posibles_response?: string[];
   on_change?: OnChange;
   depend_of?: string;
-  atribs_config: ConfigDataAtribs_config[];
+  atribs_config: ConfigDataAttribute[];
+  is_create?: boolean;
 }
 
 interface ConfigDataService {
