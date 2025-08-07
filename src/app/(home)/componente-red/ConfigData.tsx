@@ -174,13 +174,13 @@ export default function ConfigData({
   useEffect(() => {
     prepareInputs(configAttributes);
     prepareInputs(configServices);
+    setFilteredConfigServices([])
   }, [tipoComponente]);
 
   useEffect(() => {
     const hasInitialData =
       Object.keys(attributes || {}).length > 0 ||
       Object.keys(services || {}).length > 0;
-
     if (hasInitialData) {
       setFormData((prev) => {
         if (Object.keys(prev).length === 0) {
@@ -190,6 +190,27 @@ export default function ConfigData({
       });
     }
   }, [attributes, services]);
+
+  useEffect(() => {
+    const circuitoId = formData.id_tipo_circuito;
+    if (
+      circuitoId !== undefined &&
+      circuitoId !== null &&
+      configServices.length > 0
+    ) {
+      const relacion = RELACIONES_TIPO_CIRCUITO.find(
+        (r) => r.id === parseInt(circuitoId)
+      );
+      if (relacion) {
+        const serviciosFiltrados = configServices.filter((service) =>
+          relacion.servicios_asociados.some((s) => s.name === service.name)
+        );
+        setFilteredConfigServices(serviciosFiltrados);
+      } else {
+        setFilteredConfigServices([]);
+      }
+    }
+  }, [formData.id_tipo_circuito, configServices]);
 
   useEffect(() => {
     const attributeKeys = configAttributes.map((item) => item.name);
@@ -207,7 +228,7 @@ export default function ConfigData({
     }
 
     setAttributes(newAttributes);
-    setServices(filteredConfigServices);
+    setServices(newServices);
   }, [formData]);
 
   const renderInputs = (attributes: ConfigDataAttribute[], namePrefix = "") =>

@@ -55,7 +55,7 @@ export function useComponenteRedForm({
       isUpdate = false
     ): CreateComponenteRedDto | UpdateComponenteRedDto => {
       const basePayload = {
-        ...form,
+        observation: form.observation,
         stationId: Number(form.stationId),
         refSourceId: Number(form.refSourceId),
         refComponentTypeId: Number(form.refComponentTypeId),
@@ -66,6 +66,7 @@ export function useComponenteRedForm({
         service: [service],
         control: {
           id: 0,
+          idControl: 0,
           label: form.controlLabel,
           name: form.controlName,
           status: 0,
@@ -196,6 +197,8 @@ export function useComponenteRedForm({
 
   const onSubmit = useCallback(
     async (form: FormValues) => {
+      console.log("forma data", form);
+      
       if (mode === "create") return onCreate(form as CreateComponenteRedDto);
       if (mode === "update") return onUpdate(form as UpdateComponenteRedDto);
       if (mode === "approve") return onApprove(form);

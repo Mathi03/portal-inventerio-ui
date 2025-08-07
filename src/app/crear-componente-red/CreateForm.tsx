@@ -1,5 +1,5 @@
 import Select from "@/components/Select";
-import { Form, Switch, TextField } from "@telefonica/mistica";
+import { Form, IntegerField, Switch, TextField } from "@telefonica/mistica";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "@/components/Button";
 import { CreateComponenteRedDto } from "@/core/componente-red/dto/create.dto";
@@ -140,7 +140,7 @@ export default function CreateForm({
 
   const initialValues = useMemo(
     () => ({
-      componentId: componenteRed?.componentId,
+      componentId: componenteRed?.componentId.toString().trim(),
       code: componenteRed?.code,
       observation: componenteRed?.observation?.toString() || "",
       regionId: componenteRed?.regionId?.toString() || "",
@@ -175,6 +175,13 @@ export default function CreateForm({
     }
     setIsLoadingRedes(false);
   }, [networkId]);
+
+  useEffect(() => {
+    if (componenteRed !== undefined && componenteRed !== null) {
+      if (componenteRed.refNetworkId)
+        setRed(redes.find((r) => r.id === componenteRed.refNetworkId) || null);
+    }
+  }, [redes, componenteRed]);
 
   const getTipoComponentes = useCallback(async () => {
     if (!red) return;
@@ -380,7 +387,7 @@ export default function CreateForm({
           optional={mode === "approve"}
         />
 
-        <TextField
+        <IntegerField
           name={"componentId" as FormItem}
           label="Componente ID"
           fullWidth
@@ -389,8 +396,8 @@ export default function CreateForm({
           optional={mode === "approve"}
         />
 
-        <SearchableSelect
-          ref={networkInputRef}
+        <Select
+          // ref={networkInputRef}
           name={"refNetworkId" as FormItem}
           label="Red"
           disabled={mode === "approve" ? true : isLoadingRedes}
@@ -401,12 +408,13 @@ export default function CreateForm({
             text: red.label,
             value: red.id.toString(),
           }))}
-          onChangeValue={(value) =>
-            setRed(redes.find((r) => r.id === +value) || null)
-          }
+          onChangeValue={(value) => {
+            setRed(redes.find((r) => r.id === +value) || null);
+            setTipoComponente(null);
+          }}
         />
 
-        <SearchableSelect
+        <Select
           name={"refComponentTypeId" as FormItem}
           label="Tipo de componente"
           disabled={mode === "approve" ? true : isLoadingTC}
@@ -426,7 +434,7 @@ export default function CreateForm({
           }
         />
 
-        <SearchableSelect
+        <Select
           name={"refSourceId" as FormItem}
           label="Fuente"
           disabled={

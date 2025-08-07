@@ -25,12 +25,12 @@ const TypeEnum = z.union(
 );
 
 const HtmlFormTypeEnum = z.union(
-  [z.literal("input"), z.literal("select"), z.literal("date")],
+  [z.literal("input"), z.literal("select"), z.literal("date"), z.literal("multiple")],
   {
     invalid_type_error:
-      "El tipo de formulario HTML debe ser 'input', 'select' o 'date'",
+      "El tipo de formulario HTML debe ser 'input', 'select', 'multiple' o 'date'",
     required_error:
-      "El tipo de formulario HTML debe ser 'input', 'select' o 'date'",
+      "El tipo de formulario HTML debe ser 'input', 'select', 'multiple' o 'date'",
   }
 );
 
