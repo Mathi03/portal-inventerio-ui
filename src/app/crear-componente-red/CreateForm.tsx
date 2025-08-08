@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "@/components/Button";
 import { CreateComponenteRedDto } from "@/core/componente-red/dto/create.dto";
 import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
-import ConfigAdicional from "@/app/(home)/componente-red/ConfigAdicional";
 import RelacionJerarquica from "./Relatcion-jerarquica";
 import { RedService } from "@/core/red/red.service";
 import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
@@ -24,6 +23,14 @@ import SearchableSelect, {
 } from "@/components/SearchableSelect";
 import { useModalStore } from "@/hooks/modalStorage";
 import ConfigData from "../(home)/componente-red/ConfigData";
+import { EstacionType } from "@/core/estaciones/estacion.type";
+
+const estaciones: EstacionType[] = [
+  {
+    nombre: "Estación Caracas",
+    id: 1,
+  },
+];
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -32,30 +39,46 @@ type FormValues = (CreateComponenteRedDto | UpdateComponenteRedDto) & {
 };
 
 interface BaseCreateFormProps {
-  mode?: "create" | "update" | "approve";
-  isModal?: boolean;
-  networkId?: number;
+  mode?: "create" | "update" | "approve" | "popup";
   componentTypeId?: number;
+}
+
+interface PopUpModeProps extends BaseCreateFormProps {
+  mode?: "popup";
+  networkId: number | null;
+  regionId: number | null;
+  stationId: number | null;
+  componenteRed?: never;
 }
 
 interface CreateModeProps extends BaseCreateFormProps {
   mode?: "create";
   componenteRed?: never;
+  networkId?: never;
+  regionId?: never;
+  stationId?: never;
 }
 
 interface UpdateOrApproveModeProps extends BaseCreateFormProps {
   mode: "update" | "approve";
   componenteRed: ComponenteRedType;
+  networkId?: never;
+  regionId?: never;
+  stationId?: never;
 }
 
-type CreateFormProps = CreateModeProps | UpdateOrApproveModeProps;
+type CreateFormProps =
+  | CreateModeProps
+  | UpdateOrApproveModeProps
+  | PopUpModeProps;
 
 export default function CreateForm({
   mode = "create",
   componenteRed,
-  isModal,
   networkId,
   componentTypeId,
+  regionId,
+  stationId,
 }: CreateFormProps) {
   const { closeModal } = useModalStore();
 
@@ -82,11 +105,11 @@ export default function CreateForm({
   );
   const [fuentes, setFuentes] = useState<FuenteType[]>([]);
   const [regiones, setRegiones] = useState<RegionType[]>([]);
+  const [region, setRegion] = useState<RegionType | null>(null);
+  const [estacion, setEstacion] = useState<EstacionType | null>(null);
 
   const [commentPage, setCommentPage] = useState(1);
   const [commentLimit, setCommentLimit] = useState(5);
-
-  const [selectedTab, setSelectedTab] = useState(0);
 
   const {
     isSubmitting,
@@ -100,22 +123,6 @@ export default function CreateForm({
     setIsApproved,
     onSubmit,
   } = useComponenteRedForm({ componenteRed, mode });
-
-  interface NestedAttributes {
-    [key: string]: string;
-  }
-
-  interface AttributesState {
-    [key: string]: string | NestedAttributes;
-  }
-
-  interface NestedServices {
-    [key: string]: string;
-  }
-
-  interface ServicesState {
-    [key: string]: string | NestedServices;
-  }
 
   const [childName, setChildName] = useState(componenteRed?.controlName ?? "");
   const [label, setLabel] = useState(componenteRed?.controlLabel ?? "");
@@ -143,8 +150,8 @@ export default function CreateForm({
       componentId: componenteRed?.componentId.toString().trim(),
       code: componenteRed?.code,
       observation: componenteRed?.observation?.toString() || "",
-      regionId: componenteRed?.regionId?.toString() || "",
-      stationId: componenteRed?.stationId?.toString() || "",
+      regionId: componenteRed?.regionId?.toString() || regionId?.toString(),
+      stationId: componenteRed?.stationId?.toString() || stationId?.toString(),
       refNetworkId:
         componenteRed?.refNetworkId?.toString() || networkId?.toString(),
       refComponentTypeId:
@@ -159,7 +166,7 @@ export default function CreateForm({
         : {}),
       ...(componenteRed?.service ? JSON.parse(componenteRed.service)[0] : {}),
     }),
-    [componenteRed, networkId, componentTypeId]
+    [componenteRed, networkId, componentTypeId, stationId, regionId]
   );
 
   const getRedes = useCallback(async () => {
@@ -179,9 +186,25 @@ export default function CreateForm({
   useEffect(() => {
     if (componenteRed !== undefined && componenteRed !== null) {
       if (componenteRed.refNetworkId)
-        setRed(redes.find((r) => r.id === componenteRed.refNetworkId) || null);
+        setRed(
+          redes.find(
+            (r) => r.id?.toString() === componenteRed.refNetworkId?.toString()
+          ) || null
+        );
+      if (componenteRed.regionId)
+        setRegion(
+          regiones.find(
+            (r) => r.id?.toString() === componenteRed.regionId?.toString()
+          ) || null
+        );
+      if (componenteRed.stationId)
+        setEstacion(
+          estaciones.find(
+            (r) => r.id?.toString() === componenteRed.stationId?.toString()
+          ) || null
+        );
     }
-  }, [redes, componenteRed]);
+  }, [redes, componenteRed, regiones, estaciones]);
 
   const getTipoComponentes = useCallback(async () => {
     if (!red) return;
@@ -219,7 +242,11 @@ export default function CreateForm({
       "/api/v1/direcciones/regiones",
       {}
     );
-    setRegiones(data?.data?.data || []);
+    const activeRegions: RegionType[] = data?.data?.data || [];
+    if (regionId) {
+      setRegion(activeRegions.find((r) => r.id === regionId) ?? null);
+    }
+    setRegiones(activeRegions);
     setIsLoadingRegiones(false);
   }, []);
 
@@ -347,7 +374,7 @@ export default function CreateForm({
             manera eficiente y personalizada.
           </p>
         </header>
-        {isModal && (
+        {mode === "popup" && (
           <div className="p-6">
             <Button variant="primary" onClick={() => closeModal()}>
               Cerrar
@@ -400,8 +427,10 @@ export default function CreateForm({
           // ref={networkInputRef}
           name={"refNetworkId" as FormItem}
           label="Red"
-          disabled={mode === "approve" ? true : isLoadingRedes}
-          optional={mode === "approve"}
+          disabled={
+            mode === "approve" || mode === "popup" ? true : isLoadingRedes
+          }
+          optional={mode === "approve" || mode === "popup"}
           fullWidth
           helperText={isLoadingRedes ? "Cargando redes..." : undefined}
           options={redes.map((red) => ({
@@ -451,50 +480,45 @@ export default function CreateForm({
             text: f.label,
             value: f.id.toString(),
           }))}
-          // Si deseas setFuente puedes hacerlo aquí también
         />
-
-        {/*<Select
-          name="control_status"
-          label="Control estado"
-          options={CRStatusEnumOptions.map((option) => ({
-            text: option.label,
-            value: option.value.toString(),
-          }))}
-          fullWidth
-        />*/}
-        {/*<TextField
-          name={"code" as FormItem}
-          label="Código"
-          fullWidth
-          maxLength={255}
-        />*/}
 
         <Select
           name={"regionId" as FormItem}
           label="Región"
-          disabled={mode === "approve" ? true : isLoadingRegiones}
-          optional={mode === "approve"}
+          disabled={
+            mode === "approve" || mode === "popup" ? true : isLoadingRegiones
+          }
+          optional={mode === "approve" || mode === "popup"}
           fullWidth
           helperText={isLoadingRegiones ? "Cargando regiones..." : undefined}
           options={regiones.map((r) => ({
             text: r.nombre,
             value: r.id.toString(),
           }))}
+          onChangeValue={(value) => {
+            setRegion(
+              regiones?.find((r) => r?.id?.toString() === value?.toString()) ??
+                null
+            );
+          }}
         />
 
         <Select
           name={"stationId" as FormItem}
           label="Estación"
-          disabled={mode === "approve"}
-          optional={mode === "approve"}
-          options={[
-            {
-              text: "Estación Caracas",
-              value: "1",
-            },
-          ]}
+          disabled={mode === "approve" || mode === "popup"}
+          optional={mode === "approve" || mode === "popup"}
+          options={estaciones.map((tc) => ({
+            text: tc.nombre,
+            value: tc.id.toString(),
+          }))}
           fullWidth
+          onChangeValue={(value) => {
+            setEstacion(
+              estaciones.find((s) => s?.id?.toString() === value?.toString()) ??
+                null
+            );
+          }}
         />
 
         <hr className="col-span-3" />
@@ -506,6 +530,9 @@ export default function CreateForm({
           setServices={setService}
           attributes={attribute}
           services={service}
+          networkId={Number(red?.id)}
+          regionId={Number(region?.id)}
+          stationId={Number(estacion?.id)}
           // attribute={attribute}
           // onAttributes={onAttributes}
           // service={service}

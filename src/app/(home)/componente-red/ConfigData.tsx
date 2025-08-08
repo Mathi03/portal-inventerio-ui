@@ -35,11 +35,14 @@ function getAxiosClientFromUrl(url: string): AxiosInstance {
 }
 
 interface ConfigDataProps {
-  tipoComponente: TipoComponenteType;
+  tipoComponente: TipoComponenteType | null;
   setAttributes: React.Dispatch<React.SetStateAction<{ [key: string]: any }>>;
   setServices: React.Dispatch<React.SetStateAction<{ [key: string]: any }>>;
   attributes: { [key: string]: any };
   services: { [key: string]: any };
+  networkId: number | null;
+  regionId: number | null;
+  stationId: number | null;
 }
 
 export default function ConfigData({
@@ -48,6 +51,9 @@ export default function ConfigData({
   setServices,
   attributes,
   services,
+  networkId,
+  regionId,
+  stationId,
 }: ConfigDataProps) {
   const [selectedTab, setSelectedTab] = useState(0);
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -65,11 +71,19 @@ export default function ConfigData({
 
   const fetchOptions = async (
     url: string,
-    responseFields?: string[]
+    responseFields?: string[],
+    searchQuery = ""
   ): Promise<{ text: string; value: string }[]> => {
     try {
-      const client = getAxiosClientFromUrl(url);
-      const response = await client.get(url);
+      const urlWithSearch =
+        responseFields && searchQuery
+          ? url.includes("?")
+            ? `${url}&q=${searchQuery}`
+            : `${url}?q=${searchQuery}`
+          : url;
+
+      const client = getAxiosClientFromUrl(urlWithSearch);
+      const response = await client.get(urlWithSearch);
 
       const items: any[] =
         response.data?.items || response.data?.data?.data || response.data;
@@ -156,6 +170,20 @@ export default function ConfigData({
     }));
   };
 
+  const loadPaginatedOptions =
+    (url: string, responseFields?: string[]) =>
+    async (search: string, loadedOptions: any, { page }: any) => {
+      const paginatedUrl = `${url}`.replace(/([&?])page=\d+/, "$1page=" + page);
+      
+      const options = await fetchOptions(paginatedUrl, responseFields, search);
+      
+      return {
+        options: options.map(({ text, value }) => ({ label: text, value })),
+        hasMore: options.length === 10, // configurable según API
+        additional: { page: page + 1 },
+      };
+    };
+
   const prepareInputs = (
     attributes: ConfigDataAttribute[],
     namePrefix = ""
@@ -174,7 +202,7 @@ export default function ConfigData({
   useEffect(() => {
     prepareInputs(configAttributes);
     prepareInputs(configServices);
-    setFilteredConfigServices([])
+    setFilteredConfigServices([]);
   }, [tipoComponente]);
 
   useEffect(() => {
@@ -255,9 +283,18 @@ export default function ConfigData({
             }))
           }
           isCreate={attr.is_create}
-          //red={{ id: configDataItem.networkId }}
-          //tipoComponente={{ id: tipoComponente.id }}
+          networkId={networkId}
+          regionId={regionId}
+          stationId={stationId}
           onChange={onChange}
+          isPaginated={
+            attr.valores_posibles_source?.includes("limit=") &&
+            attr.valores_posibles_source?.includes("page=")
+          }
+          loadPaginatedOptions={loadPaginatedOptions(
+            attr.valores_posibles_source ?? "",
+            attr.valores_posibles_response
+          )}
         />
       ));
 
@@ -280,7 +317,7 @@ export default function ConfigData({
     <div className="flex flex-col gap-6">
       <div>
         <h4>Atributos principales</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
           {renderInputs(items.filter((a) => a.type !== "array"))}
         </div>
       </div>

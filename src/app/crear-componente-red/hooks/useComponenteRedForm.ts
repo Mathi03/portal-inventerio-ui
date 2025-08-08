@@ -18,7 +18,7 @@ export function useComponenteRedForm({
   mode,
 }: {
   componenteRed?: ComponenteRedType;
-  mode: "create" | "update" | "approve";
+  mode: "create" | "update" | "approve" | "popup";
 }) {
   const { openSnackbar } = useSnackbar();
   const router = useRouter();

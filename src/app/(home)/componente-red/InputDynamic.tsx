@@ -1,13 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TextField, Select, DateField } from "@telefonica/mistica";
 import { useModalStore } from "@/hooks/modalStorage";
 import CreateForm from "@/app/crear-componente-red/CreateForm";
+import { AsyncPaginate } from "react-select-async-paginate";
 
 interface InputDynamicProps {
   name: string;
   label: string;
   required?: boolean;
-  html_form_type: "input" | "select" | "date";
+  html_form_type: "input" | "select" | "date" | "multiple";
   value?: string;
   onChange: (name: string, value: string) => void;
   isCreate?: boolean;
@@ -16,8 +17,15 @@ interface InputDynamicProps {
     value: string;
   }>;
   loading?: boolean;
-  networkId?: number;
-  componentTypeId?: number;
+  networkId: number | null;
+  regionId: number | null;
+  stationId: number | null;
+  isPaginated?: boolean;
+  loadPaginatedOptions?: (
+    search: string,
+    loadedOptions: any,
+    meta: any
+  ) => Promise<any>;
 }
 
 export default function InputDynamic({
@@ -31,9 +39,20 @@ export default function InputDynamic({
   selectOptions = [],
   loading = false,
   networkId,
-  componentTypeId,
+  regionId,
+  stationId,
+  isPaginated,
+  loadPaginatedOptions,
 }: InputDynamicProps) {
   const { openModal } = useModalStore();
+  const [myValue, setMyValue] = useState<{
+    label: string;
+    value: string;
+  } | null>(null);
+
+  useEffect(() => {
+    console.log("INPUT DINAMICO", value, myValue);
+  }, [value, myValue]);
 
   const renderButton = () => (
     <button
@@ -42,9 +61,10 @@ export default function InputDynamic({
         e.preventDefault();
         openModal(
           <CreateForm
-            isModal
+            mode="popup"
             networkId={networkId}
-            componentTypeId={componentTypeId}
+            regionId={regionId}
+            stationId={stationId}
           />
         );
       }}
@@ -53,21 +73,60 @@ export default function InputDynamic({
     </button>
   );
 
-  const renderSelect = () => (
-    <Select
-      name={name}
-      label={label}
-      optional={!required}
-      value={value?.toString()}
-      onChangeValue={(val) => {
-        onChange(name, val);
-      }}
-      disabled={loading}
-      helperText={loading ? `Cargando ${label}...` : undefined}
-      options={selectOptions}
-      fullWidth
-    />
-  );
+  const renderSelect = () => {
+    if (isPaginated && loadPaginatedOptions) {
+      console.log("value", value);
+
+      return (
+        <AsyncPaginate
+          debounceTimeout={1000}
+          loadOptions={loadPaginatedOptions}
+          onChange={(option) => {
+            onChange(name, option?.value || "");
+            setMyValue(option);
+          }}
+          additional={{ page: 1 }}
+          placeholder={`Seleccione ${label}`}
+          isClearable
+        />
+      );
+    }
+
+    return (
+      <Select
+        name={name}
+        label={label}
+        optional={!required}
+        value={value?.toString()}
+        onChangeValue={(val) => onChange(name, val)}
+        disabled={loading}
+        helperText={loading ? `Cargando ${label}...` : undefined}
+        options={selectOptions}
+        fullWidth
+      />
+    );
+  };
+
+  const renderMultiple = () => {
+    return (
+      <AsyncPaginate
+        loadOptions={() => ({
+          options: selectOptions.map((o) => ({
+            label: o.text,
+            value: o.value,
+          })),
+        })}
+        onChange={(option) => {
+          console.log("onchange", option);
+          onChange(name, option?.value || "");
+          setMyValue(option);
+        }}
+        placeholder={`Seleccione ${label}`}
+        isMulti
+        className="w-full"
+      />
+    );
+  };
 
   const renderInput = () => (
     <TextField
@@ -105,6 +164,8 @@ export default function InputDynamic({
         return renderInput();
       case "date":
         return renderDate();
+      case "multiple":
+        return renderMultiple();
       default:
         return <div>Error: tipo no soportado</div>;
     }
