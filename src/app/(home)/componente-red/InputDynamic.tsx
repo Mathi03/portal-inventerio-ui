@@ -3,6 +3,7 @@ import { TextField, Select, DateField } from "@telefonica/mistica";
 import { useModalStore } from "@/hooks/modalStorage";
 import CreateForm from "@/app/crear-componente-red/CreateForm";
 import { AsyncPaginate } from "react-select-async-paginate";
+import SelectField from "@/components/SelectField";
 
 interface InputDynamicProps {
   name: string;
@@ -109,20 +110,15 @@ export default function InputDynamic({
 
   const renderMultiple = () => {
     return (
-      <AsyncPaginate
-        loadOptions={() => ({
-          options: selectOptions.map((o) => ({
-            label: o.text,
-            value: o.value,
-          })),
-        })}
-        onChange={(option) => {
-          console.log("onchange", option);
-          onChange(name, option?.value || "");
-          setMyValue(option);
-        }}
+      <SelectField
+        name={name}
+        label={label}
+        options={selectOptions}
+        value={value}
+        onChangeValue={(val) => onChange(name, val)}
         placeholder={`Seleccione ${label}`}
-        isMulti
+        helperText={loading ? `Cargando ${label}...` : undefined}
+        isMultiple
         className="w-full"
       />
     );

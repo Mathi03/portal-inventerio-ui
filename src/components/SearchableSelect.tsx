@@ -49,6 +49,7 @@ const SearchableSelect = forwardRef<
     },
     ref
   ) => {
+    const initialized = useRef(false);
     const [selectedText, setSelectedText] = useState("");
     const isControlled =
       controlledValue !== undefined && onChangeValue !== undefined;
@@ -92,12 +93,14 @@ const SearchableSelect = forwardRef<
     }, [query, options]);
 
     useEffect(() => {
+      if (initialized.current) return;
       if (options.length === 0 || !value) return;
       const selected = options.find((opt) => opt.value === value);
       if (selected) {
         setQuery(selected.text);
         setValue(selected.value);
       }
+      initialized.current = true;
     }, [value, options]);
 
     useEffect(() => {
@@ -143,7 +146,8 @@ const SearchableSelect = forwardRef<
           value={query}
           onChangeValue={(val) => {
             setQuery(val);
-            setShowList(true);
+            if (!showList) setShowList(true);
+
             if (selectedText && val !== selectedText) {
               setValue("");
               setSelectedText("");

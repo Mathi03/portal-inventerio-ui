@@ -24,6 +24,7 @@ import SearchableSelect, {
 import { useModalStore } from "@/hooks/modalStorage";
 import ConfigData from "../(home)/componente-red/ConfigData";
 import { EstacionType } from "@/core/estaciones/estacion.type";
+import SelectField from "@/components/SelectField";
 
 const estaciones: EstacionType[] = [
   {
@@ -150,13 +151,13 @@ export default function CreateForm({
       componentId: componenteRed?.componentId.toString().trim(),
       code: componenteRed?.code,
       observation: componenteRed?.observation?.toString() || "",
-      regionId: componenteRed?.regionId?.toString() || regionId?.toString(),
-      stationId: componenteRed?.stationId?.toString() || stationId?.toString(),
+      regionId: componenteRed?.regionId?.toString() || regionId?.toString()|| "",
+      stationId: componenteRed?.stationId?.toString() || stationId?.toString()|| "",
       refNetworkId:
-        componenteRed?.refNetworkId?.toString() || networkId?.toString(),
+        componenteRed?.refNetworkId?.toString() || networkId?.toString() || "",
       refComponentTypeId:
         componenteRed?.refComponentTypeId?.toString() ||
-        componentTypeId?.toString(),
+        componentTypeId?.toString()  || "",
       refSourceId: componenteRed?.refSourceId?.toString() || "",
       status: componenteRed?.status?.toString() || "",
       label: componenteRed?.controlLabel,

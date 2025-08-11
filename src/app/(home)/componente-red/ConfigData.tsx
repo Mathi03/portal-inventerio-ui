@@ -257,6 +257,8 @@ export default function ConfigData({
 
     setAttributes(newAttributes);
     setServices(newServices);
+    console.log("FormData", formData, newAttributes);
+    
   }, [formData]);
 
   const renderInputs = (attributes: ConfigDataAttribute[], namePrefix = "") =>
@@ -317,7 +319,7 @@ export default function ConfigData({
     <div className="flex flex-col gap-6">
       <div>
         <h4>Atributos principales</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-start">
           {renderInputs(items.filter((a) => a.type !== "array"))}
         </div>
       </div>
