@@ -25,6 +25,7 @@ import { useModalStore } from "@/hooks/modalStorage";
 import ConfigData from "../(home)/componente-red/ConfigData";
 import { EstacionType } from "@/core/estaciones/estacion.type";
 import SelectField from "@/components/SelectField";
+import TreeView from "../(home)/componente-red/TreeView";
 
 const estaciones: EstacionType[] = [
   {
@@ -559,6 +560,21 @@ export default function CreateForm({
             );
           }}
         />
+
+        <hr className="col-span-3" />
+        <hgroup className="col-span-3" id="relacion-jerarquica">
+          <h4 className="text-[20px]">Arbol</h4>
+          <p>En esta sección se mostrara las relaciones entre nodos</p>
+        </hgroup>
+        <TreeView
+          tipoComponente={tipoComponente ?? null}
+          attributes={attribute}
+          // attribute={attribute}
+          // onAttributes={onAttributes}
+          // service={service}
+          // onServices={onServices}
+        />
+
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="observacion">
           <h4 className="text-[20px]">Observación</h4>

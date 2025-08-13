@@ -1,7 +1,20 @@
 import { z } from "zod";
 
+// Acepta dominios, localhost e IPv4, con puerto y path opcionales
 const urlConIPRegex = new RegExp(
-  "^(https?:\\/\\/)?(?:(?:[a-z0-9-]+\\.)+[a-z]{2,}|(?:\\d{1,3}\\.){3}\\d{1,3})(?:\\:\\d+)?(?:\\/\\S*)?$"
+  '^(https?:\\/\\/)?' +                              // protocolo opcional
+  '(?:' +
+    '(?:localhost)' +                                // localhost
+    '|' +
+    '(?:[a-z0-9-]+(?:\\.[a-z0-9-]+)+)' +             // dominio con TLD
+    '|' +
+    '(?:\\d{1,3}(?:\\.\\d{1,3}){3})' +               // IPv4
+  ')' +
+  '(?::\\d+)?' +                                     // puerto opcional
+  '(?:\\/[^\\s?#]*)?' +                              // path opcional
+  '(?:\\?[^\\s#]*)?' +                               // query opcional
+  '(?:#[^\\s]*)?$',                                  // fragment opcional
+  'i'
 );
 
 const posiblesValoresSchema = z.object({
@@ -25,7 +38,12 @@ const TypeEnum = z.union(
 );
 
 const HtmlFormTypeEnum = z.union(
-  [z.literal("input"), z.literal("select"), z.literal("date"), z.literal("multiple")],
+  [
+    z.literal("input"),
+    z.literal("select"),
+    z.literal("date"),
+    z.literal("multiple"),
+  ],
   {
     invalid_type_error:
       "El tipo de formulario HTML debe ser 'input', 'select', 'multiple' o 'date'",
@@ -46,8 +64,8 @@ const atribsConfigSchema = z.object({
   type: TypeEnum,
   html_form_type: HtmlFormTypeEnum.optional(),
   place_holder: z.string().optional(),
-  required: z.boolean(),
-  default: z.boolean(),
+  required: z.coerce.boolean(),
+  default: z.coerce.boolean(), 
   valores_posibles2: z.array(posiblesValoresSchema).optional(),
 });
 
@@ -84,7 +102,7 @@ const itemSchema = z.object({
   depend_of: z.string().optional(),
   atribs_config: z.array(atribsConfigSchema).optional(),
   status: z.union([z.string(), z.number()]).optional(),
-  is_create: z.boolean().optional()
+  is_create: z.boolean().optional(),
 });
 
 export const jsonSchemaAttribute = z.array(itemSchema);
