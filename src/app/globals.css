@@ -117,3 +117,13 @@ body > div {
 [role="dialog"] {
   z-index: 1000 !important;
 }
+
+.group_field_paginated .field_paginated__control {
+  height: inherit;
+  border-radius: 0px;
+}
+
+.group_field_paginated .field_paginated__placeholder {
+  font-size: 1.125rem;
+  color: #6E7894;
+}

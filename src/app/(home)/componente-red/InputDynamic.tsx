@@ -46,14 +46,6 @@ export default function InputDynamic({
   loadPaginatedOptions,
 }: InputDynamicProps) {
   const { openModal } = useModalStore();
-  const [myValue, setMyValue] = useState<{
-    label: string;
-    value: string;
-  } | null>(null);
-
-  useEffect(() => {
-    console.log("INPUT DINAMICO", value, myValue);
-  }, [value, myValue]);
 
   const renderButton = () => (
     <button
@@ -76,19 +68,19 @@ export default function InputDynamic({
 
   const renderSelect = () => {
     if (isPaginated && loadPaginatedOptions) {
-      console.log("value", value);
-
       return (
         <AsyncPaginate
+          className="h-[60px] group_field_paginated"
+          classNamePrefix={"field_paginated"}
           debounceTimeout={1000}
           loadOptions={loadPaginatedOptions}
           onChange={(option) => {
             onChange(name, option?.value || "");
-            setMyValue(option);
           }}
           additional={{ page: 1 }}
-          placeholder={`Seleccione ${label}`}
+          placeholder={label}
           isClearable
+          required={required}
         />
       );
     }

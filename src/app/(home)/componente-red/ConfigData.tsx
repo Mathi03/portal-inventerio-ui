@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ConfigDataAttribute,
   TipoComponenteType,
@@ -33,6 +33,16 @@ function getAxiosClientFromUrl(url: string): AxiosInstance {
   );
   return entry?.[1] || source;
 }
+
+type LoaderFn = (
+  search: string,
+  loadedOptions: Array<{ label: string; value: string }>,
+  additional: { page: number }
+) => Promise<{
+  options: Array<{ label: string; value: string }>;
+  hasMore: boolean;
+  additional: { page: number };
+}>;
 
 interface ConfigDataProps {
   tipoComponente: TipoComponenteType | null;
@@ -170,26 +180,50 @@ export default function ConfigData({
     }));
   };
 
-  const loadPaginatedOptions =
+  const loadPaginatedOptions = useCallback(
     (url: string, responseFields?: string[]) =>
-    async (search: string, loadedOptions: any, { page }: any) => {
-      const paginatedUrl = `${url}`.replace(/([&?])page=\d+/, "$1page=" + page);
-      
-      const options = await fetchOptions(paginatedUrl, responseFields, search);
-      
-      return {
-        options: options.map(({ text, value }) => ({ label: text, value })),
-        hasMore: options.length === 10, // configurable según API
-        additional: { page: page + 1 },
-      };
+      async (search: string, loadedOptions: any, { page }: any) => {
+        const paginatedUrl = `${url}`.replace(
+          /([&?])page=\d+/,
+          "$1page=" + page
+        );
+        const options = await fetchOptions(
+          paginatedUrl,
+          responseFields,
+          search
+        );
+        return {
+          options: options.map(({ text, value }) => ({ label: text, value })),
+          hasMore: options.length === 10,
+          additional: { page: page + 1 },
+        };
+      },
+    [fetchOptions] // <- si fetchOptions es estable, bien; si no, también envuélvelo en useCallback
+  );
+
+  const getLoader = useMemo(() => {
+    const cache = new Map<string, LoaderFn>();
+    return (src?: string, resp?: string[]) => {
+      const key = `${src ?? ""}|${JSON.stringify(resp ?? [])}`;
+      if (cache.has(key)) return cache.get(key)!;
+      const fn = loadPaginatedOptions(src ?? "", resp);
+      cache.set(key, fn);
+      return fn;
     };
+  }, [loadPaginatedOptions]);
+
+  const isPaginatedSource = (src?: string) =>
+    !!src && src.includes("limit=") && src.includes("page=");
 
   const prepareInputs = (
     attributes: ConfigDataAttribute[],
     namePrefix = ""
   ) => {
     attributes.forEach((attr) => {
-      if (attr.valores_posibles_source) {
+      if (
+        attr.valores_posibles_source &&
+        !isPaginatedSource(attr.valores_posibles_source)
+      ) {
         fetchValoresPosibles(attr, namePrefix);
       }
 
@@ -258,47 +292,53 @@ export default function ConfigData({
     setAttributes(newAttributes);
     setServices(newServices);
     console.log("FormData", formData, newAttributes);
-    
   }, [formData]);
 
   const renderInputs = (attributes: ConfigDataAttribute[], namePrefix = "") =>
     attributes
       .filter((attr) => attr.html_form_type)
-      .map((attr, idx) => (
-        <InputDynamic
-          key={`${namePrefix}${attr.name}-${idx}`}
-          name={`${namePrefix}${attr.name}`}
-          label={attr.label}
-          value={
-            namePrefix.includes("#")
-              ? formData[namePrefix.split("#")[0]]?.[0]?.[attr.name]
-              : formData[`${namePrefix}${attr.name}`]
-          }
-          // type={attr.type}
-          required={attr.required}
-          html_form_type={attr.html_form_type}
-          selectOptions={
-            dynamicOptions[`${namePrefix}${attr.name}`] ||
-            attr.valores_posibles?.map((i) => ({
-              text: i.name?.toString(),
-              value: i.value?.toString(),
-            }))
-          }
-          isCreate={attr.is_create}
-          networkId={networkId}
-          regionId={regionId}
-          stationId={stationId}
-          onChange={onChange}
-          isPaginated={
-            attr.valores_posibles_source?.includes("limit=") &&
-            attr.valores_posibles_source?.includes("page=")
-          }
-          loadPaginatedOptions={loadPaginatedOptions(
-            attr.valores_posibles_source ?? "",
-            attr.valores_posibles_response
-          )}
-        />
-      ));
+      .map((attr, idx) => {
+        const isPaginated =
+          attr.valores_posibles_source?.includes("limit=") &&
+          attr.valores_posibles_source?.includes("page=");
+
+        const loader = isPaginated
+          ? getLoader(
+              attr.valores_posibles_source,
+              attr.valores_posibles_response
+            )
+          : undefined;
+
+        return (
+          <InputDynamic
+            key={`${namePrefix}${attr.name}-${idx}`}
+            name={`${namePrefix}${attr.name}`}
+            label={attr.label}
+            value={
+              namePrefix.includes("#")
+                ? formData[namePrefix.split("#")[0]]?.[0]?.[attr.name]
+                : formData[`${namePrefix}${attr.name}`]
+            }
+            // type={attr.type}
+            required={attr.required}
+            html_form_type={attr.html_form_type}
+            selectOptions={
+              dynamicOptions[`${namePrefix}${attr.name}`] ||
+              attr.valores_posibles?.map((i) => ({
+                text: i.name?.toString(),
+                value: i.value?.toString(),
+              }))
+            }
+            isCreate={attr.is_create}
+            networkId={networkId}
+            regionId={regionId}
+            stationId={stationId}
+            onChange={onChange}
+            isPaginated={isPaginated}
+            loadPaginatedOptions={loader}
+          />
+        );
+      });
 
   const renderNestedInputs = (attributes: ConfigDataAttribute[]) => {
     const nested = attributes.filter(

@@ -16,7 +16,6 @@ type NodeSpec = { key: string; level: number };
 
 const INDENTS = ["", "pl-0", "pl-6", "pl-10", "pl-14", "pl-20"];
 
-/** === Axios routing por dominio/base === */
 const urlClientMap: Record<string, AxiosInstance> = {
   [process.env.NEXT_PUBLIC_API_URL!]: bff,
   [process.env.NEXT_PUBLIC_API_URL_MS_DIRECCIONES!]: msDirecciones,
@@ -27,18 +26,16 @@ const urlClientMap: Record<string, AxiosInstance> = {
 
 function getAxiosClientFromUrl(url: string): AxiosInstance {
   const entry = Object.entries(urlClientMap).find(([baseUrl]) =>
-    url.startsWith(baseUrl),
+    url.startsWith(baseUrl)
   );
-  return entry?.[1] || source; // usa tus interceptors/tokens del cliente default
+  return entry?.[1] || source;
 }
 
-/** Utils */
 const stripQuery = (url: string) => url.split("?")[0];
 const toStr = (x: any) => String(x);
 const getByPath = (obj: any, path: string) =>
   path.split(".").reduce((acc, k) => (acc == null ? acc : acc[k]), obj);
 
-/** Specs con niveles (puedes moverlos afuera si quieres) */
 const clienteSpecs: NodeSpec[] = [
   { key: "id_control_nodo_a", level: 1 },
   { key: "id_control_tarjeta_a", level: 2 },
@@ -58,26 +55,37 @@ const TreeView = ({
   attributes,
 }: {
   tipoComponente: TipoComponenteType | null;
-  attributes: AttrMap;
+  attributes: AttrMap | null;
 }) => {
-  if (!tipoComponente) return null;
+  // ⚠️ NUNCA retornamos antes de llamar Hooks
+
+  const isReady = !!tipoComponente;
+  const attrs = attributes ?? {};
 
   const allAttributes = useMemo(
-    () => tipoComponente.configData.flatMap((c) => c.configAttributes),
-    [tipoComponente],
+    () =>
+      (tipoComponente?.configData ?? []).flatMap(
+        (c) => c.configAttributes ?? []
+      ) ?? [],
+    [tipoComponente]
   );
 
-  const getCfg = (name: string) => allAttributes.find((a) => a.name === name);
+  const getCfg = (name: string) =>
+    allAttributes.find((a: any) => a.name === name);
   const getLabelFromCfg = (name: string) => getCfg(name)?.label || name;
 
-  // cache de GET base/{id}
   const cacheRef = useRef<Map<string, any>>(new Map());
-  // labels resueltos para select/multiple
   const [resolved, setResolved] = useState<Record<string, string | string[]>>(
-    {},
+    {}
   );
 
   useEffect(() => {
+    // si no hay datos listos, limpiamos y salimos
+    if (!isReady) {
+      setResolved({});
+      return;
+    }
+
     let mounted = true;
 
     const visibleKeys = [...clienteSpecs, ...movistarSpecs]
@@ -85,7 +93,7 @@ const TreeView = ({
       .filter((k, i, arr) => arr.indexOf(k) === i);
 
     const resolveForKey = async (key: string) => {
-      const rawVal = attributes[key];
+      const rawVal = attrs[key];
       if (rawVal == null) return;
 
       const cfg: any = getCfg(key);
@@ -107,7 +115,8 @@ const TreeView = ({
         }>;
         if (formType === "select") {
           const found = opts.find((o) => toStr(o.value) === toStr(rawVal));
-          if (mounted && found) setResolved((p) => ({ ...p, [key]: found.name }));
+          if (mounted && found)
+            setResolved((p) => ({ ...p, [key]: found.name }));
         } else {
           const ids = Array.isArray(rawVal) ? rawVal.map(toStr) : [];
           const labels = ids
@@ -118,7 +127,7 @@ const TreeView = ({
         return;
       }
 
-      // 2) opciones remotas: GET base/{id}, label = valores_posibles_response[0]
+      // 2) opciones remotas
       if (cfg.valores_posibles_source && cfg.valores_posibles_response) {
         const base = stripQuery(cfg.valores_posibles_source as string);
         const labelPath = (cfg.valores_posibles_response as string[])[0];
@@ -127,8 +136,7 @@ const TreeView = ({
         const fetchById = async (id: string) => {
           const url = `${base}/${encodeURIComponent(id)}`;
           if (cacheRef.current.has(url)) return cacheRef.current.get(url);
-          const { data } = await client.get(url); // usa interceptors/tokens
-          console.log("consulta", data);
+          const { data } = await client.get(url);
           cacheRef.current.set(url, data?.data);
           return data?.data;
         };
@@ -140,17 +148,19 @@ const TreeView = ({
             const label = getByPath(obj, labelPath) ?? id;
             if (mounted) setResolved((p) => ({ ...p, [key]: String(label) }));
           } else {
-            const ids: string[] = Array.isArray(rawVal) ? rawVal.map(toStr) : [];
+            const ids: string[] = Array.isArray(rawVal)
+              ? rawVal.map(toStr)
+              : [];
             const results = await Promise.all(
               ids.map(async (id) => {
                 const obj = await fetchById(id);
                 return getByPath(obj, labelPath) ?? id;
-              }),
+              })
             );
             if (mounted) setResolved((p) => ({ ...p, [key]: results }));
           }
-        } catch (_) {
-          // noop: si falla, dejamos rawVal
+        } catch {
+          // si falla, dejamos rawVal sin resolver
         }
       }
     };
@@ -159,7 +169,7 @@ const TreeView = ({
     return () => {
       mounted = false;
     };
-  }, [attributes, allAttributes]);
+  }, [isReady, attrs, allAttributes]);
 
   const renderValue = (key: string, raw: any) => {
     const val = resolved[key] ?? raw;
@@ -176,13 +186,11 @@ const TreeView = ({
       const { title, subtitle, line1, line2 } = val as any;
       return (
         <p className="text-xs leading-4 text-neutral-500">
-          {[title, subtitle, line1, line2]
-            .filter(Boolean)
-            .map((t, i) => (
-              <span key={i} className={i ? "block" : ""}>
-                {t}
-              </span>
-            ))}
+          {[title, subtitle, line1, line2].filter(Boolean).map((t, i) => (
+            <span key={i} className={i ? "block" : ""}>
+              {t}
+            </span>
+          ))}
         </p>
       );
     }
@@ -201,13 +209,13 @@ const TreeView = ({
       </span>
       <div>
         <p className="font-medium">{getLabelFromCfg(k)}</p>
-        {renderValue(k, attributes[k])}
+        {renderValue(k, attrs[k])}
       </div>
     </div>
   );
 
   const renderCard = (title: string, specs: NodeSpec[]) => {
-    const filtered = specs.filter((s) => attributes[s.key] !== undefined);
+    const filtered = specs.filter((s) => attrs[s.key] !== undefined);
     if (filtered.length === 0) return null;
 
     return (
@@ -219,12 +227,15 @@ const TreeView = ({
         </header>
         <div className="space-y-5 p-5">
           {filtered.map(({ key, level }) => (
-            <CheckItem key={key} k={key} level={level} />
+            <CheckItem key={`check-${title}-${key}`} k={key} level={level} />
           ))}
         </div>
       </section>
     );
   };
+
+  // 🔚 ahora sí, si no está listo, no renderizamos UI
+  if (!isReady) return null;
 
   return (
     <div className="w-full rounded-lg bg-[#fafafa] border p-4 col-span-3">

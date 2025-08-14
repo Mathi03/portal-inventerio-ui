@@ -17,7 +17,7 @@ type ValueType = string | string[]; // single o multiple
 interface SelectFieldProps {
   name: string;
   label: string;
-  options: Option[];
+  options?: Option[];
   isMultiple?: boolean;
   value?: ValueType;
   onChangeValue?: (value: ValueType) => void;
@@ -59,8 +59,6 @@ const SelectField = forwardRef<SelectFieldHandle, SelectFieldProps>(
     // ---- Integración con Form / controlado-no controlado ----
     const isControlled =
       controlledValue !== undefined && onChangeValue !== undefined;
-      console.log("SELECT FIELD ", controlledValue);
-      
 
     const {
       defaultValue,
@@ -81,7 +79,9 @@ const SelectField = forwardRef<SelectFieldHandle, SelectFieldProps>(
 
     const getInitialValue = (): ValueType => {
       if (isControlled) return controlledValue!;
-      return (defaultValue as ValueType) ?? (isMultiple ? [] : "");
+      const initialValue =
+        (defaultValue as ValueType) ?? (isMultiple ? [] : "");
+      return initialValue;
     };
 
     const [internalValue, setInternalValue] =
@@ -97,11 +97,8 @@ const SelectField = forwardRef<SelectFieldHandle, SelectFieldProps>(
         setInternalValue(val);
         // sintetizamos el change para Mistica Form
         const syntheticEvent = {
-          currentTarget: { value: val as any},
+          currentTarget: { value: val as any },
         } as unknown as React.ChangeEvent<HTMLInputElement>;
-        console.log("no controlled", name, val, syntheticEvent);
-        console.log("no controlled 1", defaultValue, formOnChange);
-        
         formOnChange(syntheticEvent);
       }
     };
@@ -221,7 +218,6 @@ const SelectField = forwardRef<SelectFieldHandle, SelectFieldProps>(
     const selectedChips: Option[] = useMemo(() => {
       if (!isMultiple) return [];
       const arr = Array.isArray(currentValue) ? currentValue : [];
-      console.log("selected chips", currentValue, Array.isArray(currentValue), arr);
 
       const map = new Map(options.map((o) => [o.value, o.text]));
       return arr.map((v) => ({ value: v, text: map.get(v) ?? v }));
@@ -235,6 +231,7 @@ const SelectField = forwardRef<SelectFieldHandle, SelectFieldProps>(
         className={cls(
           "relative h-min-[60px]",
           fullWidth ? "w-full" : "w-[360px]",
+          !isMultiple && "max-h-[60px]",
           className
         )}
       >
@@ -316,8 +313,8 @@ const SelectField = forwardRef<SelectFieldHandle, SelectFieldProps>(
             )}
             autoComplete="off"
             disabled={disabled}
-            aria-controls={listboxId}
-            aria-autocomplete="list"
+            //aria-controls={listboxId}
+            //aria-autocomplete="list"
             onClick={() => !disabled && setOpen(true)}
           />
 
@@ -333,7 +330,7 @@ const SelectField = forwardRef<SelectFieldHandle, SelectFieldProps>(
               "peer-focus:top-3 peer-focus:text-xs peer-focus:text-blue-700",
               "peer-[&:not(:placeholder-shown)]:top-4 peer-[&:not(:placeholder-shown)]:text-xs",
               error && "peer-focus:text-red-700",
-              (isMultiple && selectedChips.length > 0) && "top-[16px] text-xs"
+              isMultiple && selectedChips.length > 0 && "top-[16px] text-xs"
             )}
           >
             {label}{" "}
