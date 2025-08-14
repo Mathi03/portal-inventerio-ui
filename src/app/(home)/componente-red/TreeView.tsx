@@ -57,7 +57,6 @@ const TreeView = ({
   tipoComponente: TipoComponenteType | null;
   attributes: AttrMap | null;
 }) => {
-  // ⚠️ NUNCA retornamos antes de llamar Hooks
 
   const isReady = !!tipoComponente;
   const attrs = attributes ?? {};

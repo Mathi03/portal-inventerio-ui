@@ -57,7 +57,10 @@ export default function RelacionJerarquica({
   );
 
   const getComponenteRedes = useCallback(async () => {
-    if (!red || !tipoComponenteId) return;
+    if (!red || !tipoComponenteId) {
+      setComponenteRedes([]);
+      return;
+    }
 
     setIsLoading(true);
     const componenteRed = new ComponenteRedService();

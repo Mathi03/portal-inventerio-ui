@@ -1,5 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { TextField, Select, DateField } from "@telefonica/mistica";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  TextField,
+  Select,
+  DateField,
+  IntegerField,
+} from "@telefonica/mistica";
 import { useModalStore } from "@/hooks/modalStorage";
 import CreateForm from "@/app/crear-componente-red/CreateForm";
 import { AsyncPaginate } from "react-select-async-paginate";
@@ -10,7 +15,8 @@ interface InputDynamicProps {
   label: string;
   required?: boolean;
   html_form_type: "input" | "select" | "date" | "multiple";
-  value?: string;
+  type?: "string" | "number";
+  value?: string | { label: string; value: string };
   onChange: (name: string, value: string) => void;
   isCreate?: boolean;
   selectOptions?: Array<{
@@ -35,6 +41,7 @@ export default function InputDynamic({
   required = true,
   html_form_type,
   value = "",
+  type = "string",
   onChange,
   isCreate,
   selectOptions = [],
@@ -46,6 +53,11 @@ export default function InputDynamic({
   loadPaginatedOptions,
 }: InputDynamicProps) {
   const { openModal } = useModalStore();
+  const [internalAsyncValue, setInternalAsyncValue] = useState<{
+    label: string;
+    value: string;
+  } | null>(null);
+  const isInitial = useRef(true);
 
   const renderButton = () => (
     <button
@@ -68,14 +80,23 @@ export default function InputDynamic({
 
   const renderSelect = () => {
     if (isPaginated && loadPaginatedOptions) {
+      const selectedValue =
+        typeof value === "object" && value !== null && isInitial.current
+          ? value
+          : internalAsyncValue;
+
       return (
         <AsyncPaginate
           className="h-[60px] group_field_paginated"
           classNamePrefix={"field_paginated"}
           debounceTimeout={1000}
+          value={selectedValue}
           loadOptions={loadPaginatedOptions}
           onChange={(option) => {
-            onChange(name, option?.value || "");
+            if (isInitial.current) isInitial.current = false;
+            const selected = option || { label: "", value: "" };
+            setInternalAsyncValue(selected);
+            onChange(name, selected.value);
           }}
           additional={{ page: 1 }}
           placeholder={label}
@@ -116,20 +137,37 @@ export default function InputDynamic({
     );
   };
 
-  const renderInput = () => (
-    <TextField
-      name={name}
-      optional={!required}
-      label={label}
-      value={value}
-      fullWidth
-      maxLength={255}
-      onChange={(e) => {
-        const val = e.target.value;
-        onChange(name, val);
-      }}
-    />
-  );
+  const renderInput = () => {
+    if (type === "number")
+      return (
+        <IntegerField
+          name={name}
+          optional={!required}
+          label={label}
+          value={value?.toString() ?? ""}
+          fullWidth
+          maxLength={255}
+          onChange={(e) => {
+            const val = e.target.value;
+            onChange(name, val);
+          }}
+        />
+      );
+    return (
+      <TextField
+        name={name}
+        optional={!required}
+        label={label}
+        value={value}
+        fullWidth
+        maxLength={255}
+        onChange={(e) => {
+          const val = e.target.value;
+          onChange(name, val);
+        }}
+      />
+    );
+  };
 
   const renderDate = () => (
     <DateField

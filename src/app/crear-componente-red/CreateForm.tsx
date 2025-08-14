@@ -152,13 +152,16 @@ export default function CreateForm({
       componentId: componenteRed?.componentId.toString().trim(),
       code: componenteRed?.code,
       observation: componenteRed?.observation?.toString() || "",
-      regionId: componenteRed?.regionId?.toString() || regionId?.toString()|| "",
-      stationId: componenteRed?.stationId?.toString() || stationId?.toString()|| "",
+      regionId:
+        componenteRed?.regionId?.toString() || regionId?.toString() || "",
+      stationId:
+        componenteRed?.stationId?.toString() || stationId?.toString() || "",
       refNetworkId:
         componenteRed?.refNetworkId?.toString() || networkId?.toString() || "",
       refComponentTypeId:
         componenteRed?.refComponentTypeId?.toString() ||
-        componentTypeId?.toString()  || "",
+        componentTypeId?.toString() ||
+        "",
       refSourceId: componenteRed?.refSourceId?.toString() || "",
       status: componenteRed?.status?.toString() || "",
       label: componenteRed?.controlLabel,
@@ -393,7 +396,6 @@ export default function CreateForm({
         <h1 className="col-span-3 text-xl" id="datos">
           Datos del componente de red
         </h1>
-
         <TextField
           name={"controlName" as FormItem}
           label="Nombre"
@@ -404,7 +406,6 @@ export default function CreateForm({
           disabled={mode === "approve"}
           optional={mode === "approve"}
         />
-
         <TextField
           name={"controlLabel" as FormItem}
           label="Etiqueta"
@@ -415,7 +416,6 @@ export default function CreateForm({
           disabled={mode === "approve"}
           optional={mode === "approve"}
         />
-
         <IntegerField
           name={"componentId" as FormItem}
           label="Componente ID"
@@ -424,7 +424,6 @@ export default function CreateForm({
           disabled={mode === "approve"}
           optional={mode === "approve"}
         />
-
         <Select
           // ref={networkInputRef}
           name={"refNetworkId" as FormItem}
@@ -444,7 +443,6 @@ export default function CreateForm({
             setTipoComponente(null);
           }}
         />
-
         <Select
           name={"refComponentTypeId" as FormItem}
           label="Tipo de componente"
@@ -464,7 +462,6 @@ export default function CreateForm({
             )
           }
         />
-
         <Select
           name={"refSourceId" as FormItem}
           label="Fuente"
@@ -483,7 +480,6 @@ export default function CreateForm({
             value: f.id.toString(),
           }))}
         />
-
         <Select
           name={"regionId" as FormItem}
           label="Región"
@@ -504,7 +500,6 @@ export default function CreateForm({
             );
           }}
         />
-
         <Select
           name={"stationId" as FormItem}
           label="Estación"
@@ -522,10 +517,8 @@ export default function CreateForm({
             );
           }}
         />
-
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="config-adicional"></hgroup>
-
         <ConfigData
           tipoComponente={tipoComponente ?? null}
           setAttributes={setAttribute}
@@ -540,7 +533,6 @@ export default function CreateForm({
           // service={service}
           // onServices={onServices}
         />
-
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="relacion-jerarquica">
           <h4 className="text-[20px]">Relación jerarquica (opcional)</h4>
@@ -560,21 +552,23 @@ export default function CreateForm({
             );
           }}
         />
-
-        <hr className="col-span-3" />
-        <hgroup className="col-span-3" id="relacion-jerarquica">
-          <h4 className="text-[20px]">Arbol</h4>
-          <p>En esta sección se mostrara las relaciones entre nodos</p>
-        </hgroup>
-        <TreeView
-          tipoComponente={tipoComponente ?? null}
-          attributes={attribute}
-          // attribute={attribute}
-          // onAttributes={onAttributes}
-          // service={service}
-          // onServices={onServices}
-        />
-
+        {red?.id?.toString() === "16" && (
+          <>
+            <hr className="col-span-3" />
+            <hgroup className="col-span-3" id="relacion-jerarquica">
+              <h4 className="text-[20px]">Arbol</h4>
+              <p>En esta sección se mostrara las relaciones entre nodos</p>
+            </hgroup>
+            <TreeView
+              tipoComponente={tipoComponente ?? null}
+              attributes={attribute}
+              // attribute={attribute}
+              // onAttributes={onAttributes}
+              // service={service}
+              // onServices={onServices}
+            />
+          </>
+        )}
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="observacion">
           <h4 className="text-[20px]">Observación</h4>
@@ -583,7 +577,6 @@ export default function CreateForm({
             antes de la creación
           </p>
         </hgroup>
-
         <div className="col-span-3">
           <TextField
             name={"observation" as FormItem}
@@ -594,7 +587,6 @@ export default function CreateForm({
             optional={mode === "approve"}
           />
         </div>
-
         {componenteRed?.approvalComment && (
           <>
             <h4 className="text-[20px] mt-6 col-span-3">
@@ -624,7 +616,6 @@ export default function CreateForm({
             </div>
           </>
         )}
-
         {mode === "approve" && (
           <>
             <h4 className="text-[20px] mt-6 col-span-3">Agregar Comentario</h4>
@@ -649,7 +640,6 @@ export default function CreateForm({
             </div>
           </>
         )}
-
         <footer className="grid gap-4 p-4 border-t-[1px] border-[#eee] col-span-3 justify-center">
           <Button showSpinner={isSubmitting}>Guardar</Button>
         </footer>

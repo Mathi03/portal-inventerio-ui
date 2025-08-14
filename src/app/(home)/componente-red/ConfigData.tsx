@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ConfigDataAttribute,
   TipoComponenteType,
@@ -74,6 +74,13 @@ export default function ConfigData({
   const [filteredConfigServices, setFilteredConfigServices] = useState<
     ConfigDataAttribute[]
   >([]);
+
+  const [resolvedAsyncValues, setResolvedAsyncValues] = useState<
+    Record<string, { label: string; value: string }>
+  >({});
+  const hasResolvedAsyncValues = useRef(false);
+
+  console.log("Attributes Config Data", attributes);
 
   const configDataItem = tipoComponente ? tipoComponente.configData?.[0] : null;
   const configAttributes = configDataItem?.configAttributes ?? [];
@@ -198,7 +205,7 @@ export default function ConfigData({
           additional: { page: page + 1 },
         };
       },
-    [fetchOptions] // <- si fetchOptions es estable, bien; si no, también envuélvelo en useCallback
+    [fetchOptions]
   );
 
   const getLoader = useMemo(() => {
@@ -289,10 +296,73 @@ export default function ConfigData({
       }
     }
 
-    setAttributes(newAttributes);
-    setServices(newServices);
+    // ⚠️ Solo actualizamos si hay algo útil que setear
+    const shouldUpdateAttributes = Object.keys(newAttributes).length > 0;
+    const shouldUpdateServices = Object.keys(newServices).length > 0;
+
+    if (shouldUpdateAttributes) {
+      setAttributes(newAttributes);
+    }
+
+    if (shouldUpdateServices) {
+      setServices(newServices);
+    }
+
     console.log("FormData", formData, newAttributes);
   }, [formData]);
+
+  useEffect(() => {
+    if (hasResolvedAsyncValues.current || !tipoComponente) return;
+
+    const resolveInitialAsyncValues = async () => {
+      const allAttrs = [...configAttributes, ...configServices];
+      const valuesToResolve: Record<string, any> = {
+        ...formData,
+        ...attributes,
+        ...services,
+      };
+
+      const resolvedValues: Record<string, { label: string; value: string }> =
+        {};
+
+      await Promise.all(
+        allAttrs.map(async (attr) => {
+          const fieldValue = valuesToResolve[attr.name];
+
+          if (
+            fieldValue &&
+            attr.valores_posibles_source &&
+            attr.valores_posibles_response?.length >= 2
+          ) {
+            try {
+              const [labelKey, valueKey] = attr.valores_posibles_response;
+              const baseUrl = attr.valores_posibles_source.split("?")[0];
+              const client = getAxiosClientFromUrl(baseUrl);
+              const res = await client.get(`${baseUrl}/${fieldValue}`);
+              const data = res.data?.data || res.data;
+
+              if (data && data[valueKey]) {
+                resolvedValues[attr.name] = {
+                  label: String(data[labelKey]),
+                  value: String(data[valueKey]),
+                };
+              }
+            } catch (error) {
+              console.warn(
+                `Error resolving initial async value for ${attr.name}:`,
+                error
+              );
+            }
+          }
+        })
+      );
+
+      setResolvedAsyncValues(resolvedValues);
+      hasResolvedAsyncValues.current = true;
+    };
+
+    resolveInitialAsyncValues();
+  }, [tipoComponente]);
 
   const renderInputs = (attributes: ConfigDataAttribute[], namePrefix = "") =>
     attributes
@@ -315,11 +385,13 @@ export default function ConfigData({
             name={`${namePrefix}${attr.name}`}
             label={attr.label}
             value={
-              namePrefix.includes("#")
-                ? formData[namePrefix.split("#")[0]]?.[0]?.[attr.name]
-                : formData[`${namePrefix}${attr.name}`]
+              attr.valores_posibles_source && resolvedAsyncValues[attr.name]
+                ? resolvedAsyncValues[attr.name]
+                : namePrefix.includes("#")
+                  ? formData[namePrefix.split("#")[0]]?.[0]?.[attr.name]
+                  : formData[`${namePrefix}${attr.name}`]
             }
-            // type={attr.type}
+            type={attr.type}
             required={attr.required}
             html_form_type={attr.html_form_type}
             selectOptions={
@@ -367,21 +439,25 @@ export default function ConfigData({
     </div>
   );
 
-  const tabsData = [
-    {
-      title: "Atributos",
-      content: () => renderTabContent(configAttributes),
-    },
-    {
-      title: "Servicios",
-      content: () =>
-        renderTabContent(
-          filteredConfigServices.length > 0
-            ? filteredConfigServices
-            : configServices
-        ),
-    },
-  ];
+  const tabsData = () => {
+    const tabsToRender = [];
+    if (configAttributes?.length > 0)
+      tabsToRender.push({
+        title: "Atributos",
+        content: () => renderTabContent(configAttributes),
+      });
+    if (configServices?.length > 0)
+      tabsToRender.push({
+        title: "Servicios",
+        content: () =>
+          renderTabContent(
+            filteredConfigServices.length > 0
+              ? filteredConfigServices
+              : configServices
+          ),
+      });
+    return tabsToRender;
+  };
 
   return (
     <TabStrip
@@ -407,7 +483,7 @@ export default function ConfigData({
         </hgroup>
       }
     >
-      {tabsData.map((tab, index) => (
+      {tabsData().map((tab, index) => (
         <TabStripTab key={index} title={tab.title}>
           {tab.content()}
         </TabStripTab>
