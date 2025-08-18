@@ -34,6 +34,10 @@ function getAxiosClientFromUrl(url: string): AxiosInstance {
   return entry?.[1] || source;
 }
 
+function camelToSnake(str: string): string {
+  return str.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+}
+
 type LoaderFn = (
   search: string,
   loadedOptions: Array<{ label: string; value: string }>,
@@ -331,14 +335,43 @@ export default function ConfigData({
           if (
             fieldValue &&
             isPaginatedSource(attr.valores_posibles_source) &&
+            attr.valores_posibles_source &&
+            attr.valores_posibles_response &&
             attr.valores_posibles_response?.length >= 2
           ) {
             try {
               const [labelKey, valueKey] = attr.valores_posibles_response;
-              const baseUrl = attr.valores_posibles_source.split("?")[0];
-              const client = getAxiosClientFromUrl(baseUrl);
-              const res = await client.get(`${baseUrl}/${fieldValue}`);
-              const data = res.data?.data || res.data;
+
+              let data;
+              if (valueKey.toLocaleLowerCase() == "id") {
+                const baseUrl = attr.valores_posibles_source.split("?")[0];
+                const client = getAxiosClientFromUrl(baseUrl);
+                const res = await client.get(`${baseUrl}/${fieldValue}`);
+                data = res.data?.data || res.data;
+              } else {
+                const fieldSnake = camelToSnake(valueKey);
+                let baseUrl = attr.valores_posibles_source;
+
+                let urlObj = new URL(baseUrl);
+
+                if (urlObj.searchParams.has(fieldSnake)) {
+                  urlObj.searchParams.set(fieldSnake, String(fieldValue));
+                } else {
+                  urlObj.searchParams.set(fieldSnake, String(fieldValue));
+                }
+
+                urlObj.searchParams.set("page", "1");
+                urlObj.searchParams.set("limit", "10");
+
+                const client = getAxiosClientFromUrl(
+                  urlObj.origin + urlObj.pathname
+                );
+                const res = await client.get(urlObj.toString());
+
+                // ✅ tomar solo el primer valor del listado
+                const list = res.data?.data?.data || res.data?.data || [];
+                data = Array.isArray(list) ? list[0] : list;
+              }
 
               if (data && data[valueKey]) {
                 resolvedValues[attr.name] = {
