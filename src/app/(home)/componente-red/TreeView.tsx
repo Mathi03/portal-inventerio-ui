@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { AxiosInstance } from "axios";
 import {
   bff,
@@ -10,6 +10,8 @@ import {
   source, // fallback
 } from "@/core/config";
 import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
+import Modal from "@/components/Modal";
+import CreateForm from "@/app/crear-componente-red/CreateForm";
 
 type AttrMap = { [key: string]: any };
 type NodeSpec = { key: string; level: number };
@@ -57,6 +59,8 @@ const TreeView = ({
   tipoComponente: TipoComponenteType | null;
   attributes: AttrMap | null;
 }) => {
+  const [openForm, setOpenForm] = useState(false);
+  const [componenteRed, setComponenteRed] = useState<any | null>(null);
 
   const isReady = !!tipoComponente;
   const attrs = attributes ?? {};
@@ -69,8 +73,10 @@ const TreeView = ({
     [tipoComponente]
   );
 
-  const getCfg = (name: string) =>
-    allAttributes.find((a: any) => a.name === name);
+  const getCfg = useCallback(
+    (name: string) => allAttributes.find((a: any) => a.name === name),
+    [allAttributes]
+  );
   const getLabelFromCfg = (name: string) => getCfg(name)?.label || name;
 
   const cacheRef = useRef<Map<string, any>>(new Map());
@@ -78,13 +84,12 @@ const TreeView = ({
     {}
   );
 
+  // === Resuelve etiquetas visibles (igual que antes) ===
   useEffect(() => {
-    // si no hay datos listos, limpiamos y salimos
     if (!isReady) {
       setResolved({});
       return;
     }
-
     let mounted = true;
 
     const visibleKeys = [...clienteSpecs, ...movistarSpecs]
@@ -159,7 +164,7 @@ const TreeView = ({
             if (mounted) setResolved((p) => ({ ...p, [key]: results }));
           }
         } catch {
-          // si falla, dejamos rawVal sin resolver
+          // silenciar
         }
       }
     };
@@ -168,7 +173,42 @@ const TreeView = ({
     return () => {
       mounted = false;
     };
-  }, [isReady, attrs, allAttributes]);
+  }, [isReady, attrs, getCfg]);
+
+  // === CLICK: abre modal y pasa el resultado de fetchById usando el cacheRef ===
+  const handleOpenFormForKey = useCallback(
+    async (k: string) => {
+      const cfg: any = getCfg(k);
+      const val = attrs[k];
+      if (!cfg || val == null) return;
+
+      const isSelect =
+        cfg.html_form_type === "select" || cfg.html_form_type === "multiple";
+      const hasRemote = !!cfg.valores_posibles_source;
+
+      if (!isSelect || !hasRemote) return;
+
+      const base = stripQuery(cfg.valores_posibles_source as string);
+      const client = getAxiosClientFromUrl(base);
+      const id = Array.isArray(val) ? toStr(val[0]) : toStr(val);
+      const url = `${base}/${encodeURIComponent(id)}`;
+
+      try {
+        let obj = cacheRef.current.get(url);
+        if (!obj) {
+          const { data } = await client.get(url);
+          obj = data?.data;
+          cacheRef.current.set(url, obj);
+        }
+        setComponenteRed(obj ?? null);
+        setOpenForm(true);
+      } catch {
+        // si falla, no abrir o abrir vacío a tu elección:
+        // setComponenteRed(null); setOpenForm(true);
+      }
+    },
+    [attrs, getCfg]
+  );
 
   const renderValue = (key: string, raw: any) => {
     const val = resolved[key] ?? raw;
@@ -197,7 +237,16 @@ const TreeView = ({
   };
 
   const CheckItem = ({ k, level }: { k: string; level: number }) => (
-    <div className={clsx("flex items-start gap-3", INDENTS[level] || "pl-0")}>
+    <div
+      className={clsx(
+        "flex items-start gap-3",
+        INDENTS[level] || "pl-0",
+        "cursor-pointer hover:bg-neutral-50 rounded-md p-1"
+      )}
+      role="button"
+      onClick={() => handleOpenFormForKey(k)}
+      title="Ver detalle"
+    >
       <span className="mt-0.5 grid h-5 w-5 place-items-center rounded border border-neutral-300 bg-white shrink-0">
         <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
           <path
@@ -233,7 +282,6 @@ const TreeView = ({
     );
   };
 
-  // 🔚 ahora sí, si no está listo, no renderizamos UI
   if (!isReady) return null;
 
   return (
@@ -242,6 +290,10 @@ const TreeView = ({
         {renderCard("Cliente", clienteSpecs)}
         {renderCard("Movistar", movistarSpecs)}
       </div>
+
+      <Modal open={openForm} onClose={() => setOpenForm(false)}>
+        <CreateForm mode="read" componenteRed={componenteRed ?? {}} />
+      </Modal>
     </div>
   );
 };

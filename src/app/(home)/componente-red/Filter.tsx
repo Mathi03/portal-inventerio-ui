@@ -13,8 +13,8 @@ import { FuenteType } from "@/core/fuente/fuente.type";
 import { FuenteService } from "@/core/fuente/fuente.service";
 import SearchableSelect from "@/components/SearchableSelect";
 import SearchClient from "@/components/SearchClient";
-import { useModalStore } from "@/hooks/modalStorage";
 import SearchEstacion from "@/components/SearchEstacion";
+import Modal from "@/components/Modal";
 
 export type FormFilterType = Omit<
   QueryComponenteRedDto,
@@ -38,7 +38,8 @@ export default function Filter({
 }: {
   onFilter: (form: FormFilterType) => void;
 }) {
-  const { openModal } = useModalStore();
+  const [openModalCliente, setOpenModalCliente] = useState(false);
+  const [openModalEstacion, setOpenModalEstacion] = useState(false);
   const [formValues, setFormValues] = useState<FormFilterType>(defaultValues);
   const [clientName, setClientName] = useState("");
 
@@ -121,171 +122,186 @@ export default function Filter({
   };
 
   return (
-    <div
-      onKeyDown={handleKeyDown}
-      className="max-w-[360px] bg-white rounded-[8px] grid grid-rows-[auto_1fr_auto] gap-4 overflow-hidden"
-    >
-      <header className="p-4 grid gap-4">
-        <h6 className="col-span-5 text-base font-semibold flex gap-4">
-          <span className="material-symbols-outlined">filter_list</span>
-          <b className="text-[22px] font-normal">Filtro de Búsqueda</b>
-        </h6>
-        <p>
-          Seleccione los filtros necesarios antes de consultar sus componente de
-          red
-        </p>
-      </header>
-      <section className="grid gap-4 overflow-auto px-4 pb-4 scroller">
-        <TextField
-          name="id"
-          label="Componente Id"
-          value={formValues.id}
-          onChange={(e) => handleChange("id", e.target.value)}
-          fullWidth
-          optional
-        />
-        <TextField
-          name="name"
-          label="Nombre"
-          value={formValues.name}
-          onChange={(e) => handleChange("name", e.target.value)}
-          fullWidth
-          optional
-        />
-        <TextField
-          name="label"
-          label="Etiqueta"
-          value={formValues.label}
-          onChange={(e) => handleChange("label", e.target.value)}
-          fullWidth
-          optional
-        />
-
-        <SearchableSelect
-          name="ref_component_type_id"
-          label="Tipo de componente"
-          value={formValues.ref_component_type_id?.toString()}
-          onChangeValue={(value) =>
-            handleChange("ref_component_type_id", value)
-          }
-          disabled={isLoadingTC}
-          helperText={
-            isLoadingTC ? "Cargando tipo de componentes..." : undefined
-          }
-          options={tipoComponentes
-            .filter((tc) => tc.status === 1)
-            .map((tc) => ({ text: tc.label, value: tc.id.toString() }))}
-          optional
-          fullWidth
-        />
-
-        <SearchableSelect
-          name="ref_network_id"
-          label="Red"
-          value={formValues.ref_network_id}
-          onChangeValue={(value) => handleChange("ref_network_id", value)}
-          disabled={isLoadingRedes}
-          helperText={isLoadingRedes ? "Cargando redes..." : undefined}
-          options={redes
-            .filter((r) => r.status === 1)
-            .map((r) => ({ text: r.label, value: r.id.toString() }))}
-          optional
-          fullWidth
-        />
-
-        <SearchableSelect
-          name="ref_source_id"
-          label="Fuente"
-          value={formValues.ref_source_id}
-          onChangeValue={(value) => handleChange("ref_source_id", value)}
-          disabled={isLoadingFuentes}
-          helperText={isLoadingFuentes ? "Cargando fuentes..." : undefined}
-          options={fuentes.map((r) => ({
-            text: r.label,
-            value: r.id.toString(),
-          }))}
-          optional
-          fullWidth
-        />
-
-        <SearchableSelect
-          name="region_id"
-          label="Región"
-          value={formValues.region_id}
-          onChangeValue={(value) => handleChange("region_id", value)}
-          disabled={isLoadingRegiones}
-          helperText={isLoadingRegiones ? "Cargando regiones..." : undefined}
-          options={regiones.map((r) => ({
-            text: r.nombre,
-            value: r.id.toString(),
-          }))}
-          optional
-          fullWidth
-        />
-
-        <div
-          onClick={() => {
-            openModal(
-              <SearchClient
-                onSelected={(client) => {
-                  if (client.id && client.nombreadministrativo) {
-                    setFormValues((prev) => ({
-                      ...prev,
-                      client_id: client.id.toString(),
-                    }));
-                    setClientName(client.nombreadministrativo.toString());
-                  }
-                }}
-              />
-            );
-          }}
-        >
+    <>
+      <div
+        onKeyDown={handleKeyDown}
+        className="max-w-[360px] bg-white rounded-[8px] grid grid-rows-[auto_1fr_auto] gap-4 overflow-hidden"
+      >
+        <header className="p-4 grid gap-4">
+          <h6 className="col-span-5 text-base font-semibold flex gap-4">
+            <span className="material-symbols-outlined">filter_list</span>
+            <b className="text-[22px] font-normal">Filtro de Búsqueda</b>
+          </h6>
+          <p>
+            Seleccione los filtros necesarios antes de consultar sus componente
+            de red
+          </p>
+        </header>
+        <section className="grid gap-4 overflow-auto px-4 pb-4 scroller">
           <TextField
-            id="client_id"
-            name="client_id"
-            label="Cliente"
+            name="id"
+            label="Componente Id"
+            value={formValues.id}
+            onChange={(e) => handleChange("id", e.target.value)}
             fullWidth
-            value={clientName}
-            readOnly
             optional
           />
-        </div>
-        <div
-          onClick={() => {
-            openModal(
-              <SearchEstacion
-                onSelected={(client) => {
-                  if (client.id && client.nombre) {
-                    setFormValues((prev) => ({
-                      ...prev,
-                      station_id: client.id.toString(),
-                    }));
-                    //setClientName(client.nombre.toString());
-                  }
-                }}
-              />
-            );
-          }}
-        >
           <TextField
-            id="station_id"
-            name="station_id"
-            label="Estacion"
+            name="name"
+            label="Nombre"
+            value={formValues.name}
+            onChange={(e) => handleChange("name", e.target.value)}
             fullWidth
-            value={formValues.station_id}
-            readOnly
             optional
           />
-        </div>
-      </section>
-      <footer className="grid gap-4 grid-cols-2 p-4 border-t-[1px] border-[#eee]">
-        <Button variant="secondary" onClick={handleReset}>
-          Limpiar
-        </Button>
-        <Button variant="primary" onClick={() => handleSubmit()}>
-          Buscar
-        </Button>
-      </footer>
-    </div>
+          <TextField
+            name="label"
+            label="Etiqueta"
+            value={formValues.label}
+            onChange={(e) => handleChange("label", e.target.value)}
+            fullWidth
+            optional
+          />
+
+          <SearchableSelect
+            name="ref_component_type_id"
+            label="Tipo de componente"
+            value={formValues.ref_component_type_id?.toString()}
+            onChangeValue={(value) =>
+              handleChange("ref_component_type_id", value)
+            }
+            disabled={isLoadingTC}
+            helperText={
+              isLoadingTC ? "Cargando tipo de componentes..." : undefined
+            }
+            options={tipoComponentes
+              .filter((tc) => tc.status === 1)
+              .map((tc) => ({ text: tc.label, value: tc.id.toString() }))}
+            optional
+            fullWidth
+          />
+
+          <SearchableSelect
+            name="ref_network_id"
+            label="Red"
+            value={formValues.ref_network_id}
+            onChangeValue={(value) => handleChange("ref_network_id", value)}
+            disabled={isLoadingRedes}
+            helperText={isLoadingRedes ? "Cargando redes..." : undefined}
+            options={redes
+              .filter((r) => r.status === 1)
+              .map((r) => ({ text: r.label, value: r.id.toString() }))}
+            optional
+            fullWidth
+          />
+
+          <SearchableSelect
+            name="ref_source_id"
+            label="Fuente"
+            value={formValues.ref_source_id}
+            onChangeValue={(value) => handleChange("ref_source_id", value)}
+            disabled={isLoadingFuentes}
+            helperText={isLoadingFuentes ? "Cargando fuentes..." : undefined}
+            options={fuentes.map((r) => ({
+              text: r.label,
+              value: r.id.toString(),
+            }))}
+            optional
+            fullWidth
+          />
+
+          <SearchableSelect
+            name="region_id"
+            label="Región"
+            value={formValues.region_id}
+            onChangeValue={(value) => handleChange("region_id", value)}
+            disabled={isLoadingRegiones}
+            helperText={isLoadingRegiones ? "Cargando regiones..." : undefined}
+            options={regiones.map((r) => ({
+              text: r.nombre,
+              value: r.id.toString(),
+            }))}
+            optional
+            fullWidth
+          />
+
+          <div
+            onClick={() => {
+              setOpenModalCliente(true);
+            }}
+          >
+            <TextField
+              id="client_id"
+              name="client_id"
+              label="Cliente"
+              fullWidth
+              value={clientName}
+              readOnly
+              optional
+            />
+          </div>
+          <div
+            onClick={() => {
+              setOpenModalEstacion(true);
+            }}
+          >
+            <TextField
+              id="station_id"
+              name="station_id"
+              label="Estacion"
+              fullWidth
+              value={formValues.station_id}
+              readOnly
+              optional
+            />
+          </div>
+        </section>
+        <footer className="grid gap-4 grid-cols-2 p-4 border-t-[1px] border-[#eee]">
+          <Button variant="secondary" onClick={handleReset}>
+            Limpiar
+          </Button>
+          <Button variant="primary" onClick={() => handleSubmit()}>
+            Buscar
+          </Button>
+        </footer>
+      </div>
+
+      <Modal
+        open={openModalCliente}
+        onClose={() => {
+          setOpenModalCliente(false);
+        }}
+      >
+        <SearchClient
+          onSelected={(client) => {
+            if (client.id && client.nombreadministrativo) {
+              setFormValues((prev) => ({
+                ...prev,
+                client_id: client.id.toString(),
+              }));
+              setClientName(client.nombreadministrativo.toString());
+            }
+          }}
+        />
+      </Modal>
+      <Modal
+        open={openModalEstacion}
+        onClose={() => {
+          setOpenModalEstacion(false);
+        }}
+      >
+        <SearchEstacion
+          onSelected={(client) => {
+            if (client.id && client.nombre) {
+              setFormValues((prev) => ({
+                ...prev,
+                station_id: client.id.toString(),
+              }));
+              //setClientName(client.nombre.toString());
+            }
+          }}
+        />
+      </Modal>
+    </>
   );
 }

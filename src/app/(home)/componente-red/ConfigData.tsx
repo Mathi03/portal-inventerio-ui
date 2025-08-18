@@ -79,8 +79,7 @@ export default function ConfigData({
     Record<string, { label: string; value: string }>
   >({});
   const hasResolvedAsyncValues = useRef(false);
-
-  console.log("Attributes Config Data", attributes);
+  const fetchedKeys = useRef(new Set<string>());
 
   const configDataItem = tipoComponente ? tipoComponente.configData?.[0] : null;
   const configAttributes = configDataItem?.configAttributes ?? [];
@@ -176,15 +175,15 @@ export default function ConfigData({
   ) => {
     if (!attribute.valores_posibles_source) return;
 
+    const key = `${namePrefix}${attribute.name}`;
+    if (fetchedKeys.current.has(key)) return;
+
+    fetchedKeys.current.add(key);
     const options = await fetchOptions(
       attribute.valores_posibles_source,
       attribute.valores_posibles_response
     );
-
-    setDynamicOptions((prev) => ({
-      ...prev,
-      [`${namePrefix}${attribute.name}`]: options,
-    }));
+    setDynamicOptions((prev) => ({ ...prev, [key]: options }));
   };
 
   const loadPaginatedOptions = useCallback(
@@ -331,7 +330,7 @@ export default function ConfigData({
 
           if (
             fieldValue &&
-            attr.valores_posibles_source &&
+            isPaginatedSource(attr.valores_posibles_source) &&
             attr.valores_posibles_response?.length >= 2
           ) {
             try {
@@ -385,7 +384,7 @@ export default function ConfigData({
             name={`${namePrefix}${attr.name}`}
             label={attr.label}
             value={
-              attr.valores_posibles_source && resolvedAsyncValues[attr.name]
+              isPaginated && resolvedAsyncValues[attr.name]
                 ? resolvedAsyncValues[attr.name]
                 : namePrefix.includes("#")
                   ? formData[namePrefix.split("#")[0]]?.[0]?.[attr.name]

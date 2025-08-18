@@ -6,7 +6,7 @@ import "@telefonica/mistica/css/mistica.css";
 import "material-symbols";
 import { Toaster } from "@/components/ui/toaster";
 import Link from "next/link";
-import Modal from '@/components/Modal';
+import GlobalModal from "@/components/GlobalModal";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -43,7 +43,7 @@ export default function RootLayout({
           }}
         >
           {children}
-          <Modal />
+          <GlobalModal />
           <Toaster />
         </ThemeContextProvider>
       </body>

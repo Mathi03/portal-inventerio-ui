@@ -18,13 +18,10 @@ import Table from "@/components/Table/Table";
 import Pagination from "@/components/Pagination";
 import { UpdateComponenteRedDto } from "@/core/componente-red/dto/update.dto";
 import { useComponenteRedForm } from "./hooks/useComponenteRedForm";
-import SearchableSelect, {
-  SearchableSelectHandle,
-} from "@/components/SearchableSelect";
+import { SearchableSelectHandle } from "@/components/SearchableSelect";
 import { useModalStore } from "@/hooks/modalStorage";
 import ConfigData from "../(home)/componente-red/ConfigData";
 import { EstacionType } from "@/core/estaciones/estacion.type";
-import SelectField from "@/components/SelectField";
 import TreeView from "../(home)/componente-red/TreeView";
 
 const estaciones: EstacionType[] = [
@@ -41,7 +38,7 @@ type FormValues = (CreateComponenteRedDto | UpdateComponenteRedDto) & {
 };
 
 interface BaseCreateFormProps {
-  mode?: "create" | "update" | "approve" | "popup";
+  mode?: "create" | "update" | "approve" | "popup" | "read";
   componentTypeId?: number;
 }
 
@@ -69,10 +66,19 @@ interface UpdateOrApproveModeProps extends BaseCreateFormProps {
   stationId?: never;
 }
 
+interface ReadModeProps extends BaseCreateFormProps {
+  mode: "read";
+  componenteRed: ComponenteRedType;
+  networkId?: never;
+  regionId?: never;
+  stationId?: never;
+}
+
 type CreateFormProps =
   | CreateModeProps
   | UpdateOrApproveModeProps
-  | PopUpModeProps;
+  | PopUpModeProps
+  | ReadModeProps;
 
 export default function CreateForm({
   mode = "create",
@@ -220,13 +226,20 @@ export default function CreateForm({
       (t: TipoComponenteType) => t.status === 1
     );
     setTipoComponentes(activeComponenteTypes);
-    if (componentTypeId) {
+    if (mode === "update" && componenteRed){
       setTipoComponente(
         activeComponenteTypes.find(
-          (r: TipoComponenteType) => r.id === componentTypeId
+          (t: TipoComponenteType) => t.id === +componenteRed.refComponentTypeId
         ) ?? null
       );
     }
+    // if (mode === "update" && componentTypeId) {
+    //   setTipoComponente(
+    //     activeComponenteTypes.find(
+    //       (r: TipoComponenteType) => r.id === componentTypeId
+    //     ) ?? null
+    //   );
+    // }
     setIsLoadingTC(false);
   }, [red]);
 
@@ -308,15 +321,6 @@ export default function CreateForm({
   // }, [getRedes, getTipoComponentes, getFuentes, getRegiones]);
 
   useEffect(() => {
-    if (componenteRed?.refComponentTypeId && tipoComponentes.length > 0) {
-      const tipo = tipoComponentes.find(
-        (t) => t.id === +componenteRed.refComponentTypeId
-      );
-      setTipoComponente(tipo || null);
-    }
-  }, [componenteRed, tipoComponentes]);
-
-  useEffect(() => {
     if (componenteRed) {
       if (componenteRed.attribute) {
         try {
@@ -379,7 +383,7 @@ export default function CreateForm({
             manera eficiente y personalizada.
           </p>
         </header>
-        {mode === "popup" && (
+        {(mode === "popup" || mode === "read") && (
           <div className="p-6">
             <Button variant="primary" onClick={() => closeModal()}>
               Cerrar
@@ -403,8 +407,8 @@ export default function CreateForm({
           fullWidth
           maxLength={255}
           onChange={handleInputName}
-          disabled={mode === "approve"}
-          optional={mode === "approve"}
+          disabled={mode === "approve" || mode === "read"}
+          optional={mode === "approve" || mode === "read"}
         />
         <TextField
           name={"controlLabel" as FormItem}
@@ -413,25 +417,27 @@ export default function CreateForm({
           fullWidth
           maxLength={255}
           onChange={handleInputLabel}
-          disabled={mode === "approve"}
-          optional={mode === "approve"}
+          disabled={mode === "approve" || mode === "read"}
+          optional={mode === "approve" || mode === "read"}
         />
         <IntegerField
           name={"componentId" as FormItem}
           label="Componente ID"
           fullWidth
           maxLength={255}
-          disabled={mode === "approve"}
-          optional={mode === "approve"}
+          disabled={mode === "approve" || mode === "read"}
+          optional={mode === "approve" || mode === "read"}
         />
         <Select
           // ref={networkInputRef}
           name={"refNetworkId" as FormItem}
           label="Red"
           disabled={
-            mode === "approve" || mode === "popup" ? true : isLoadingRedes
+            mode === "approve" || mode === "popup" || mode === "read"
+              ? true
+              : isLoadingRedes
           }
-          optional={mode === "approve" || mode === "popup"}
+          optional={mode === "approve" || mode === "popup" || mode === "read"}
           fullWidth
           helperText={isLoadingRedes ? "Cargando redes..." : undefined}
           options={redes.map((red) => ({
@@ -446,8 +452,8 @@ export default function CreateForm({
         <Select
           name={"refComponentTypeId" as FormItem}
           label="Tipo de componente"
-          disabled={mode === "approve" ? true : isLoadingTC}
-          optional={mode === "approve"}
+          disabled={mode === "approve" || mode === "read" ? true : isLoadingTC}
+          optional={mode === "approve" || mode === "read"}
           fullWidth
           helperText={
             isLoadingTC ? "Cargando tipos de componente..." : undefined
@@ -466,13 +472,13 @@ export default function CreateForm({
           name={"refSourceId" as FormItem}
           label="Fuente"
           disabled={
-            mode === "approve"
+            mode === "approve" || mode === "read"
               ? true
               : !isValidToSearch
                 ? true
                 : isLoadingFuentes
           }
-          optional={mode === "approve"}
+          optional={mode === "approve" || mode === "read"}
           fullWidth
           helperText={isLoadingFuentes ? "Cargando fuentes..." : undefined}
           options={fuentes.map((f) => ({
@@ -484,9 +490,11 @@ export default function CreateForm({
           name={"regionId" as FormItem}
           label="Región"
           disabled={
-            mode === "approve" || mode === "popup" ? true : isLoadingRegiones
+            mode === "approve" || mode === "popup" || mode === "read"
+              ? true
+              : isLoadingRegiones
           }
-          optional={mode === "approve" || mode === "popup"}
+          optional={mode === "approve" || mode === "popup" || mode === "read"}
           fullWidth
           helperText={isLoadingRegiones ? "Cargando regiones..." : undefined}
           options={regiones.map((r) => ({
@@ -503,8 +511,8 @@ export default function CreateForm({
         <Select
           name={"stationId" as FormItem}
           label="Estación"
-          disabled={mode === "approve" || mode === "popup"}
-          optional={mode === "approve" || mode === "popup"}
+          disabled={mode === "approve" || mode === "popup" || mode === "read"}
+          optional={mode === "approve" || mode === "popup" || mode === "read"}
           options={estaciones.map((tc) => ({
             text: tc.nombre,
             value: tc.id.toString(),
@@ -583,8 +591,8 @@ export default function CreateForm({
             label="Observación"
             fullWidth
             multiline
-            disabled={mode === "approve"}
-            optional={mode === "approve"}
+            disabled={mode === "approve" || mode === "read"}
+            optional={mode === "approve" || mode === "read"}
           />
         </div>
         {componenteRed?.approvalComment && (
@@ -640,9 +648,11 @@ export default function CreateForm({
             </div>
           </>
         )}
-        <footer className="grid gap-4 p-4 border-t-[1px] border-[#eee] col-span-3 justify-center">
-          <Button showSpinner={isSubmitting}>Guardar</Button>
-        </footer>
+        {mode !== "read" && (
+          <footer className="grid gap-4 p-4 border-t-[1px] border-[#eee] col-span-3 justify-center">
+            <Button showSpinner={isSubmitting}>Guardar</Button>
+          </footer>
+        )}
       </Form>
     </section>
   );

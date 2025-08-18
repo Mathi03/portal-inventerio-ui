@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   TextField,
   Select,
   DateField,
   IntegerField,
 } from "@telefonica/mistica";
-import { useModalStore } from "@/hooks/modalStorage";
 import CreateForm from "@/app/crear-componente-red/CreateForm";
 import { AsyncPaginate } from "react-select-async-paginate";
 import SelectField from "@/components/SelectField";
+import Modal from "@/components/Modal";
 
 interface InputDynamicProps {
   name: string;
@@ -52,7 +52,7 @@ export default function InputDynamic({
   isPaginated,
   loadPaginatedOptions,
 }: InputDynamicProps) {
-  const { openModal } = useModalStore();
+  const [openForm, setOpenForm] = useState(false);
   const [internalAsyncValue, setInternalAsyncValue] = useState<{
     label: string;
     value: string;
@@ -64,14 +64,7 @@ export default function InputDynamic({
       className="px-6 py-3 bg-blue-600 text-white rounded-full"
       onClick={(e) => {
         e.preventDefault();
-        openModal(
-          <CreateForm
-            mode="popup"
-            networkId={networkId}
-            regionId={regionId}
-            stationId={stationId}
-          />
-        );
+        setOpenForm(true);
       }}
     >
       Crear
@@ -111,7 +104,7 @@ export default function InputDynamic({
         name={name}
         label={label}
         optional={!required}
-        value={value?.toString()}
+        value={value?.toString() ?? ""}
         onChangeValue={(val) => onChange(name, val)}
         disabled={loading}
         helperText={loading ? `Cargando ${label}...` : undefined}
@@ -195,13 +188,21 @@ export default function InputDynamic({
       default:
         return <div>Error: tipo no soportado</div>;
     }
-  }, [html_form_type, loading, selectOptions]);
+  }, [html_form_type, loading, selectOptions, value]);
 
   if (isCreate) {
     return (
       <div className="flex gap-2 items-start">
         {field}
         {renderButton()}
+        <Modal open={openForm} onClose={() => setOpenForm(false)}>
+          <CreateForm
+            mode="popup"
+            networkId={networkId}
+            regionId={regionId}
+            stationId={stationId}
+          />
+        </Modal>
       </div>
     );
   }

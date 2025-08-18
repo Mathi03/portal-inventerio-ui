@@ -127,3 +127,16 @@ body > div {
   font-size: 1.125rem;
   color: #6E7894;
 }
+
+
+body.modal-open #app-root { 
+  pointer-events: none;
+  /* Si quieres "empujar" al fondo visualmente, puedes usar filter/opacity o z-index negativo */
+  /* filter: blur(1px); */
+}
+
+/* Si quieres el famoso z-[-1] global sin ensuciar layouts: */
+body.modal-open #app-root .app-container {
+  position: relative;
+  z-index: -1;
+}

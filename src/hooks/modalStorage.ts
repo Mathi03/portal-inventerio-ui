@@ -1,25 +1,56 @@
+// src/hooks/modalStorage.ts
 import { create } from 'zustand';
-import { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
-interface ModalState {
+export type ModalSize = {
+  width?: CSSProperties['width'];
+  height?: CSSProperties['height'];
+};
+
+type ModalState = {
   isOpen: boolean;
-  content: ReactNode;
-  openModal: (
-    content: ReactNode,
-    width?: React.CSSProperties['width'],
-    height?: React.CSSProperties['height']
-  ) => void;
-  closeModal: () => void;
-  width?: React.CSSProperties['width'];
-  height?: React.CSSProperties['height'];
-}
+  content: ReactNode | null;
+  contentKey?: any;              // <--- clave para controlar actualizaciones
+  size: ModalSize;
+  onClose?: () => void;
 
-export const useModalStore = create<ModalState>((set) => ({
+  openModal: (opts: { content: ReactNode; key?: any; size?: ModalSize; onClose?: () => void }) => void;
+  closeModal: () => void;
+  replaceContent: (content: ReactNode, key?: any) => void;
+  setSize: (size?: ModalSize) => void;
+};
+
+const DEFAULT_SIZE: ModalSize = { width: '90%', height: '90%' };
+
+export const useModalStore = create<ModalState>((set, get) => ({
   isOpen: false,
   content: null,
-  openModal: (content, width, height) =>
-    set({ isOpen: true, content, width, height }),
-  closeModal: () => set({ isOpen: false, content: null }),
-  width: '90%',
-  height: '90%'
+  contentKey: undefined,
+  size: DEFAULT_SIZE,
+  onClose: undefined,
+
+  openModal: ({ content, key, size, onClose }) => {
+    set({
+      isOpen: true,
+      content,
+      contentKey: key,
+      size: size ?? DEFAULT_SIZE,
+      onClose,
+    });
+  },
+
+  closeModal: () => {
+    const { onClose } = get();
+    try { onClose?.(); } finally {
+      set({ isOpen: false, content: null, contentKey: undefined, onClose: undefined, size: DEFAULT_SIZE });
+    }
+  },
+
+  replaceContent: (content, key) => set((s) => {
+    // si la key no cambia, no hagas nada (evita rerenders)
+    if (key !== undefined && s.contentKey === key) return s;
+    return { content, contentKey: key };
+  }),
+
+  setSize: (size) => set({ size: size ?? DEFAULT_SIZE }),
 }));
