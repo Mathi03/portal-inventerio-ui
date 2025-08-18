@@ -52,6 +52,32 @@ const movistarSpecs: NodeSpec[] = [
   { key: "id_control_nodo_dependiente_b", level: 1 },
 ];
 
+const camelToSnake = (str: string) =>
+  str.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase();
+
+const buildResolvedUrl = (
+  source: string,
+  valueKey: string,
+  fieldValue: string | number
+): string => {
+  const fieldSnake = camelToSnake(valueKey);
+  const urlObj = new URL(source);
+
+  // si ya trae el parámetro -> lo reemplazamos
+  if (urlObj.searchParams.has(fieldSnake)) {
+    urlObj.searchParams.set(fieldSnake, String(fieldValue));
+  } else {
+    // sino lo agregamos
+    urlObj.searchParams.set(fieldSnake, String(fieldValue));
+  }
+
+  // normalizamos paginación
+  urlObj.searchParams.set("page", "1");
+  urlObj.searchParams.set("limit", "10");
+
+  return urlObj.toString();
+};
+
 const TreeView = ({
   tipoComponente,
   attributes,
@@ -133,16 +159,44 @@ const TreeView = ({
 
       // 2) opciones remotas
       if (cfg.valores_posibles_source && cfg.valores_posibles_response) {
-        const base = stripQuery(cfg.valores_posibles_source as string);
         const labelPath = (cfg.valores_posibles_response as string[])[0];
-        const client = getAxiosClientFromUrl(base);
+        const valueKey = (cfg.valores_posibles_response as string[])[1];
 
         const fetchById = async (id: string) => {
-          const url = `${base}/${encodeURIComponent(id)}`;
-          if (cacheRef.current.has(url)) return cacheRef.current.get(url);
-          const { data } = await client.get(url);
-          cacheRef.current.set(url, data?.data);
-          return data?.data;
+          const fieldValue = id;
+          if (valueKey.toLowerCase() === "id") {
+            const baseUrl = cfg.valores_posibles_source.split("?")[0];
+            const client = getAxiosClientFromUrl(baseUrl);
+            const res = await client.get(`${baseUrl}/${fieldValue}`);
+            const resultData = res.data?.data || res.data;
+            cacheRef.current.set(baseUrl, resultData);
+
+            return resultData;
+          } else {
+            const fieldSnake = camelToSnake(valueKey);
+            let baseUrl = cfg.valores_posibles_source;
+
+            let urlObj = new URL(baseUrl);
+
+            if (urlObj.searchParams.has(fieldSnake)) {
+              urlObj.searchParams.set(fieldSnake, String(fieldValue));
+            } else {
+              urlObj.searchParams.set(fieldSnake, String(fieldValue));
+            }
+
+            urlObj.searchParams.set("page", "1");
+            urlObj.searchParams.set("limit", "10");
+
+            const client = getAxiosClientFromUrl(
+              urlObj.origin + urlObj.pathname
+            );
+            const res = await client.get(urlObj.toString());
+
+            const list = res.data?.data?.data || res.data?.data || [];
+            const data = Array.isArray(list) ? list[0] : list;
+            cacheRef.current.set(baseUrl, data);
+            return data;
+          }
         };
 
         try {
@@ -188,23 +242,25 @@ const TreeView = ({
 
       if (!isSelect || !hasRemote) return;
 
-      const base = stripQuery(cfg.valores_posibles_source as string);
-      const client = getAxiosClientFromUrl(base);
-      const id = Array.isArray(val) ? toStr(val[0]) : toStr(val);
-      const url = `${base}/${encodeURIComponent(id)}`;
-
       try {
+        const valueKey = (cfg.valores_posibles_response as string[])[1];
+        const id = Array.isArray(val) ? toStr(val[0]) : toStr(val);
+
+        const url = buildResolvedUrl(cfg.valores_posibles_source, valueKey, id);
+
         let obj = cacheRef.current.get(url);
         if (!obj) {
+          const client = getAxiosClientFromUrl(
+            new URL(url).origin + new URL(url).pathname
+          );
           const { data } = await client.get(url);
-          obj = data?.data;
+          obj = data?.data?.data?.[0] ?? data?.data ?? data;
           cacheRef.current.set(url, obj);
         }
         setComponenteRed(obj ?? null);
         setOpenForm(true);
       } catch {
-        // si falla, no abrir o abrir vacío a tu elección:
-        // setComponenteRed(null); setOpenForm(true);
+        // fallback
       }
     },
     [attrs, getCfg]
