@@ -19,7 +19,7 @@ export default function Header({
       <IconButton icon="arrow_back_ios" onClick={onNavigate} />
       <img src="/logo.svg" alt="telefonica" className="w-6" />
       <h4 className="text-3xl">
-        {componenteRed?.id} {componenteRed?.name}
+        {componenteRed?.controlLabel} - {componenteRed?.id}
       </h4>
       <IconButton icon="notifications_unread" />
       <Avatar

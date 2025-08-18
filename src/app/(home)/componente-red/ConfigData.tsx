@@ -491,16 +491,15 @@ export default function ConfigData({
     return tabsToRender;
   };
 
-  return (
-    <TabStrip
-      selected={selectedTab}
-      onSelect={({ selected }) => setSelectedTab(selected)}
-      className="col-span-full"
-      header={
-        <hgroup className="" style={{ marginBottom: "20px" }}>
-          <h4 className="text-[20px]" style={{ marginBottom: "10px" }}>
-            Configuración adicional
-          </h4>
+  const Header = () => (
+    <hgroup className="" style={{ marginBottom: "20px" }}>
+      <h4 className="text-[20px]" style={{ marginBottom: "10px" }}>
+        Configuración adicional
+      </h4>
+      {configAttributes?.length == 0 && configServices?.length == 0 ? (
+        <span> No posee configuración</span>
+      ) : (
+        <>
           <p>
             Esta configuración es dinámica, por lo cual cambia según el criterio
             del administrador. Si desea modificarlo, haga clic en{" "}
@@ -512,8 +511,24 @@ export default function ConfigData({
               <Icon icon="edit" style={{ fontSize: "20px" }} />
             </Link>
           </p>
-        </hgroup>
-      }
+        </>
+      )}
+    </hgroup>
+  );
+
+  if (configAttributes?.length == 0 && configServices?.length == 0)
+    return (
+      <div className="col-span-full">
+        <Header />
+      </div>
+    );
+
+  return (
+    <TabStrip
+      selected={selectedTab}
+      onSelect={({ selected }) => setSelectedTab(selected)}
+      className="col-span-full"
+      header={<Header />}
     >
       {tabsData().map((tab, index) => (
         <TabStripTab key={index} title={tab.title}>

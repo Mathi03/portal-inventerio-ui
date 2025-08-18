@@ -278,7 +278,7 @@ export default function CreateForm({
   }, [getTipoComponentes]);
 
   const isValidToSearch =
-    red && red !== null && tipoComponente && tipoComponente !== null;
+    red && red !== null 
 
   useEffect(() => {
     if (isValidToSearch) {
