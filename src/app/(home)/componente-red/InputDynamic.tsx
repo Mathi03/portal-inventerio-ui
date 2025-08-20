@@ -80,9 +80,9 @@ export default function InputDynamic({
 
       return (
         <div className="relative w-full">
-          {value && (
+          {selectedValue && (
             <div className="absolute top-2 z-[1] left-3 text-sm text-gray-500">
-              {label} {required && "(opcional)"}
+              {label} {!required && "(opcional)"}
             </div>
           )}
           <AsyncPaginate
@@ -98,7 +98,7 @@ export default function InputDynamic({
               onChange(name, selected === null ? "" : selected.value);
             }}
             additional={{ page: 1 }}
-            placeholder={label}
+            placeholder={`${label} ${!required && "(opcional)"}`}
             isClearable
             required={required}
           />

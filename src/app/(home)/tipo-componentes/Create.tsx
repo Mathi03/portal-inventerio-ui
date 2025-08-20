@@ -8,6 +8,7 @@ import {
   TextField,
   Select,
   useDialog,
+  useSnackbar,
 } from "@telefonica/mistica";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import useTipoComponente from "./useTipoComponente";
@@ -31,6 +32,8 @@ import AsideTypeComponent from "@/components/AsideTypeComponent";
 import { UpdateTipoComponenteDto } from "@/core/tipo-componente/dto/updatev2.dto";
 import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
 import Pagination from "@/components/Pagination";
+import axios from "axios";
+import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
 
 const convertirFormato = (texto: string): string => {
   return texto
@@ -63,6 +66,7 @@ export default function Create({
     allTipoComponente,
     updateTipoComponente,
   } = useTipoComponente();
+  const { openSnackbar } = useSnackbar();
   const [creating, setCreating] = useState(false);
   const [openTcAssociate, setOpenTcAssociate] = useState(false);
   const [checked, setChecked] = useState(false);
@@ -307,10 +311,25 @@ export default function Create({
         })),
       };
 
-      await createTipoComponente(dto);
-      setCreating(false);
-      onSuccess();
-      onClose();
+      try {
+        await createTipoComponente(dto);
+        onSuccess();
+        onClose();
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response) {
+          openSnackbar({
+            message: errorMessageInAPI,
+            type: "CRITICAL",
+          });
+        } else {
+          openSnackbar({
+            message: errorGeneric,
+            type: "CRITICAL",
+          });
+        }
+      } finally {
+        setCreating(false);
+      }
     },
     [onClose, createTipoComponente, checked, data, parentAssociations]
   );
@@ -352,10 +371,25 @@ export default function Create({
           status: 0,
         })),
       };
-      await updateTipoComponente(tipoComponente!.id, dto);
-      setCreating(false);
-      onSuccess();
-      onClose();
+      try {
+        await updateTipoComponente(tipoComponente!.id, dto);
+        onSuccess();
+        onClose();
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response) {
+          openSnackbar({
+            message: errorMessageInAPI,
+            type: "CRITICAL",
+          });
+        } else {
+          openSnackbar({
+            message: errorGeneric,
+            type: "CRITICAL",
+          });
+        }
+      } finally {
+        setCreating(false);
+      }
     },
     [
       data,
