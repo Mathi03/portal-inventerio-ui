@@ -48,7 +48,7 @@ interface OnChange {
 
 export interface ConfigDataAttribute {
   name: string;
-  type: string;
+  type: "number" | "string" | "array" | "date" | "boolean";
   label: string;
   default: boolean;
   required: boolean;

@@ -38,6 +38,28 @@ function camelToSnake(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
 }
 
+// === helpers de normalización ===
+const normalizeApiData = (r: any) =>
+  r?.data?.data?.data ?? r?.data?.data ?? r?.data ?? r;
+
+const buildCacheKey = (url: string) => {
+  const u = new URL(url);
+  // orden estable de query:
+  const entries = [...u.searchParams.entries()].sort(([a], [b]) =>
+    a.localeCompare(b)
+  );
+  u.search = "";
+  for (const [k, v] of entries) u.searchParams.append(k, v);
+  return u.toString();
+};
+
+const ensurePaged = (url: string) => {
+  const u = new URL(url);
+  if (!u.searchParams.has("page")) u.searchParams.set("page", "1");
+  if (!u.searchParams.has("limit")) u.searchParams.set("limit", "10");
+  return u.toString();
+};
+
 type LoaderFn = (
   search: string,
   loadedOptions: Array<{ label: string; value: string }>,
@@ -82,12 +104,49 @@ export default function ConfigData({
   const [resolvedAsyncValues, setResolvedAsyncValues] = useState<
     Record<string, { label: string; value: string }>
   >({});
+  const dataCacheRef = useRef<Map<string, any>>(new Map());
+  const inflightRef = useRef<Map<string, Promise<any>>>(new Map());
+
   const hasResolvedAsyncValues = useRef(false);
-  const fetchedKeys = useRef(new Set<string>());
 
   const configDataItem = tipoComponente ? tipoComponente.configData?.[0] : null;
   const configAttributes = configDataItem?.configAttributes ?? [];
   const configServices = configDataItem?.configServices ?? [];
+
+  const fetchCached = useCallback(async (url: string) => {
+    const key = buildCacheKey(url);
+
+    if (dataCacheRef.current.has(key)) {
+      return dataCacheRef.current.get(key);
+    }
+    if (inflightRef.current.has(key)) {
+      return inflightRef.current.get(key);
+    }
+
+    const parsed = new URL(url);
+    const client = getAxiosClientFromUrl(parsed.origin + parsed.pathname);
+
+    const p = client
+      .get(url)
+      .then((res) => {
+        const data = normalizeApiData(res);
+        dataCacheRef.current.set(key, data);
+        inflightRef.current.delete(key);
+        return data;
+      })
+      .catch((err) => {
+        inflightRef.current.delete(key);
+        throw err;
+      });
+
+    inflightRef.current.set(key, p);
+    return p;
+  }, []);
+
+  useEffect(() => {
+    dataCacheRef.current.clear();
+    inflightRef.current.clear();
+  }, [tipoComponente?.id]);
 
   const fetchOptions = async (
     url: string,
@@ -95,25 +154,19 @@ export default function ConfigData({
     searchQuery = ""
   ): Promise<{ text: string; value: string }[]> => {
     try {
-      const urlWithSearch =
-        responseFields && searchQuery
-          ? url.includes("?")
-            ? `${url}&q=${searchQuery}`
-            : `${url}?q=${searchQuery}`
-          : url;
+      const base = new URL(url, window.location.origin);
+      if (searchQuery) base.searchParams.set("q", searchQuery);
+      const finalUrl = base.toString();
 
-      const client = getAxiosClientFromUrl(urlWithSearch);
-      const response = await client.get(urlWithSearch);
+      const data = await fetchCached(finalUrl);
+      const items: any[] = Array.isArray(data) ? data : (data?.items ?? data);
 
-      const items: any[] =
-        response.data?.items || response.data?.data?.data || response.data;
+      const labelKey = responseFields?.[0] ?? "name";
+      const valueKey = responseFields?.[1] ?? "value";
 
-      const labelKey = responseFields ? responseFields[0] : "name";
-      const valueKey = responseFields ? responseFields[1] : "value";
-
-      return items.map((item) => ({
-        text: String(item[labelKey]),
-        value: String(item[valueKey]),
+      return (items ?? []).map((item: any) => ({
+        text: String(item?.[labelKey]),
+        value: String(item?.[valueKey]),
       }));
     } catch (err) {
       console.error("Error fetching options from", url, err);
@@ -179,32 +232,48 @@ export default function ConfigData({
   ) => {
     if (!attribute.valores_posibles_source) return;
 
-    const key = `${namePrefix}${attribute.name}`;
-    if (fetchedKeys.current.has(key)) return;
+    const keyField = `${namePrefix}${attribute.name}`;
+    const url = ensurePaged(attribute.valores_posibles_source);
 
-    fetchedKeys.current.add(key);
     const options = await fetchOptions(
-      attribute.valores_posibles_source,
+      url,
       attribute.valores_posibles_response
     );
-    setDynamicOptions((prev) => ({ ...prev, [key]: options }));
+
+    // evita re-render si no cambió
+    // setDynamicOptions((prev) => ({ ...prev, [key]: options }));
+
+    setDynamicOptions((prev) => {
+      const prevOpts = prev[keyField] ?? [];
+      const sameLen = prevOpts.length === options.length;
+      const same =
+        sameLen &&
+        prevOpts.every(
+          (o, i) => o.text === options[i].text && o.value === options[i].value
+        );
+      if (same) return prev;
+      return { ...prev, [keyField]: options };
+    });
   };
 
   const loadPaginatedOptions = useCallback(
     (url: string, responseFields?: string[]) =>
-      async (search: string, loadedOptions: any, { page }: any) => {
-        const paginatedUrl = `${url}`.replace(
-          /([&?])page=\d+/,
-          "$1page=" + page
-        );
+      async (
+        search: string,
+        _loadedOptions: any,
+        { page }: { page: number }
+      ) => {
+        const u = new URL(url);
+        u.searchParams.set("page", String(page));
+        const limit = Number(u.searchParams.get("limit") ?? "10");
         const options = await fetchOptions(
-          paginatedUrl,
+          u.toString(),
           responseFields,
           search
         );
         return {
           options: options.map(({ text, value }) => ({ label: text, value })),
-          hasMore: options.length === 10,
+          hasMore: options.length >= limit,
           additional: { page: page + 1 },
         };
       },
@@ -316,6 +385,7 @@ export default function ConfigData({
 
   useEffect(() => {
     if (hasResolvedAsyncValues.current || !tipoComponente) return;
+    let mounted = true;
 
     const resolveInitialAsyncValues = async () => {
       const allAttrs = [...configAttributes, ...configServices];
@@ -324,9 +394,7 @@ export default function ConfigData({
         ...attributes,
         ...services,
       };
-
-      const resolvedValues: Record<string, { label: string; value: string }> =
-        {};
+      const out: Record<string, { label: string; value: string }> = {};
 
       await Promise.all(
         allAttrs.map(async (attr) => {
@@ -345,36 +413,20 @@ export default function ConfigData({
               let data;
               if (valueKey.toLocaleLowerCase() == "id") {
                 const baseUrl = attr.valores_posibles_source.split("?")[0];
-                const client = getAxiosClientFromUrl(baseUrl);
-                const res = await client.get(`${baseUrl}/${fieldValue}`);
-                data = res.data?.data || res.data;
+                const url = `${baseUrl}/${fieldValue}`;
+                data = await fetchCached(url);
+                if (Array.isArray(data)) data = data[0];
               } else {
-                const fieldSnake = camelToSnake(valueKey);
-                let baseUrl = attr.valores_posibles_source;
-
-                let urlObj = new URL(baseUrl);
-
-                if (urlObj.searchParams.has(fieldSnake)) {
-                  urlObj.searchParams.set(fieldSnake, String(fieldValue));
-                } else {
-                  urlObj.searchParams.set(fieldSnake, String(fieldValue));
-                }
-
-                urlObj.searchParams.set("page", "1");
-                urlObj.searchParams.set("limit", "10");
-
-                const client = getAxiosClientFromUrl(
-                  urlObj.origin + urlObj.pathname
-                );
-                const res = await client.get(urlObj.toString());
-
-                // ✅ tomar solo el primer valor del listado
-                const list = res.data?.data?.data || res.data?.data || [];
-                data = Array.isArray(list) ? list[0] : list;
+                const u = new URL(attr.valores_posibles_source);
+                u.searchParams.set(camelToSnake(valueKey), String(fieldValue));
+                const url = ensurePaged(u.toString());
+                const list = await fetchCached(url);
+                const arr = Array.isArray(list) ? list : (list?.data ?? list);
+                data = Array.isArray(arr) ? arr[0] : arr;
               }
 
               if (data && data[valueKey]) {
-                resolvedValues[attr.name] = {
+                out[attr.name] = {
                   label: String(data[labelKey]),
                   value: String(data[valueKey]),
                 };
@@ -389,11 +441,16 @@ export default function ConfigData({
         })
       );
 
-      setResolvedAsyncValues(resolvedValues);
-      hasResolvedAsyncValues.current = true;
+      if (mounted) {
+        setResolvedAsyncValues(out);
+        hasResolvedAsyncValues.current = true;
+      }
     };
 
     resolveInitialAsyncValues();
+    return () => {
+      mounted = false;
+    };
   }, [tipoComponente]);
 
   const renderInputs = (attributes: ConfigDataAttribute[], namePrefix = "") =>

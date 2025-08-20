@@ -62,10 +62,10 @@ const atribsConfigSchema = z.object({
   name: z.string(),
   label: z.string(),
   type: TypeEnum,
-  html_form_type: HtmlFormTypeEnum.optional(),
+  html_form_type: HtmlFormTypeEnum,
   place_holder: z.string().optional(),
-  required: z.coerce.boolean(),
-  default: z.coerce.boolean(), 
+  required: z.boolean(),
+  default: z.boolean(), 
   valores_posibles2: z.array(posiblesValoresSchema).optional(),
 });
 
@@ -79,7 +79,7 @@ const itemSchema = z.object({
     invalid_type_error: "El campo 'label' debe ser una cadena",
   }),
   type: TypeEnum,
-  html_form_type: HtmlFormTypeEnum.optional(), // si es select = valores_posibles o valores_posibles_sources
+  html_form_type: HtmlFormTypeEnum, // si es select = valores_posibles o valores_posibles_sources
   place_holder: z.string().optional(),
   required: z.boolean({
     required_error: "El campo 'required' es obligatorio",

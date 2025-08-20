@@ -15,7 +15,7 @@ interface InputDynamicProps {
   label: string;
   required?: boolean;
   html_form_type: "input" | "select" | "date" | "multiple";
-  type?: "string" | "number";
+  type?: "number" | "string" | "array" | "date" | "boolean";
   value?: string | { label: string; value: string };
   onChange: (name: string, value: string) => void;
   isCreate?: boolean;
@@ -79,23 +79,30 @@ export default function InputDynamic({
           : internalAsyncValue;
 
       return (
-        <AsyncPaginate
-          className="h-[60px] group_field_paginated"
-          classNamePrefix={"field_paginated"}
-          debounceTimeout={1000}
-          value={selectedValue}
-          loadOptions={loadPaginatedOptions}
-          onChange={(option) => {
-            if (isInitial.current) isInitial.current = false;
-            const selected = option || { label: "", value: "" };
-            setInternalAsyncValue(selected);
-            onChange(name, selected.value);
-          }}
-          additional={{ page: 1 }}
-          placeholder={label}
-          isClearable
-          required={required}
-        />
+        <div className="relative w-full">
+          {value && (
+            <div className="absolute top-2 z-[1] left-3 text-sm text-gray-500">
+              {label} {required && "(opcional)"}
+            </div>
+          )}
+          <AsyncPaginate
+            className="h-[60px] group_field_paginated"
+            classNamePrefix={"field_paginated"}
+            debounceTimeout={1000}
+            value={selectedValue}
+            loadOptions={loadPaginatedOptions}
+            onChange={(option) => {
+              if (isInitial.current) isInitial.current = false;
+              const selected = option === null ? null : option;
+              setInternalAsyncValue(selected);
+              onChange(name, selected === null ? "" : selected.value);
+            }}
+            additional={{ page: 1 }}
+            placeholder={label}
+            isClearable
+            required={required}
+          />
+        </div>
       );
     }
 

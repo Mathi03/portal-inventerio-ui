@@ -1,16 +1,15 @@
 interface TabStripTabProps {
   title: string;
-  children: React.ReactNode;
-  selected: boolean;
-  onSelect: (index: number) => void;
-  index: number;
+  children?: React.ReactNode;
+  selected?: boolean;
+  onSelect?: (index: number) => void;
+  index?: number;
   disabled?: boolean;
   className?: string;
 }
 
 const TabStripTab: React.FC<TabStripTabProps> = ({
   title,
-  children,
   selected,
   onSelect,
   index,
@@ -18,7 +17,7 @@ const TabStripTab: React.FC<TabStripTabProps> = ({
   className = "",
 }) => {
   const handleTabClick = () => {
-    if (!disabled) {
+    if (!disabled && onSelect && index) {
       onSelect(index);
     }
   };

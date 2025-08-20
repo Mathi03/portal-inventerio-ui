@@ -33,7 +33,6 @@ function getAxiosClientFromUrl(url: string): AxiosInstance {
   return entry?.[1] || source;
 }
 
-const stripQuery = (url: string) => url.split("?")[0];
 const toStr = (x: any) => String(x);
 const getByPath = (obj: any, path: string) =>
   path.split(".").reduce((acc, k) => (acc == null ? acc : acc[k]), obj);
@@ -55,6 +54,19 @@ const movistarSpecs: NodeSpec[] = [
 const camelToSnake = (str: string) =>
   str.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase();
 
+const normalizeApiData = (r: any) =>
+  r?.data?.data?.data ?? r?.data?.data ?? r?.data ?? r;
+
+const buildCacheKey = (url: string) => {
+  // normaliza host+path+query (orden estable)
+  const u = new URL(url);
+  const entries = [...u.searchParams.entries()].sort(([a], [b]) =>
+    a.localeCompare(b)
+  );
+  u.search = "";
+  for (const [k, v] of entries) u.searchParams.append(k, v);
+  return u.toString();
+};
 const buildResolvedUrl = (
   source: string,
   valueKey: string,
@@ -87,6 +99,8 @@ const TreeView = ({
 }) => {
   const [openForm, setOpenForm] = useState(false);
   const [componenteRed, setComponenteRed] = useState<any | null>(null);
+  const dataCacheRef = useRef<Map<string, any>>(new Map());
+  const inflightRef = useRef<Map<string, Promise<any>>>(new Map());
 
   const isReady = !!tipoComponente;
   const attrs = attributes ?? {};
@@ -109,6 +123,40 @@ const TreeView = ({
   const [resolved, setResolved] = useState<Record<string, string | string[]>>(
     {}
   );
+
+  const fetchCached = useCallback(async (url: string) => {
+    const key = buildCacheKey(url);
+
+    if (dataCacheRef.current.has(key)) {
+      return dataCacheRef.current.get(key);
+    }
+    if (inflightRef.current.has(key)) {
+      return inflightRef.current.get(key);
+    }
+
+    const client = getAxiosClientFromUrl(
+      new URL(url).origin + new URL(url).pathname
+    );
+    const promise = client
+      .get(url)
+      .then((res) => {
+        const normalized = normalizeApiData(res);
+        dataCacheRef.current.set(key, normalized);
+        inflightRef.current.delete(key);
+        return normalized;
+      })
+      .catch((err) => {
+        inflightRef.current.delete(key);
+        throw err;
+      });
+
+    inflightRef.current.set(key, promise);
+    return promise;
+  }, []);
+  useEffect(() => {
+    dataCacheRef.current.clear();
+    inflightRef.current.clear();
+  }, [tipoComponente?.id]);
 
   // === Resuelve etiquetas visibles (igual que antes) ===
   useEffect(() => {
@@ -157,52 +205,40 @@ const TreeView = ({
         return;
       }
 
-      // 2) opciones remotas
+      // 2) opciones remotas (con cache)
       if (cfg.valores_posibles_source && cfg.valores_posibles_response) {
         const labelPath = (cfg.valores_posibles_response as string[])[0];
         const valueKey = (cfg.valores_posibles_response as string[])[1];
 
-        const fetchById = async (id: string) => {
-          const fieldValue = id;
+        const getObjById = async (id: string) => {
+          // normaliza URL para key de cache
           if (valueKey.toLowerCase() === "id") {
             const baseUrl = cfg.valores_posibles_source.split("?")[0];
-            const client = getAxiosClientFromUrl(baseUrl);
-            const res = await client.get(`${baseUrl}/${fieldValue}`);
-            const resultData = res.data?.data || res.data;
-            cacheRef.current.set(baseUrl, resultData);
-
-            return resultData;
+            const url = `${baseUrl}/${id}`;
+            const data = await fetchCached(url);
+            // si el endpoint devuelve una lista, toma el primero
+            return Array.isArray(data) ? data[0] : data;
           } else {
-            const fieldSnake = camelToSnake(valueKey);
-            let baseUrl = cfg.valores_posibles_source;
-
-            let urlObj = new URL(baseUrl);
-
-            if (urlObj.searchParams.has(fieldSnake)) {
-              urlObj.searchParams.set(fieldSnake, String(fieldValue));
-            } else {
-              urlObj.searchParams.set(fieldSnake, String(fieldValue));
-            }
-
-            urlObj.searchParams.set("page", "1");
-            urlObj.searchParams.set("limit", "10");
-
-            const client = getAxiosClientFromUrl(
-              urlObj.origin + urlObj.pathname
+            const url = buildResolvedUrl(
+              cfg.valores_posibles_source,
+              valueKey,
+              id
             );
-            const res = await client.get(urlObj.toString());
-
-            const list = res.data?.data?.data || res.data?.data || [];
-            const data = Array.isArray(list) ? list[0] : list;
-            cacheRef.current.set(baseUrl, data);
-            return data;
+            const data = await fetchCached(url);
+            // usualmente viene como lista paginada, toma el primero
+            const list = Array.isArray(data)
+              ? data
+              : Array.isArray(data?.data)
+                ? data.data
+                : data;
+            return Array.isArray(list) ? list[0] : list;
           }
         };
 
         try {
           if (formType === "select") {
             const id = toStr(rawVal);
-            const obj = await fetchById(id);
+            const obj = await getObjById(id);
             const label = getByPath(obj, labelPath) ?? id;
             if (mounted) setResolved((p) => ({ ...p, [key]: String(label) }));
           } else {
@@ -211,14 +247,14 @@ const TreeView = ({
               : [];
             const results = await Promise.all(
               ids.map(async (id) => {
-                const obj = await fetchById(id);
+                const obj = await getObjById(id);
                 return getByPath(obj, labelPath) ?? id;
               })
             );
             if (mounted) setResolved((p) => ({ ...p, [key]: results }));
           }
         } catch {
-          // silenciar
+          // silencio
         }
       }
     };

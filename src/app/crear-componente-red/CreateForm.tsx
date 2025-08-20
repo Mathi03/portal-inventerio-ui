@@ -226,7 +226,7 @@ export default function CreateForm({
       (t: TipoComponenteType) => t.status === 1
     );
     setTipoComponentes(activeComponenteTypes);
-    if (mode === "update" && componenteRed){
+    if (mode === "update" && componenteRed) {
       setTipoComponente(
         activeComponenteTypes.find(
           (t: TipoComponenteType) => t.id === +componenteRed.refComponentTypeId
@@ -277,8 +277,7 @@ export default function CreateForm({
     getTipoComponentes();
   }, [getTipoComponentes]);
 
-  const isValidToSearch =
-    red && red !== null 
+  const isValidToSearch = red && red !== null;
 
   useEffect(() => {
     if (isValidToSearch) {
@@ -541,25 +540,33 @@ export default function CreateForm({
           // service={service}
           // onServices={onServices}
         />
-        <hr className="col-span-3" />
-        <hgroup className="col-span-3" id="relacion-jerarquica">
-          <h4 className="text-[20px]">Relación jerarquica (opcional)</h4>
-          <p>En esta sección podra relacionar componentes de red entre si</p>
-        </hgroup>
-        <RelacionJerarquica
-          red={redFather}
-          tipoComponenteId={componentTypeFatherId}
-          onSelected={(componente) =>
-            setComponenteSeleted([...componenteSeleted, componente])
-          }
-          onDeselected={(componente) => {
-            setComponenteSeleted(
-              componenteSeleted.filter(
-                (selected) => selected.id !== componente.id
-              )
-            );
-          }}
-        />
+
+        {red?.id?.toString() === "16" && (
+          <>
+            <hr className="col-span-3" />
+            <hgroup className="col-span-3" id="relacion-jerarquica">
+              <h4 className="text-[20px]">Relación jerarquica (opcional)</h4>
+              <p>
+                En esta sección podra relacionar componentes de red entre si
+              </p>
+            </hgroup>
+            <RelacionJerarquica
+              red={redFather}
+              tipoComponenteId={componentTypeFatherId}
+              onSelected={(componente) =>
+                setComponenteSeleted([...componenteSeleted, componente])
+              }
+              onDeselected={(componente) => {
+                setComponenteSeleted(
+                  componenteSeleted.filter(
+                    (selected) => selected.id !== componente.id
+                  )
+                );
+              }}
+            />
+          </>
+        )}
+
         {red?.id?.toString() === "16" && (
           <>
             <hr className="col-span-3" />

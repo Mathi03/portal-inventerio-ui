@@ -125,11 +125,17 @@ body > div {
 
 .group_field_paginated .field_paginated__placeholder {
   font-size: 1.125rem;
-  color: #6E7894;
+  color: #6e7894;
+}
+.group_field_paginated .field_paginated__menu {
+  z-index: 10;
 }
 
+.group_field_paginated .field_paginated__single-value {
+  margin-top: 1.25rem;
+}
 
-body.modal-open #app-root { 
+body.modal-open #app-root {
   pointer-events: none;
   /* Si quieres "empujar" al fondo visualmente, puedes usar filter/opacity o z-index negativo */
   /* filter: blur(1px); */
