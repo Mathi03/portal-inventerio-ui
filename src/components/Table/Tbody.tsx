@@ -9,15 +9,17 @@ export default function Tbody({
 }) {
   return (
     <tbody className="h-fit w-full text-base">
-      {rows?.map((row, rowKey) => (
-        <tr key={rowKey} className="flex w-full even:bg-[#f5f5f5]">
+      {rows.map((row, rowKey) => (
+        <tr key={rowKey} className="flex w-full odd:bg-[#fff]">
           {columns.map(({ key, render, maxWidth, hidden }, columnKey) => (
             <td
               key={columnKey}
-              className="w-full p-4 border-r-[1px] border-b-[1px] border-[#D1D5E4] last:border-r-0 text-base items-center text-ellipsis overflow-hidden"
-              style={{ maxWidth, display: hidden ? "none" : "flex" }}
+              className="w-full p-4 border-r-[1px] border-b-[1px] border-[#D1D5E4] last:border-r-0 
+                        break-words whitespace-normal overflow-hidden"
+              hidden={hidden}
+              style={{ maxWidth }}
             >
-              {row[key as string] || render?.(row)}
+              {render ? render(row) : row[key as string]}
             </td>
           ))}
         </tr>
