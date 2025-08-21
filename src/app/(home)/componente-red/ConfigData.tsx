@@ -60,6 +60,43 @@ const ensurePaged = (url: string) => {
   return u.toString();
 };
 
+const DEFAULT_GROUP_LABEL = "Sin agrupación";
+// Priorizar grupo
+const PREFERRED_FIRST_GROUPS = ["Principal"];
+
+function groupByGroup(items: ConfigDataAttribute[]) {
+  const out: Record<string, ConfigDataAttribute[]> = {};
+  for (const it of items) {
+    const g =
+      (it as any)?.group && String((it as any).group).trim()
+        ? String((it as any).group).trim()
+        : DEFAULT_GROUP_LABEL;
+    (out[g] ??= []).push(it);
+  }
+  return out;
+}
+
+function sortGroupNames(names: string[]) {
+  // 1) preferidos primero (en el orden indicado)
+  // 2) alfabético
+  // 3) DEFAULT_GROUP_LABEL al final
+  return [...names].sort((a, b) => {
+    const ia = PREFERRED_FIRST_GROUPS.indexOf(a);
+    const ib = PREFERRED_FIRST_GROUPS.indexOf(b);
+    const aIsDefault = a === DEFAULT_GROUP_LABEL;
+    const bIsDefault = b === DEFAULT_GROUP_LABEL;
+
+    if (ia !== -1 || ib !== -1) {
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    }
+    if (aIsDefault && !bIsDefault) return 1;
+    if (bIsDefault && !aIsDefault) return -1;
+    return a.localeCompare(b);
+  });
+}
+
 type LoaderFn = (
   search: string,
   loadedOptions: Array<{ label: string; value: string }>,
@@ -505,28 +542,47 @@ export default function ConfigData({
     const nested = attributes.filter(
       (a) => a.type === "array" && a.atribs_config
     );
-    return nested.map((attr, idx) => (
-      <div key={idx}>
-        <h4>{attr.label} (Atributos secundarios)</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-2">
-          {renderInputs(attr.atribs_config || [], `${attr.name}#`)}
-          {/* renderInputs(attr.atribs_config || [], "") */}
+    return nested.map((attr, idx) => {
+      const grouped = groupByGroup(attr.atribs_config || []);
+      const groupNames = sortGroupNames(Object.keys(grouped));
+      return (
+        <div key={idx}>
+          <h4>{attr.label} (Atributos secundarios)</h4>
+          {groupNames.map((gName) => (
+            <section key={gName} className="mt-3">
+              <h5 className="text-[16px] font-medium mb-2">{gName}</h5>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {renderInputs(grouped[gName] || [], `${attr.name}#`)}
+              </div>
+            </section>
+          ))}
         </div>
-      </div>
-    ));
+      );
+    });
   };
 
-  const renderTabContent = (items: ConfigDataAttribute[]) => (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h4>Atributos principales</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-start">
-          {renderInputs(items.filter((a) => a.type !== "array"))}
+  const renderTabContent = (items: ConfigDataAttribute[]) => {
+    const flatItems = items.filter((a) => a.type !== "array");
+    const grouped = groupByGroup(flatItems);
+    const groupNames = sortGroupNames(Object.keys(grouped));
+
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h4>Atributos principales</h4>
+          {groupNames.map((gName) => (
+            <section key={gName} className="mt-3">
+              <h5 className="text-[16px] font-medium mb-2">{gName}</h5>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-start">
+                {renderInputs(grouped[gName] || [])}
+              </div>
+            </section>
+          ))}
         </div>
+        {renderNestedInputs(items)}
       </div>
-      {renderNestedInputs(items)}
-    </div>
-  );
+    );
+  };
 
   const tabsData = () => {
     const tabsToRender = [];

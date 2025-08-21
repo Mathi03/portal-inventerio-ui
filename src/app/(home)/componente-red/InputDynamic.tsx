@@ -81,7 +81,7 @@ export default function InputDynamic({
       return (
         <div className="relative w-full">
           {selectedValue && (
-            <div className="absolute top-2 z-[1] left-3 text-sm text-gray-500">
+            <div className="absolute top-2 z-[1] left-3 text-sm text-gray-500 w-5/6 truncate">
               {label} {!required && "(opcional)"}
             </div>
           )}

@@ -247,12 +247,11 @@ export default function CreateForm({
     setIsLoadingFuentes(true);
     const fuenteService = new FuenteService();
     const { data } = await fuenteService.findAll({
-      refComponentTypeId: tipoComponente?.id,
       refNetworkId: red?.id,
     });
     setFuentes(data.data.data.filter((f: FuenteType) => f.status === 1));
     setIsLoadingFuentes(false);
-  }, [tipoComponente, red]);
+  }, [red]);
 
   const getRegiones = useCallback(async () => {
     setIsLoadingRegiones(true);
@@ -283,7 +282,7 @@ export default function CreateForm({
     if (isValidToSearch) {
       getFuentes();
     }
-  }, [red, tipoComponente]);
+  }, [red]);
 
   const getConfigRelation = async () => {
     const tcService = new TipoComponenteService();

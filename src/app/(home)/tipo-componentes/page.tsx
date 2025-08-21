@@ -31,7 +31,7 @@ export default function MantenedorRedPage() {
     getTipoComponentes,
     setTipoComponente,
     deleteTipoComponente,
-  } = useTipoComponente();
+  } = useTipoComponente({});
   const { columns, showColumn, setShowColumn } = useColumn();
 
   const [reloadKey, setReloadKey] = useState(Date.now());

@@ -13,7 +13,7 @@ const Aprobar = () => {
   const params = useParams();
   const { id } = params as { id: string };
 
-  const { getTipoComponentes } = useTipoComponente();
+  const { getTipoComponentes } = useTipoComponente({});
   const tipoComponenteService = new TipoComponenteService();
 
   const fetchTipoComponente = useCallback(async () => {

@@ -58,14 +58,6 @@ export default function Create({
   tipoComponente?: TipoComponenteType;
   mode?: "create" | "edit" | "approve";
 }) {
-  const {
-    createTipoComponente,
-    getTipoComponentes,
-    tipoComponentes,
-    allTipoComponentes,
-    allTipoComponente,
-    updateTipoComponente,
-  } = useTipoComponente();
   const { openSnackbar } = useSnackbar();
   const [creating, setCreating] = useState(false);
   const [openTcAssociate, setOpenTcAssociate] = useState(false);
@@ -88,6 +80,14 @@ export default function Create({
   const [tipo, setTipo] = useState<any>();
   const [status, setStatus] = useState<any>();
   const { confirm } = useDialog();
+  const {
+    createTipoComponente,
+    getTipoComponentes,
+    tipoComponentes,
+    allTipoComponentes,
+    allTipoComponente,
+    updateTipoComponente,
+  } = useTipoComponente({ onSuccess, onClose, setCreating });
 
   useEffect(() => {
     if (mode !== "create" && tipoComponente) {
@@ -310,26 +310,7 @@ export default function Create({
           status: 0,
         })),
       };
-
-      try {
-        await createTipoComponente(dto);
-        onSuccess();
-        onClose();
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
-          openSnackbar({
-            message: errorMessageInAPI,
-            type: "CRITICAL",
-          });
-        } else {
-          openSnackbar({
-            message: errorGeneric,
-            type: "CRITICAL",
-          });
-        }
-      } finally {
-        setCreating(false);
-      }
+      await createTipoComponente(dto);
     },
     [onClose, createTipoComponente, checked, data, parentAssociations]
   );
@@ -371,25 +352,7 @@ export default function Create({
           status: 0,
         })),
       };
-      try {
-        await updateTipoComponente(tipoComponente!.id, dto);
-        onSuccess();
-        onClose();
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
-          openSnackbar({
-            message: errorMessageInAPI,
-            type: "CRITICAL",
-          });
-        } else {
-          openSnackbar({
-            message: errorGeneric,
-            type: "CRITICAL",
-          });
-        }
-      } finally {
-        setCreating(false);
-      }
+      await updateTipoComponente(tipoComponente!.id, dto);
     },
     [
       data,

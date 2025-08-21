@@ -48,7 +48,7 @@ function ParentAssociationWizardModal({
     tipoComponentes,
     allTipoComponente,
     allTipoComponentes,
-  } = useTipoComponente();
+  } = useTipoComponente({});
   const { page, limit } = usePagination();
   const [networksId, setNetworksId] = useState<any[]>([]);
 

@@ -20,7 +20,7 @@ export default function Edit({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const { updateTipoComponente } = useTipoComponente();
+  const { updateTipoComponente } = useTipoComponente({});
   const [updating, setUpdating] = useState(false);
   const [configAttributes, setConfigAttributes] = useState<
     UpdateTipoComponenteDto["configAttributes"]

@@ -9,7 +9,15 @@ import { useSnackbar } from "@telefonica/mistica";
 import { useCallback, useState } from "react";
 const tipoComponenteService = new TipoComponenteService();
 
-export default function useTipoComponente() {
+export default function useTipoComponente({
+  onSuccess,
+  onClose,
+  setCreating,
+}: {
+  onSuccess?: () => void;
+  onClose?: () => void;
+  setCreating?: any;
+}) {
   const { openSnackbar } = useSnackbar();
   const [tipoComponentes, setTipoComponentes] = useState<TipoComponenteType[]>(
     []
@@ -23,21 +31,23 @@ export default function useTipoComponente() {
 
   const createTipoComponente = useCallback(
     async (dto: CreateTipoComponenteDto) => {
-      await tipoComponenteService
-        .create(dto)
-        .then(() =>
-          openSnackbar({
-            message: `Tipo de componente "${dto.createRefComponentTypeRequestDto.name ?? ""}" creado`,
-          })
-        )
-        .catch(() => {
-          openSnackbar({
-            message: `Ha ocurrido un error al momento de crear el tipo de componente "${name}"`,
-            type: "CRITICAL",
-          });
+      try {
+        await tipoComponenteService.create(dto);
+        openSnackbar({
+          message: `Tipo de componente "${dto.createRefComponentTypeRequestDto.name ?? ""}" creado`,
         });
+        if (onSuccess) onSuccess();
+        if (onClose) onClose();
+      } catch (err) {
+        openSnackbar({
+          message: `Ha ocurrido un error al momento de crear el tipo de componente "${name}"`,
+          type: "CRITICAL",
+        });
+      } finally {
+        if (setCreating) setCreating(false);
+      }
     },
-    [openSnackbar]
+    [openSnackbar, onSuccess, onClose]
   );
 
   const getTipoComponentes = useCallback(
@@ -79,21 +89,23 @@ export default function useTipoComponente() {
   );
   const updateTipoComponente = useCallback(
     async (id: number, dto: UpdateTipoComponenteDto) => {
-      await tipoComponenteService
-        .update(id, dto)
-        .then(() =>
-          openSnackbar({
-            message: `Tipo componente "${dto.updateRefComponentTypeRequestDto.name ?? ""}" actualizado`,
-          })
-        )
-        .catch(() =>
-          openSnackbar({
-            message: `Ha ocurrido un error al momento de actualizar el tipo de componente "${name}"`,
-            type: "CRITICAL",
-          })
-        );
+      try {
+        await tipoComponenteService.update(id, dto);
+        openSnackbar({
+          message: `Tipo componente "${dto.updateRefComponentTypeRequestDto.name ?? ""}" actualizado`,
+        });
+        if (onSuccess) onSuccess();
+        if (onClose) onClose();
+      } catch (err) {
+        openSnackbar({
+          message: `Ha ocurrido un error al momento de actualizar el tipo de componente "${name}"`,
+          type: "CRITICAL",
+        });
+      } finally {
+        if (setCreating) setCreating(false);
+      }
     },
-    [openSnackbar]
+    [openSnackbar, onSuccess, onClose]
   );
 
   const deleteTipoComponente = useCallback(

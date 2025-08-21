@@ -100,6 +100,7 @@ const itemSchema = z.object({
   // valores_posibles_sources: z.array(posiblesValoresSchema).optional(),
   on_change: onChangeSchema.optional(),
   depend_of: z.string().optional(),
+  group: z.string().optional(),
   atribs_config: z.array(atribsConfigSchema).optional(),
   status: z.union([z.string(), z.number()]).optional(),
   is_create: z.boolean().optional(),
