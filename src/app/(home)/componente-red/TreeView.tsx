@@ -282,24 +282,29 @@ const TreeView = ({
         const valueKey = (cfg.valores_posibles_response as string[])[1];
         const id = Array.isArray(val) ? toStr(val[0]) : toStr(val);
 
-        const url = buildResolvedUrl(cfg.valores_posibles_source, valueKey, id);
+        let url: string;
 
-        let obj = cacheRef.current.get(url);
-        if (!obj) {
-          const client = getAxiosClientFromUrl(
-            new URL(url).origin + new URL(url).pathname
-          );
-          const { data } = await client.get(url);
-          obj = data?.data?.data?.[0] ?? data?.data ?? data;
-          cacheRef.current.set(url, obj);
+        if (valueKey.toLowerCase() === "id") {
+          const baseUrl = cfg.valores_posibles_source.split("?")[0];
+          url = `${baseUrl}/${id}`;
+        } else {
+          url = buildResolvedUrl(cfg.valores_posibles_source, valueKey, id);
         }
+
+        const data = await fetchCached(url);
+
+        const obj = Array.isArray(data)
+          ? data[0]
+          : Array.isArray(data?.data)
+            ? data.data[0]
+            : data;
+
         setComponenteRed(obj ?? null);
         setOpenForm(true);
-      } catch {
-        // fallback
+      } catch (err) {
       }
     },
-    [attrs, getCfg]
+    [attrs, getCfg, fetchCached]
   );
 
   const renderValue = (key: string, raw: any) => {
