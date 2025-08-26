@@ -1,0 +1,55 @@
+schemaVersion: 2.2.0
+metadata:
+  name: portal-inventario-frontend
+  version: 1.0.0
+  provider: Red Hat
+  supportUrl: https://github.com/devfile-samples/devfile-support#support-information
+  icon: https://design.jboss.org/quarkus/logo/final/SVG/quarkus_icon_rgb_default.svg
+  website: https://nextjs.org
+  displayName: Next.js Frontend
+  namespace: dev-front-oss
+  description: Next.js frontend application
+  tags:
+    - JavaScript
+    - Next.js
+  projectType: Next.js
+  language: JavaScript
+  attributes:
+    alpha.dockerimage-port: 3000
+components:
+  - name: image-build-portal-inventario-frontend
+    image:
+      imageName: portal-inventario-frontend:latest
+      dockerfile:
+        uri: Dockerfile
+        buildContext: .
+        rootRequired: false
+  - name: kubernetes-deploy
+    attributes:
+      deployment/replicas: 1
+      deployment/cpuRequest: 20m
+      deployment/memoryRequest: 200Mi
+      deployment/container-port: 3000
+    kubernetes:
+      uri: deploy.yaml
+      endpoints:
+        - name: http-3000
+          targetPort: 3000
+          path: /
+          exposure: public
+          protocol: http
+commands:
+  - id: build-image-portal-inventario-frontend
+    apply:
+      component: image-build-portal-inventario-frontend
+  - id: deployk8s
+    apply:
+      component: kubernetes-deploy
+  - id: deploy
+    composite:
+      commands:
+        - build-image-portal-inventario-frontend
+        - deployk8s
+      group:
+        kind: deploy
+        isDefault: true
