@@ -8,7 +8,7 @@ import RelacionJerarquica from "./Relatcion-jerarquica";
 import { RedService } from "@/core/red/red.service";
 import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
 import { FuenteService } from "@/core/fuente/fuente.service";
-import { msDirecciones } from "@/core/config";
+import { estaciones as estacionesInstance, msDirecciones } from "@/core/config";
 
 import { RedType } from "@/core/red/red.type";
 import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
@@ -17,19 +17,17 @@ import { RegionType } from "@/core/region/region.type";
 import Table from "@/components/Table/Table";
 import Pagination from "@/components/Pagination";
 import { UpdateComponenteRedDto } from "@/core/componente-red/dto/update.dto";
-import { useComponenteRedForm } from "./hooks/useComponenteRedForm";
+import {
+  ModeCreateForm,
+  useComponenteRedForm,
+} from "./hooks/useComponenteRedForm";
 import { SearchableSelectHandle } from "@/components/SearchableSelect";
 import { useModalStore } from "@/hooks/modalStorage";
 import ConfigData from "../(home)/componente-red/ConfigData";
 import { EstacionType } from "@/core/estaciones/estacion.type";
 import TreeView from "../(home)/componente-red/TreeView";
-
-const estaciones: EstacionType[] = [
-  {
-    nombre: "Estación Caracas",
-    id: 1,
-  },
-];
+import { SelectPaginate } from "@/components/SelectPaginate";
+import { EstacionService } from "@/core/estaciones/estacion.service";
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -38,7 +36,7 @@ type FormValues = (CreateComponenteRedDto | UpdateComponenteRedDto) & {
 };
 
 interface BaseCreateFormProps {
-  mode?: "create" | "update" | "approve" | "popup" | "read";
+  mode?: ModeCreateForm;
   componentTypeId?: number;
 }
 
@@ -114,7 +112,9 @@ export default function CreateForm({
   const [fuentes, setFuentes] = useState<FuenteType[]>([]);
   const [regiones, setRegiones] = useState<RegionType[]>([]);
   const [region, setRegion] = useState<RegionType | null>(null);
-  const [estacion, setEstacion] = useState<EstacionType | null>(null);
+  const [estacion, setEstacion] = useState<string | null>(
+    componenteRed?.stationId?.toString() || null
+  );
 
   const [commentPage, setCommentPage] = useState(1);
   const [commentLimit, setCommentLimit] = useState(5);
@@ -208,14 +208,14 @@ export default function CreateForm({
             (r) => r.id?.toString() === componenteRed.regionId?.toString()
           ) || null
         );
-      if (componenteRed.stationId)
-        setEstacion(
-          estaciones.find(
-            (r) => r.id?.toString() === componenteRed.stationId?.toString()
-          ) || null
-        );
+      // if (componenteRed.stationId)
+      //   setEstacion(
+      //     estaciones.find(
+      //       (r) => r.id?.toString() === componenteRed.stationId?.toString()
+      //     ) || null
+      //   );
     }
-  }, [redes, componenteRed, regiones, estaciones]);
+  }, [redes, componenteRed, regiones]);
 
   const getTipoComponentes = useCallback(async () => {
     if (!red) return;
@@ -391,7 +391,12 @@ export default function CreateForm({
       </div>
 
       <Form
-        onSubmit={(value) => onSubmit(value as FormValues)}
+        onSubmit={(value) =>
+          onSubmit({
+            ...value,
+            stationId: Number(estacion),
+          } as FormValues)
+        }
         className="grid grid-cols-3 content-start gap-4 px-6"
         initialValues={initialValues}
       >
@@ -506,22 +511,18 @@ export default function CreateForm({
             );
           }}
         />
-        <Select
-          name={"stationId" as FormItem}
+        <SelectPaginate
           label="Estación"
-          disabled={mode === "approve" || mode === "popup" || mode === "read"}
-          optional={mode === "approve" || mode === "popup" || mode === "read"}
-          options={estaciones.map((tc) => ({
-            text: tc.nombre,
-            value: tc.id.toString(),
-          }))}
-          fullWidth
-          onChangeValue={(value) => {
-            setEstacion(
-              estaciones.find((s) => s?.id?.toString() === value?.toString()) ??
-                null
-            );
+          value={estacion ?? ""}
+          clientToFetch={estacionesInstance}
+          fieldUrl={"v1/estaciones"}
+          fieldKey="id"
+          fieldName="nombre"
+          mapById="estacion"
+          onChange={(value) => {
+            setEstacion(value?.toString() ?? "");
           }}
+          required
         />
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="config-adicional"></hgroup>
@@ -533,7 +534,7 @@ export default function CreateForm({
           services={service}
           networkId={Number(red?.id)}
           regionId={Number(region?.id)}
-          stationId={Number(estacion?.id)}
+          stationId={Number(estacion)}
           // attribute={attribute}
           // onAttributes={onAttributes}
           // service={service}
