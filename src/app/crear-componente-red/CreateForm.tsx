@@ -221,7 +221,14 @@ export default function CreateForm({
     if (!red) return;
     setIsLoadingTC(true);
     const tcService = new TipoComponenteService();
-    const { data } = await tcService.getByNetworkId(red?.id);
+    // Filtro por RedId
+    // -----------------
+    // const { data } = await tcService.getByNetworkId(red?.id);
+    // -----------------
+    // Sin Filtro - todos los tipo componentes
+    const response = await tcService.findAll({});
+    const data = response?.data?.data?.data;
+    // -----------------
     const activeComponenteTypes = data.filter(
       (t: TipoComponenteType) => t.status === 1
     );
