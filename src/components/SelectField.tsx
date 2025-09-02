@@ -78,7 +78,18 @@ const SelectField = forwardRef<SelectFieldHandle, SelectFieldProps>(
     });
 
     const getInitialValue = (): ValueType => {
-      if (isControlled) return controlledValue!;
+      if (isControlled) {
+        if (isMultiple && Array.isArray(controlledValue)) {
+          // Si es un array de numbers, lo convierto a string[]
+          return controlledValue.map((v) => String(v));
+        }
+        // Si es un único number lo convierto a string
+        if (!isMultiple && typeof controlledValue === "number") {
+          return String(controlledValue);
+        }
+        return controlledValue!;
+      }
+
       const initialValue =
         (defaultValue as ValueType) ?? (isMultiple ? [] : "");
       return initialValue;
@@ -87,7 +98,15 @@ const SelectField = forwardRef<SelectFieldHandle, SelectFieldProps>(
     const [internalValue, setInternalValue] =
       useState<ValueType>(getInitialValue);
     const currentValue: ValueType = isControlled
-      ? (controlledValue as ValueType)
+      ? (() => {
+          if (isMultiple && Array.isArray(controlledValue)) {
+            return controlledValue.map((v) => String(v));
+          }
+          if (!isMultiple && typeof controlledValue === "number") {
+            return String(controlledValue);
+          }
+          return controlledValue as ValueType;
+        })()
       : internalValue;
 
     const emitChange = (val: ValueType) => {
