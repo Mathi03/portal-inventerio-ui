@@ -548,7 +548,7 @@ export default function CreateForm({
           // onServices={onServices}
         />
 
-        {red?.id?.toString() === "16" && (
+        {tipoComponente?.id?.toString() === "28" && (
           <>
             <hr className="col-span-3" />
             <hgroup className="col-span-3" id="relacion-jerarquica">

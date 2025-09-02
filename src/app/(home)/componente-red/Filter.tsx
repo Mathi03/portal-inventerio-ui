@@ -1,6 +1,6 @@
 "use client";
 import Button from "@/components/Button";
-import { TextField } from "@telefonica/mistica";
+import { IntegerField, TextField } from "@telefonica/mistica";
 import { useState, useEffect, useCallback } from "react";
 import { QueryComponenteRedDto } from "@/core/componente-red/dto/search.dto";
 import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
@@ -138,11 +138,19 @@ export default function Filter({
           </p>
         </header>
         <section className="grid gap-4 overflow-auto px-4 pb-4 scroller">
-          <TextField
+          <IntegerField
             name="id"
             label="Componente Id"
             value={formValues.id}
             onChange={(e) => handleChange("id", e.target.value)}
+            fullWidth
+            optional
+          />
+          <IntegerField
+            name="control_id"
+            label="Control Id"
+            value={formValues.control_id}
+            onChange={(e) => handleChange("control_id", e.target.value)}
             fullWidth
             optional
           />
