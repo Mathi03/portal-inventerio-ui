@@ -17,7 +17,7 @@ const TabStripTab: React.FC<TabStripTabProps> = ({
   className = "",
 }) => {
   const handleTabClick = () => {
-    if (!disabled && onSelect && index) {
+    if (!disabled && onSelect && index !== undefined) {
       onSelect(index);
     }
   };
