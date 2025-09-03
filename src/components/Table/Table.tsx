@@ -66,13 +66,15 @@ export default function Table({
           <Tbody columns={columns} rows={rows} />
         </table>
       )}
-      {pagination ? (pagination): (
-        <Pagination
-          itemPerPage={itemPerPage}
-          items={item}
-          onPageChange={onPageChange}
-        />
-      )}
+      {pagination
+        ? pagination
+        : (itemPerPage || item || onPageChange) && (
+            <Pagination
+              itemPerPage={itemPerPage}
+              items={item}
+              onPageChange={onPageChange}
+            />
+          )}
     </section>
   );
 }
