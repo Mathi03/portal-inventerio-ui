@@ -19,6 +19,7 @@ type SelectPaginateProps<T> = {
   fieldUrl: string;
   mapById?: string;
   clientToFetch?: AxiosInstance;
+  searchType?: "byId" | "byParams";
   onChange: (value: string | number | null) => void;
 };
 
@@ -76,6 +77,7 @@ export function SelectPaginate<T>({
   fieldName,
   mapById,
   clientToFetch,
+  searchType = "byParams",
 }: SelectPaginateProps<T>) {
   const dataCacheRef = useRef<Map<string, any>>(new Map());
   const inflightRef = useRef<Map<string, Promise<any>>>(new Map());
@@ -188,7 +190,7 @@ export function SelectPaginate<T>({
       if (fieldValue && fieldUrl && fieldName && fieldKey) {
         try {
           let data;
-          if (fieldKey.toLocaleLowerCase() == "id") {
+          if (searchType === "byId" || fieldKey.toLocaleLowerCase() == "id") {
             const baseUrl = fieldUrl.split("?")[0];
             const url = `${baseUrl}/${fieldValue}`;
             data = await fetchCached(url);
@@ -196,9 +198,12 @@ export function SelectPaginate<T>({
 
             if (Array.isArray(data)) data = data[0];
           } else {
-            const u = new URL(fieldUrl);
+            const u = fieldUrl.startsWith("http")
+              ? new URL(fieldUrl)
+              : new URL(fieldUrl, window.location.origin);
             u.searchParams.set(camelToSnake(fieldKey), String(fieldValue));
             const url = ensurePaged(u.toString());
+
             const list = await fetchCached(url);
             const arr = Array.isArray(list) ? list : (list?.data ?? list);
             data = Array.isArray(arr) ? arr[0] : arr;

@@ -522,6 +522,7 @@ export default function CreateForm({
           label="Estación"
           value={estacion ?? ""}
           clientToFetch={estacionesInstance}
+          searchType='byId'
           fieldUrl={"v1/estaciones"}
           fieldKey="id"
           fieldName="nombre"
