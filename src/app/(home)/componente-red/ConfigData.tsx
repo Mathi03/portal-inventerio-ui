@@ -490,7 +490,11 @@ export default function ConfigData({
     };
   }, [tipoComponente]);
 
-  const renderInputs = (attributes: ConfigDataAttribute[], namePrefix = "") =>
+  const renderInputs = (
+    attributes: ConfigDataAttribute[],
+    namePrefix = "",
+    inObject: boolean = false
+  ) =>
     attributes
       .filter((attr) => attr.html_form_type)
       .map((attr, idx) => {
@@ -514,7 +518,9 @@ export default function ConfigData({
               isPaginated && resolvedAsyncValues[attr.name]
                 ? resolvedAsyncValues[attr.name]
                 : namePrefix.includes("#")
-                  ? formData[namePrefix.split("#")[0]]?.[0]?.[attr.name]
+                  ? inObject
+                    ? formData[namePrefix.split("#")[0]]?.[attr.name]
+                    : formData[namePrefix.split("#")[0]]?.[0]?.[attr.name]
                   : formData[`${namePrefix}${attr.name}`]
             }
             type={attr.type}
@@ -538,7 +544,10 @@ export default function ConfigData({
         );
       });
 
-  const renderNestedInputs = (attributes: ConfigDataAttribute[]) => {
+  const renderNestedInputs = (
+    attributes: ConfigDataAttribute[],
+    isService: boolean = false
+  ) => {
     const nested = attributes.filter(
       (a) => a.type === "array" && a.atribs_config
     );
@@ -552,7 +561,7 @@ export default function ConfigData({
             <section key={gName} className="mt-3">
               <h5 className="text-[16px] font-medium mb-2">{gName}</h5>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {renderInputs(grouped[gName] || [], `${attr.name}#`)}
+                {renderInputs(grouped[gName] || [], `${attr.name}#`, isService)}
               </div>
             </section>
           ))}
@@ -560,8 +569,10 @@ export default function ConfigData({
       );
     });
   };
-
-  const renderTabContent = (items: ConfigDataAttribute[]) => {
+  const renderTabContent = (
+    items: ConfigDataAttribute[],
+    isService: boolean = false
+  ) => {
     const flatItems = items.filter((a) => a.type !== "array");
     const grouped = groupByGroup(flatItems);
     const groupNames = sortGroupNames(Object.keys(grouped));
@@ -579,7 +590,7 @@ export default function ConfigData({
             </section>
           ))}
         </div>
-        {renderNestedInputs(items)}
+        {renderNestedInputs(items, isService)}
       </div>
     );
   };
@@ -598,7 +609,8 @@ export default function ConfigData({
           renderTabContent(
             filteredConfigServices.length > 0
               ? filteredConfigServices
-              : configServices
+              : configServices,
+            true
           ),
       });
     return tabsToRender;
