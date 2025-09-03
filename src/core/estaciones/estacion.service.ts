@@ -11,11 +11,12 @@ export class EstacionService {
     return response;
   }
 
-  public async findAll(queryFuente: QueryEstacionDto) {
+  public async findAll(queryFuente: QueryEstacionDto, signal?: AbortSignal) {
     const response = await estaciones.get<PaginationDto<EstacionType[]>>(
       "/v1/estaciones",
       {
         params: queryFuente,
+        signal
       }
     );
     return response;

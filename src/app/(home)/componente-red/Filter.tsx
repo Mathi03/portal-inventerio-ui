@@ -303,7 +303,7 @@ export default function Filter({
             if (client.id && client.nombre) {
               setFormValues((prev) => ({
                 ...prev,
-                station_id: client.id.toString(),
+                station_id: client?.idEstacion?.toString(),
               }));
               //setClientName(client.nombre.toString());
             }

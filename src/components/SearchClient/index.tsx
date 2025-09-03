@@ -26,13 +26,13 @@ const SearchClient = ({ onSelected }: SearchClientProps) => {
   const { openSnackbar } = useSnackbar();
   const { closeModal } = useModalStore();
 
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [openFilter, setOpenFilter] = useState(true);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [items, setItems] = useState(0);
-  const [filter, setFilter] = useState<Partial<QueryClienteDto>>({});
-
+  const [totalItems, setTotalItems] = useState(0);
   const [clientes, setClientes] = useState<ClienteType[]>([]);
+  const [filter, setFilter] = useState<Partial<QueryClienteDto>>({});
 
   const [showColumn, setShowColumn, isLoadingShowColumn] = useStorage(
     "filtro-cliente",
@@ -45,27 +45,44 @@ const SearchClient = ({ onSelected }: SearchClientProps) => {
     }
   );
 
-  const fetchClientes = useCallback(async () => {
-    try {
-      const clienteService = new ClienteService();
-      const cleanedFilter = Object.fromEntries(
-        Object.entries(filter).filter(([, v]) => v !== "" && v !== null)
-      );
-      const { data } = await clienteService.findAll({
-        page,
-        limit,
-        ...cleanedFilter,
-      });
-      setClientes(data.data.data);
-      setItems(data.data.total);
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
-        openSnackbar({ message: errorMessageInAPI, type: "CRITICAL" });
-      } else {
-        openSnackbar({ message: errorGeneric, type: "CRITICAL" });
+  const fetchClientes = useCallback(
+    async (signal?: AbortSignal) => {
+      setIsLoadingData(true);
+
+      try {
+        const clienteService = new ClienteService();
+        const cleanedFilter = Object.fromEntries(
+          Object.entries(filter).filter(([, v]) => v !== "" && v !== null)
+        );
+
+        const { data } = await clienteService.findAll(
+          {
+            page,
+            limit,
+            ...cleanedFilter,
+          },
+          signal // <- importante
+        );
+
+        setClientes(data?.data?.data ?? []);
+        setTotalItems(data?.data?.total ?? 0);
+      } catch (err) {
+        if (axios.isCancel(err)) {
+          console.log("Consulta cancelada");
+          return;
+        }
+
+        if (axios.isAxiosError(err) && err.response) {
+          openSnackbar({ message: errorMessageInAPI, type: "CRITICAL" });
+        } else {
+          openSnackbar({ message: errorGeneric, type: "CRITICAL" });
+        }
+      } finally {
+        setIsLoadingData(false);
       }
-    }
-  }, [page, limit, filter, openSnackbar]);
+    },
+    [page, limit, filter, openSnackbar]
+  );
 
   const handleSearch = (value: string | null) => {
     setFilter((prev) => ({ ...prev, q: value }));
@@ -135,21 +152,32 @@ const SearchClient = ({ onSelected }: SearchClientProps) => {
     [showColumn]
   );
 
+  const handlePageChange = (newPage: number, newLimit: number) => {
+    setPage(newPage);
+    setLimit(newLimit);
+  };
+
   useEffect(() => {
-    fetchClientes();
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    fetchClientes(signal);
+
+    return () => {
+      controller.abort();
+    };
   }, [fetchClientes]);
 
   return (
     <section className="flex p-2 gap-2 w-full h-full relative overflow-hidden">
-      {openFilter && (
-        <Filter
-          onSearch={handleAdvancedSearch}
-        />
-      )}
+      {openFilter && <Filter onSearch={handleAdvancedSearch} />}
       <Table
+        item={totalItems}
+        itemPerPage={limit}
         columns={columns}
         rows={clientes}
-        isLoading={isLoadingShowColumn}
+        isLoading={isLoadingData}
+        onPageChange={handlePageChange}
         header={
           <header className="grid grid-cols-[1fr_auto] justify-between gap-4">
             <h1 className="col-span-2 text-[22px]">Buscar Cliente</h1>
@@ -182,15 +210,6 @@ const SearchClient = ({ onSelected }: SearchClientProps) => {
               </Button>
             </menu>
           </header>
-        }
-        pagination={
-          <Pagination
-            page={page}
-            limit={limit}
-            items={items}
-            onChangePage={(pag) => setPage(pag)}
-            onChangeLimit={(lim) => setLimit(lim)}
-          />
         }
       />
     </section>

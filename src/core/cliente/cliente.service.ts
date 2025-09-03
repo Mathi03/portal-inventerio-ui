@@ -11,11 +11,12 @@ export class ClienteService {
     return response;
   }
 
-  public async findAll(queryFuente: QueryClienteDto) {
+  public async findAll(queryFuente: QueryClienteDto, signal?: AbortSignal) {
     const response = await cnr.get<PaginationDto<ClienteType[]>>(
       "/v1/cnr/clients",
       {
         params: queryFuente,
+        signal,
       }
     );
     return response;

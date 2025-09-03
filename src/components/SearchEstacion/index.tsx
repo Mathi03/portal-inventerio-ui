@@ -26,11 +26,15 @@ const SearchEstacion = ({ onSelected }: SearchEstacionProps) => {
   const { openSnackbar } = useSnackbar();
   const { closeModal } = useModalStore();
 
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [openFilter, setOpenFilter] = useState(true);
   const [page, setPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [items, setItems] = useState(0);
   const [filter, setFilter] = useState<Partial<QueryEstacionDto>>({});
+  const [totalItems, setTotalItems] = useState(0);
+  // const [itemPerPage, setItemPerPage] = useState(10);
+  const itemPerPage = 10;
 
   const [clientes, setClientes] = useState<EstacionType[]>([]);
 
@@ -45,27 +49,45 @@ const SearchEstacion = ({ onSelected }: SearchEstacionProps) => {
     }
   );
 
-  const fetchClientes = useCallback(async () => {
-    try {
-      const estacionService = new EstacionService();
-      const cleanedFilter = Object.fromEntries(
-        Object.entries(filter).filter(([, v]) => v !== "" && v !== null)
-      );
-      const { data } = await estacionService.findAll({
-        page,
-        limit,
-        ...cleanedFilter,
-      });
-      setClientes(data.data.data);
-      setItems(data.data.total);
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
-        openSnackbar({ message: errorMessageInAPI, type: "CRITICAL" });
-      } else {
-        openSnackbar({ message: errorGeneric, type: "CRITICAL" });
+  const fetchClientes = useCallback(
+    async (signal?: AbortSignal) => {
+      setIsLoadingData(true);
+
+      try {
+        const estacionService = new EstacionService();
+        const cleanedFilter = Object.fromEntries(
+          Object.entries(filter).filter(([, v]) => v !== "" && v !== null)
+        );
+
+        const { data } = await estacionService.findAll(
+          {
+            page,
+            limit,
+            ...cleanedFilter,
+          },
+          signal // <-- Pasar el signal aquí
+        );
+
+        setClientes(data?.data?.data ?? []);
+        setTotalItems(data?.data?.total);
+      } catch (err) {
+        if (axios.isCancel(err)) {
+          // La consulta fue cancelada, no hacer nada
+          console.log("Consulta cancelada");
+          return;
+        }
+
+        if (axios.isAxiosError(err) && err.response) {
+          openSnackbar({ message: errorMessageInAPI, type: "CRITICAL" });
+        } else {
+          openSnackbar({ message: errorGeneric, type: "CRITICAL" });
+        }
+      } finally {
+        setIsLoadingData(false);
       }
-    }
-  }, [page, limit, filter, openSnackbar]);
+    },
+    [page, limit, filter, openSnackbar]
+  );
 
   const handleSearch = (value: string | null) => {
     setFilter((prev) => ({ ...prev, q: value }));
@@ -88,8 +110,8 @@ const SearchEstacion = ({ onSelected }: SearchEstacionProps) => {
   const columns = useMemo<TableColumn<EstacionType>[]>(
     () => [
       {
-        title: "ID",
-        key: "id",
+        title: "Id Estación",
+        key: "idEstacion",
         hidden: !showColumn.id,
         maxWidth: "100px",
       },
@@ -103,19 +125,25 @@ const SearchEstacion = ({ onSelected }: SearchEstacionProps) => {
         title: "Nombre",
         key: "nombre",
         hidden: !showColumn.nombrecomercial,
-        maxWidth: "350px"
+        maxWidth: "350px",
       },
       {
         title: "Código Pais",
         key: "codigoPais",
         hidden: !showColumn.rif,
-        maxWidth: "100px"
+        maxWidth: "100px",
+      },
+      {
+        title: "Propietario Estación",
+        hidden: !showColumn.rif,
+        maxWidth: "100px",
+        render: (row) => <span>{row?.tmveOwner ? "Movistar" : "Cliente"}</span>,
       },
       {
         title: "Dirección",
         key: "direccion",
         hidden: !showColumn.rif,
-        maxWidth: "400px"
+        maxWidth: "400px",
       },
       {
         maxWidth: "64px",
@@ -140,17 +168,39 @@ const SearchEstacion = ({ onSelected }: SearchEstacionProps) => {
     [showColumn]
   );
 
+  const handlePageChange = (newPage: number, newLimit: number) => {
+    console.log("handlePageChange", newPage, newLimit);
+
+    setCurrentPage(newPage);
+
+    setFilter((prev) => ({
+      ...prev,
+      page: newPage,
+      limit: newLimit,
+    }));
+  };
+
   useEffect(() => {
-    fetchClientes();
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    fetchClientes(signal);
+
+    return () => {
+      controller.abort(); // Cancela la consulta anterior si hay una nueva
+    };
   }, [fetchClientes]);
 
   return (
     <section className="flex p-2 gap-2 w-full h-full relative overflow-hidden">
       {openFilter && <Filter onSearch={handleAdvancedSearch} />}
       <Table
+        item={totalItems}
+        itemPerPage={itemPerPage}
         columns={columns}
         rows={clientes}
-        isLoading={isLoadingShowColumn}
+        isLoading={isLoadingData}
+        onPageChange={handlePageChange}
         header={
           <header className="grid grid-cols-[1fr_auto] justify-between gap-4">
             <h1 className="col-span-2 text-[22px]">Buscar Estación</h1>
@@ -183,15 +233,6 @@ const SearchEstacion = ({ onSelected }: SearchEstacionProps) => {
               </Button>
             </menu>
           </header>
-        }
-        pagination={
-          <Pagination
-            page={page}
-            limit={limit}
-            items={items}
-            onChangePage={(pag) => setPage(pag)}
-            onChangeLimit={(lim) => setLimit(lim)}
-          />
         }
       />
     </section>
