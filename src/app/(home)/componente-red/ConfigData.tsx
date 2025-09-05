@@ -8,31 +8,8 @@ import TabStripTab from "@/components/TabStripTab";
 import InputDynamic from "./InputDynamic";
 import Link from "next/link";
 import Icon from "@/components/Icon";
-import { AxiosInstance } from "axios";
-import {
-  bff,
-  cnr,
-  contacto,
-  estaciones,
-  msDirecciones,
-  source,
-} from "@/core/config";
 import { RELACIONES_TIPO_CIRCUITO } from "@/core/config/relacionesServicios";
-
-const urlClientMap: Record<string, AxiosInstance> = {
-  [process.env.NEXT_PUBLIC_API_URL!]: bff,
-  [process.env.NEXT_PUBLIC_API_URL_MS_DIRECCIONES!]: msDirecciones,
-  [process.env.NEXT_PUBLIC_API_URL_ESTACIONES!]: estaciones,
-  [process.env.NEXT_PUBLIC_API_URL_CONTACTO!]: contacto,
-  [process.env.NEXT_PUBLIC_API_URL_CNR!]: cnr,
-};
-
-function getAxiosClientFromUrl(url: string): AxiosInstance {
-  const entry = Object.entries(urlClientMap).find(([baseUrl]) =>
-    url.startsWith(baseUrl)
-  );
-  return entry?.[1] || source;
-}
+import { useFetchCached } from "./useFetchCached";
 
 function camelToSnake(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
@@ -42,21 +19,10 @@ function camelToSnake(str: string): string {
 const normalizeApiData = (r: any) =>
   r?.data?.data?.data ?? r?.data?.data ?? r?.data ?? r;
 
-const buildCacheKey = (url: string) => {
-  const u = new URL(url);
-  // orden estable de query:
-  const entries = [...u.searchParams.entries()].sort(([a], [b]) =>
-    a.localeCompare(b)
-  );
-  u.search = "";
-  for (const [k, v] of entries) u.searchParams.append(k, v);
-  return u.toString();
-};
-
 const ensurePaged = (url: string) => {
   const u = new URL(url);
-  if (!u.searchParams.has("page")) u.searchParams.set("page", "1");
-  if (!u.searchParams.has("limit")) u.searchParams.set("limit", "10");
+  u.searchParams.set("page", "1");
+  u.searchParams.set("limit", "10");
   return u.toString();
 };
 
@@ -128,6 +94,8 @@ export default function ConfigData({
   regionId,
   stationId,
 }: ConfigDataProps) {
+  const fetchCached = useFetchCached();
+
   const [selectedTab, setSelectedTab] = useState(0);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [dynamicOptions, setDynamicOptions] = useState<Record<string, any[]>>(
@@ -150,36 +118,6 @@ export default function ConfigData({
   const configAttributes = configDataItem?.configAttributes ?? [];
   const configServices = configDataItem?.configServices ?? [];
 
-  const fetchCached = useCallback(async (url: string) => {
-    const key = buildCacheKey(url);
-
-    if (dataCacheRef.current.has(key)) {
-      return dataCacheRef.current.get(key);
-    }
-    if (inflightRef.current.has(key)) {
-      return inflightRef.current.get(key);
-    }
-
-    const parsed = new URL(url);
-    const client = getAxiosClientFromUrl(parsed.origin + parsed.pathname);
-
-    const p = client
-      .get(url)
-      .then((res) => {
-        const data = normalizeApiData(res);
-        dataCacheRef.current.set(key, data);
-        inflightRef.current.delete(key);
-        return data;
-      })
-      .catch((err) => {
-        inflightRef.current.delete(key);
-        throw err;
-      });
-
-    inflightRef.current.set(key, p);
-    return p;
-  }, []);
-
   useEffect(() => {
     dataCacheRef.current.clear();
     inflightRef.current.clear();
@@ -195,7 +133,9 @@ export default function ConfigData({
       if (searchQuery) base.searchParams.set("q", searchQuery);
       const finalUrl = base.toString();
 
-      const data = await fetchCached(finalUrl);
+      const response = await fetchCached(finalUrl);
+      const data = normalizeApiData(response);
+
       const items: any[] = Array.isArray(data) ? data : (data?.items ?? data);
 
       const labelKey = responseFields?.[0] ?? "name";
@@ -302,7 +242,9 @@ export default function ConfigData({
       ) => {
         const u = new URL(url);
         u.searchParams.set("page", String(page));
-        const limit = Number(u.searchParams.get("limit") ?? "10");
+        // const limit = Number(u.searchParams.get("limit") ?? "10");
+        u.searchParams.set("limit", "10");
+        const limit = 10;
         const options = await fetchOptions(
           u.toString(),
           responseFields,
