@@ -1,37 +1,14 @@
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { AxiosInstance } from "axios";
-import {
-  bff,
-  msDirecciones,
-  estaciones,
-  contacto,
-  cnr,
-  source, // fallback
-} from "@/core/config";
 import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
 import Modal from "@/components/Modal";
 import CreateForm from "@/app/crear-componente-red/CreateForm";
+import { useFetchCached } from "./useFetchCached";
 
 type AttrMap = { [key: string]: any };
 type NodeSpec = { key: string; level: number };
 
 const INDENTS = ["", "pl-0", "pl-6", "pl-10", "pl-14", "pl-20"];
-
-const urlClientMap: Record<string, AxiosInstance> = {
-  [process.env.NEXT_PUBLIC_API_URL!]: bff,
-  [process.env.NEXT_PUBLIC_API_URL_MS_DIRECCIONES!]: msDirecciones,
-  [process.env.NEXT_PUBLIC_API_URL_ESTACIONES!]: estaciones,
-  [process.env.NEXT_PUBLIC_API_URL_CONTACTO!]: contacto,
-  [process.env.NEXT_PUBLIC_API_URL_CNR!]: cnr,
-};
-
-function getAxiosClientFromUrl(url: string): AxiosInstance {
-  const entry = Object.entries(urlClientMap).find(([baseUrl]) =>
-    url.startsWith(baseUrl)
-  );
-  return entry?.[1] || source;
-}
 
 const toStr = (x: any) => String(x);
 const getByPath = (obj: any, path: string) =>
@@ -54,19 +31,6 @@ const movistarSpecs: NodeSpec[] = [
 const camelToSnake = (str: string) =>
   str.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase();
 
-const normalizeApiData = (r: any) =>
-  r?.data?.data?.data ?? r?.data?.data ?? r?.data ?? r;
-
-const buildCacheKey = (url: string) => {
-  // normaliza host+path+query (orden estable)
-  const u = new URL(url);
-  const entries = [...u.searchParams.entries()].sort(([a], [b]) =>
-    a.localeCompare(b)
-  );
-  u.search = "";
-  for (const [k, v] of entries) u.searchParams.append(k, v);
-  return u.toString();
-};
 const buildResolvedUrl = (
   source: string,
   valueKey: string,
@@ -97,6 +61,7 @@ const TreeView = ({
   tipoComponente: TipoComponenteType | null;
   attributes: AttrMap | null;
 }) => {
+  const fetchCached = useFetchCached();
   const [openForm, setOpenForm] = useState(false);
   const [componenteRed, setComponenteRed] = useState<any | null>(null);
   const dataCacheRef = useRef<Map<string, any>>(new Map());
@@ -119,40 +84,10 @@ const TreeView = ({
   );
   const getLabelFromCfg = (name: string) => getCfg(name)?.label || name;
 
-  const cacheRef = useRef<Map<string, any>>(new Map());
   const [resolved, setResolved] = useState<Record<string, string | string[]>>(
     {}
   );
 
-  const fetchCached = useCallback(async (url: string) => {
-    const key = buildCacheKey(url);
-
-    if (dataCacheRef.current.has(key)) {
-      return dataCacheRef.current.get(key);
-    }
-    if (inflightRef.current.has(key)) {
-      return inflightRef.current.get(key);
-    }
-
-    const client = getAxiosClientFromUrl(
-      new URL(url).origin + new URL(url).pathname
-    );
-    const promise = client
-      .get(url)
-      .then((res) => {
-        const normalized = normalizeApiData(res);
-        dataCacheRef.current.set(key, normalized);
-        inflightRef.current.delete(key);
-        return normalized;
-      })
-      .catch((err) => {
-        inflightRef.current.delete(key);
-        throw err;
-      });
-
-    inflightRef.current.set(key, promise);
-    return promise;
-  }, []);
   useEffect(() => {
     dataCacheRef.current.clear();
     inflightRef.current.clear();
@@ -238,6 +173,7 @@ const TreeView = ({
         try {
           if (formType === "select") {
             const id = toStr(rawVal);
+            if (id === "0") return;
             const obj = await getObjById(id);
             const label = getByPath(obj, labelPath) ?? id;
             if (mounted) setResolved((p) => ({ ...p, [key]: String(label) }));
@@ -302,6 +238,7 @@ const TreeView = ({
         setComponenteRed(obj ?? null);
         setOpenForm(true);
       } catch (err) {
+        console.error(err);
       }
     },
     [attrs, getCfg, fetchCached]
