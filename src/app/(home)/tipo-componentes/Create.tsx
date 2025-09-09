@@ -13,6 +13,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import useTipoComponente from "./useTipoComponente";
 import {
+  AllTipoComponenteResponse,
   CreateRefComponentTypeRequestDto,
   TCStatusEnumOptions,
   TCTypeEnumOptions,
@@ -47,22 +48,44 @@ type FormItem = keyof Pick<
   "label" | "name" | "tipo" | "status"
 >;
 
+export type ChildComponentTypeNetwork = {
+  id: number;
+  red: string;
+  configAttributes: any[];
+  configServices: any[];
+};
+
+export type ConfigRelationTable = {
+  parentId: number;
+  parentLabel: string;
+  parentRedId: number;
+  parentRedName: string;
+  childRedId: number;
+  childRedName: string;
+  childType: string;
+};
+
 export default function Create({
   onSuccess,
   onClose,
   tipoComponente,
   mode = "create",
+  allTipoComponente: allByProp,
 }: {
   onSuccess: () => void;
   onClose: () => void;
   tipoComponente?: TipoComponenteType;
   mode?: "create" | "edit" | "approve";
+  allTipoComponente?: AllTipoComponenteResponse[];
 }) {
   const { openSnackbar } = useSnackbar();
+  const [parentAssociations, setParentAssociations] = useState<
+    ConfigRelationTable[]
+  >([]);
   const [creating, setCreating] = useState(false);
   const [openTcAssociate, setOpenTcAssociate] = useState(false);
   const [checked, setChecked] = useState(false);
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<ChildComponentTypeNetwork[]>([]);
   const [editConfigurationsSelected, setEditConfigurationSelected] = useState<{
     type: "attributes" | "services";
     row: any;
@@ -74,23 +97,25 @@ export default function Create({
   }>({});
   const [openParentModal, setOpenParentModal] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
-  const [parentAssociations, setParentAssociations] = useState<any[]>([]);
   const [childName, setChildName] = useState("");
   const [label, setLabel] = useState("");
   const [tipo, setTipo] = useState<any>();
   const [status, setStatus] = useState<any>();
+  const { redes, loadingRedes, getRedes } = useRed();
   const { confirm } = useDialog();
   const {
     createTipoComponente,
-    getTipoComponentes,
-    tipoComponentes,
-    allTipoComponentes,
-    allTipoComponente,
     updateTipoComponente,
+    allTipoComponente: allByHook,
+    allTipoComponentes,
   } = useTipoComponente({ onSuccess, onClose, setCreating });
 
+  const allTipoComponente: AllTipoComponenteResponse[] = allByProp
+    ? allByProp
+    : allByHook;
+
   useEffect(() => {
-    if (mode !== "create" && tipoComponente) {
+    if (mode !== "create" && allByProp === undefined && tipoComponente) {
       allTipoComponentes({
         idList: [tipoComponente.id],
       });
@@ -98,57 +123,113 @@ export default function Create({
   }, []);
 
   useEffect(() => {
-    if (allTipoComponente.length > 0) {
-      setChildName(allTipoComponente[0]?.name || "");
-      setLabel(allTipoComponente[0]?.label || "");
-      setTipo(allTipoComponente[0]?.tipo || "");
+    const loadTipoComponenteData = async () => {
+      if (allTipoComponente.length === 0) return;
+      if (redes.length === 0) return;
+
+      const current = allTipoComponente[0];
+
+      // Datos básicos
+      setChildName(current?.name || "");
+      setLabel(current?.label || "");
+      setTipo(current?.tipo || "");
       setStatus(
-        TCStatusEnumOptions.find(
-          (value) => value.value == allTipoComponente[0]?.status
-        )?.label || ""
+        TCStatusEnumOptions.find((value) => value.value == current?.status)
+          ?.label || ""
       );
-      let ConfigsData: any[] = [];
-      allTipoComponente[0].configData.map((configData) => {
-        ConfigsData.push({
-          id: redes?.find((t) => t.id == configData?.networkId)?.id,
-          red: redes?.find((t) => t.id == configData?.networkId)?.label,
+
+      // ConfigsData
+      const configsData: ChildComponentTypeNetwork[] =
+        current.configData.map((configData) => ({
+          id: redes?.find((t) => t.id == configData?.networkId)?.id ?? 0,
+          red: redes?.find((t) => t.id == configData?.networkId)?.label ?? "",
           configAttributes: configData.configAttributes,
           configServices: configData.configServices,
-        });
-      });
-      setData(ConfigsData);
+        })) ?? [];
+      setData(configsData);
 
-      const formattedTechs = allTipoComponente[0].configData.reduce(
+      // SelectedTechs
+      const formattedTechs = current.configData.reduce(
         (
           acc: { [key: string]: { key: string; label: string } | undefined },
           item
         ) => {
           acc[item.networkId] = {
             key: item.networkId.toString(),
-            label: redes?.find((t) => t.id == item?.networkId)?.label,
+            label: redes?.find((t) => t.id == item?.networkId)?.label ?? "",
           };
           return acc;
         },
         {}
       );
-
       setSelectedTechs(formattedTechs);
 
-      let ConfigsRelation: any[] = [];
-      allTipoComponente[0].configRelation.map((configData) => {
-        ConfigsRelation.push({
-          parentId: configData.componentTypeFatherId,
-          parentRedId: configData.networkFatherId,
-          childRedId: configData.networkId,
-          childType: allTipoComponente[0].name,
+      // 🔹 Fetch parents labels en paralelo con Promise.all
+      const tipoComponenteService = new TipoComponenteService();
+      const errors: number[] = [];
+      const relationsWithParents = await Promise.all(
+        current.configRelation.map(async (configData) => {
+          try {
+            const { data: padre } = await tipoComponenteService.getById(
+              configData.componentTypeFatherId
+            );
+            return {
+              parentId: configData.componentTypeFatherId,
+              parentRedId: configData.networkFatherId,
+              childRedId: configData.networkId,
+              childType: current.name,
+              parentLabel: padre?.label ?? "ERROR AL CARGA NOMBRE",
+              parentRedName:
+                redes?.find(
+                  (r) =>
+                    r?.id?.toString() === configData.networkFatherId?.toString()
+                )?.name ?? "",
+              childRedName:
+                redes?.find(
+                  (r) => r?.id?.toString() === configData.networkId?.toString()
+                )?.name ?? "",
+            };
+          } catch (err) {
+            console.error(
+              `Error obteniendo padre con id ${configData.componentTypeFatherId}`,
+              err
+            );
+            errors.push(configData.componentTypeFatherId);
+            return {
+              parentId: configData.componentTypeFatherId,
+              parentRedId: configData.networkFatherId,
+              childRedId: configData.networkId,
+              childType: current.name,
+              parentLabel: "ERROR AL CARGA NOMBRE",
+              parentRedName:
+                redes?.find(
+                  (r) =>
+                    r?.id?.toString() === configData.networkFatherId?.toString()
+                )?.name ?? "",
+              childRedName:
+                redes?.find(
+                  (r) => r?.id?.toString() === configData.networkId?.toString()
+                )?.name ?? "",
+            };
+          }
+        })
+      );
+
+      if (errors.length > 0) {
+        openSnackbar({
+          message: `No se pudieron cargar ${errors.length} padres`,
+          type: "CRITICAL",
         });
-      });
-      setParentAssociations(ConfigsRelation);
-    }
-  }, [allTipoComponente]);
+      }
+
+      setParentAssociations(relationsWithParents);
+    };
+
+    loadTipoComponenteData();
+  }, [allTipoComponente, redes, openSnackbar]);
 
   useEffect(() => {
-    if (parentAssociations.length > 0) {
+    if (parentAssociations?.length > 0) {
       setParentAssociations((prev) =>
         prev.map((assoc) => ({
           ...assoc,
@@ -159,10 +240,8 @@ export default function Create({
   }, [childName]);
 
   useEffect(() => {
-    setChecked(parentAssociations.length > 0);
+    setChecked(parentAssociations?.length > 0);
   }, [parentAssociations]);
-
-  const { redes, getRedes } = useRed();
 
   const onLoadRedes = useCallback(() => {
     getRedes({ search, page, limit: 1000 });
@@ -172,22 +251,11 @@ export default function Create({
     onLoadRedes();
   }, [onLoadRedes]);
 
-  const onLoadTypeComponent = useCallback(() => {
-    getTipoComponentes({ search, page, limit: 1000 });
-  }, [search, page, limit, getTipoComponentes]);
-
-  useEffect(() => {
-    onLoadTypeComponent();
-  }, [onLoadTypeComponent]);
-
-  const [showColumn, setShowColumn, isLoadingShowColumn] = useStorage(
-    "filter-type-component",
-    {
-      red: true,
-      configAttributes: true,
-      configServices: true,
-    }
-  );
+  const [showColumn] = useStorage("filter-type-component", {
+    red: true,
+    configAttributes: true,
+    configServices: true,
+  });
 
   const columns = useMemo<TableColumn<TipoComponenteRed>[]>(
     () => [
@@ -231,38 +299,19 @@ export default function Create({
       const columns = [
         {
           title: "Tipo de componente padre",
-          key: "parentType",
-          render: (row: RowData) => {
-            const parent = tipoComponentes.find(
-              (tc) => tc.id === Number(row.parentId)
-            );
-            return parent?.label || "";
-          },
+          key: "parentLabel",
         },
         {
           title: "Red padre",
-          key: "parentRed",
-          render: (row: RowData) => {
-            const parentRed = redes.find(
-              (tc) => tc.id === Number(row.parentRedId)
-            );
-            return parentRed?.name || "";
-          },
+          key: "parentRedName",
         },
         {
           title: "Tipo de componente hijo",
           key: "childType",
-          render: (row: RowData) => row.childType,
         },
         {
           title: "Red hijo",
-          key: "childRed",
-          render: (row: RowData) => {
-            const childRed = data.find(
-              (tc) => tc.id === Number(row.childRedId)
-            );
-            return childRed?.red || "";
-          },
+          key: "childRedName",
         },
       ];
 
@@ -276,7 +325,7 @@ export default function Create({
 
       return columns;
     },
-    [mode, tipoComponentes, data]
+    [mode, data]
   );
 
   const onCreate = useCallback(
@@ -713,6 +762,7 @@ export default function Create({
           redes={redes}
           onClose={() => setOpenTcAssociate(false)}
           selectedTechs={selectedTechs}
+          loadingRedes={loadingRedes}
           setSelectedTechs={setSelectedTechs}
           onSave={handleSaveTechs}
         />

@@ -14,11 +14,15 @@ export class TipoComponenteService {
     return response;
   }
 
-  public async findAll(queryTipoComponente: QueryTipoComponenteDto) {
+  public async findAll(
+    queryTipoComponente: QueryTipoComponenteDto,
+    signal?: AbortSignal
+  ) {
     const response = await bff.get<PaginationDto<AllTipoComponenteResponse[]>>(
       "/v1/portal/ref-component-type",
       {
         params: queryTipoComponente,
+        signal,
       }
     );
     return response;
