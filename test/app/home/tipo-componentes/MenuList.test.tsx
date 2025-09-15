@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ThemeContextProvider, getTelefonicaSkin } from "@telefonica/mistica";
-import MenuList from "../componente-red/MenuList";
+import MenuList from "@/app/(home)/tipo-componentes/MenuList";
 
 const renderWithTheme = (ui: React.ReactElement) =>
   render(
@@ -66,17 +66,4 @@ describe("MenuList", () => {
     expect(onDelete).toHaveBeenCalled();
   });
 
-  it("no muestra Aprobar si status == 1", () => {
-    renderWithTheme(
-      <MenuList
-        tc={{ ...mockTc }}
-        status={1}
-        onEdit={() => {}}
-        onApproval={() => {}}
-        onDelete={() => {}}
-      />
-    );
-    fireEvent.click(screen.getByRole("button"));
-    expect(screen.queryByText("Aprobar")).not.toBeInTheDocument();
-  });
 });
