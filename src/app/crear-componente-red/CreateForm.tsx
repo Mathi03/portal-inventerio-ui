@@ -24,10 +24,8 @@ import {
 import { SearchableSelectHandle } from "@/components/SearchableSelect";
 import { useModalStore } from "@/hooks/modalStorage";
 import ConfigData from "../(home)/componente-red/ConfigData";
-import { EstacionType } from "@/core/estaciones/estacion.type";
 import TreeView from "../(home)/componente-red/TreeView";
 import { SelectPaginate } from "@/components/SelectPaginate";
-import { EstacionService } from "@/core/estaciones/estacion.service";
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -155,7 +153,7 @@ export default function CreateForm({
 
   const initialValues = useMemo(
     () => ({
-      componentId: componenteRed?.componentId.toString().trim(),
+      componentId: componenteRed?.componentId?.toString().trim(),
       code: componenteRed?.code,
       observation: componenteRed?.observation?.toString() || "",
       regionId:
@@ -183,63 +181,84 @@ export default function CreateForm({
   const getRedes = useCallback(async () => {
     setIsLoadingRedes(true);
     const redService = new RedService();
-    const { data } = await redService.findAll({});
-    const activeNetworks = data.data.data.filter(
-      (r: RedType) => r.status === 1
-    );
-    setRedes(activeNetworks);
-    if (networkId) {
-      setRed(activeNetworks.find((r) => r.id === networkId) ?? null);
+    if (mode === "create") {
+      const { data } = await redService.findAll({});
+      const activeNetworks = data.data.data.filter(
+        (r: RedType) => r.status === 1
+      );
+      setRedes(activeNetworks);
+      if (networkId) {
+        setRed(activeNetworks.find((r) => r.id === networkId) ?? null);
+      }
+    } else {
+      const { data } = await redService.getById(
+        Number(componenteRed?.refNetworkId)
+      );
+      setRedes([data?.data]);
+      setRed(data?.data ?? null);
     }
+
     setIsLoadingRedes(false);
   }, [networkId]);
 
-  useEffect(() => {
-    if (componenteRed !== undefined && componenteRed !== null) {
-      if (componenteRed.refNetworkId)
-        setRed(
-          redes.find(
-            (r) => r.id?.toString() === componenteRed.refNetworkId?.toString()
-          ) || null
-        );
-      if (componenteRed.regionId)
-        setRegion(
-          regiones.find(
-            (r) => r.id?.toString() === componenteRed.regionId?.toString()
-          ) || null
-        );
-      // if (componenteRed.stationId)
-      //   setEstacion(
-      //     estaciones.find(
-      //       (r) => r.id?.toString() === componenteRed.stationId?.toString()
-      //     ) || null
-      //   );
-    }
-  }, [redes, componenteRed, regiones]);
+  // useEffect(() => {
+  //   if (componenteRed !== undefined && componenteRed !== null) {
+  //     if (componenteRed.refNetworkId)
+  //       setRed(
+  //         redes.find(
+  //           (r) => r.id?.toString() === componenteRed.refNetworkId?.toString()
+  //         ) || null
+  //       );
+  //     if (componenteRed.regionId)
+  //       setRegion(
+  //         regiones.find(
+  //           (r) => r.id?.toString() === componenteRed.regionId?.toString()
+  //         ) || null
+  //       );
+  //     // if (componenteRed.stationId)
+  //     //   setEstacion(
+  //     //     estaciones.find(
+  //     //       (r) => r.id?.toString() === componenteRed.stationId?.toString()
+  //     //     ) || null
+  //     //   );
+  //   }
+  // }, [redes, componenteRed, regiones]);
 
   const getTipoComponentes = useCallback(async () => {
-    if (!red) return;
+    // if (!red) return;
     setIsLoadingTC(true);
     const tcService = new TipoComponenteService();
-    // Filtro por RedId
-    // -----------------
-    // const { data } = await tcService.getByNetworkId(red?.id);
-    // -----------------
-    // Sin Filtro - todos los tipo componentes
-    const response = await tcService.findAll({});
-    const data = response?.data?.data?.data;
-    // -----------------
-    const activeComponenteTypes = data.filter(
-      (t: TipoComponenteType) => t.status === 1
-    );
-    setTipoComponentes(activeComponenteTypes);
-    if (mode === "update" && componenteRed) {
-      setTipoComponente(
-        activeComponenteTypes.find(
-          (t: TipoComponenteType) => t.id === +componenteRed.refComponentTypeId
-        ) ?? null
+
+    if (mode === "create") {
+      // Filtro por RedId
+      // -----------------
+      // const { data } = await tcService.getByNetworkId(red?.id);
+      // -----------------
+      // Sin Filtro - todos los tipo componentes
+      const response = await tcService.findAll({});
+      const data = response?.data?.data?.data;
+      // -----------------
+      const activeComponenteTypes = data.filter(
+        (t: TipoComponenteType) => t.status === 1
       );
+      setTipoComponentes(activeComponenteTypes);
+      if (mode !== "create" && componenteRed) {
+        setTipoComponente(
+          activeComponenteTypes.find(
+            (t: TipoComponenteType) =>
+              t.id === +componenteRed.refComponentTypeId
+          ) ?? null
+        );
+      }
+    } else {
+      const response = await tcService.getById(
+        Number(componenteRed?.refComponentTypeId)
+      );
+      const data = response?.data;
+      setTipoComponentes([data]);
+      setTipoComponente(data);
     }
+
     // if (mode === "update" && componentTypeId) {
     //   setTipoComponente(
     //     activeComponenteTypes.find(
@@ -248,11 +267,24 @@ export default function CreateForm({
     //   );
     // }
     setIsLoadingTC(false);
-  }, [red]);
+  }, []);
 
   const getFuentes = useCallback(async () => {
     setIsLoadingFuentes(true);
     const fuenteService = new FuenteService();
+    // if (mode === "create") {
+    //   const { data } = await fuenteService.findAll({
+    //     refNetworkId: red?.id,
+    //   });
+    //   setFuentes(data.data.data.filter((f: FuenteType) => f.status === 1));
+    //   setIsLoadingFuentes(false);
+    // } else {
+    //   const { data } = await fuenteService.getById(
+    //     Number(componenteRed?.refSourceId)
+    //   );
+    //   setFuentes([data.data]);
+    // }
+    // const fuenteService = new FuenteService();
     const { data } = await fuenteService.findAll({
       refNetworkId: red?.id,
     });
@@ -277,11 +309,8 @@ export default function CreateForm({
   useEffect(() => {
     getRedes();
     getRegiones();
-  }, [getRedes, getRegiones]);
-
-  useEffect(() => {
     getTipoComponentes();
-  }, [getTipoComponentes]);
+  }, [getRedes, getRegiones, getTipoComponentes]);
 
   const isValidToSearch = red && red !== null;
 
@@ -317,13 +346,6 @@ export default function CreateForm({
       getConfigRelation();
     }
   }, [tipoComponente]);
-
-  // useEffect(() => {
-  //   getRedes();
-  //   getTipoComponentes();
-  //   getFuentes();
-  //   getRegiones();
-  // }, [getRedes, getTipoComponentes, getFuentes, getRegiones]);
 
   useEffect(() => {
     if (componenteRed) {
@@ -442,12 +464,8 @@ export default function CreateForm({
           // ref={networkInputRef}
           name={"refNetworkId" as FormItem}
           label="Red"
-          disabled={
-            mode === "approve" || mode === "popup" || mode === "read"
-              ? true
-              : isLoadingRedes
-          }
-          optional={mode === "approve" || mode === "popup" || mode === "read"}
+          disabled={mode !== "create" ? true : isLoadingRedes}
+          optional={mode !== "create"}
           fullWidth
           helperText={isLoadingRedes ? "Cargando redes..." : undefined}
           options={redes.map((red) => ({
@@ -462,8 +480,8 @@ export default function CreateForm({
         <Select
           name={"refComponentTypeId" as FormItem}
           label="Tipo de componente"
-          disabled={mode === "approve" || mode === "read" ? true : isLoadingTC}
-          optional={mode === "approve" || mode === "read"}
+          disabled={mode !== "create" ? true : isLoadingTC}
+          optional={mode !== "create"}
           fullWidth
           helperText={
             isLoadingTC ? "Cargando tipos de componente..." : undefined
@@ -482,13 +500,13 @@ export default function CreateForm({
           name={"refSourceId" as FormItem}
           label="Fuente"
           disabled={
-            mode === "approve" || mode === "read"
+            mode !== "create"
               ? true
               : !isValidToSearch
                 ? true
                 : isLoadingFuentes
           }
-          optional={mode === "approve" || mode === "read"}
+          optional={mode !== "create"}
           fullWidth
           helperText={isLoadingFuentes ? "Cargando fuentes..." : undefined}
           options={fuentes.map((f) => ({
@@ -522,7 +540,7 @@ export default function CreateForm({
           label="Estación"
           value={estacion ?? ""}
           clientToFetch={estacionesInstance}
-          searchType='byId'
+          searchType="byId"
           fieldUrl={"v1/estaciones"}
           fieldKey="id"
           fieldName="nombre"
@@ -531,6 +549,7 @@ export default function CreateForm({
             setEstacion(value?.toString() ?? "");
           }}
           required
+          disabled={mode === "read"}
         />
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="config-adicional"></hgroup>
@@ -543,6 +562,7 @@ export default function CreateForm({
           networkId={Number(red?.id)}
           regionId={Number(region?.id)}
           stationId={Number(estacion)}
+          disabled={mode === "read"}
           // attribute={attribute}
           // onAttributes={onAttributes}
           // service={service}
@@ -575,23 +595,24 @@ export default function CreateForm({
           </>
         )}
 
-        {red?.id?.toString() === "16" && (
-          <>
-            <hr className="col-span-3" />
-            <hgroup className="col-span-3" id="relacion-jerarquica">
-              <h4 className="text-[20px]">Arbol</h4>
-              <p>En esta sección se mostrara las relaciones entre nodos</p>
-            </hgroup>
-            <TreeView
-              tipoComponente={tipoComponente ?? null}
-              attributes={attribute}
-              // attribute={attribute}
-              // onAttributes={onAttributes}
-              // service={service}
-              // onServices={onServices}
-            />
-          </>
-        )}
+        {tipoComponente?.id?.toString() === "28" ||
+          (tipoComponente?.id?.toString() === "396" && (
+            <>
+              <hr className="col-span-3" />
+              <hgroup className="col-span-3" id="relacion-jerarquica">
+                <h4 className="text-[20px]">Arbol</h4>
+                <p>En esta sección se mostrara las relaciones entre nodos</p>
+              </hgroup>
+              <TreeView
+                tipoComponente={tipoComponente ?? null}
+                attributes={attribute}
+                // attribute={attribute}
+                // onAttributes={onAttributes}
+                // service={service}
+                // onServices={onServices}
+              />
+            </>
+          ))}
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="observacion">
           <h4 className="text-[20px]">Observación</h4>

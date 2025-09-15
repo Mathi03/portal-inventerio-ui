@@ -21,6 +21,7 @@ type SelectPaginateProps<T> = {
   clientToFetch?: AxiosInstance;
   searchType?: "byId" | "byParams";
   onChange: (value: string | number | null) => void;
+  disabled?: boolean;
 };
 
 const buildCacheKey = (url: string) => {
@@ -78,6 +79,7 @@ export function SelectPaginate<T>({
   mapById,
   clientToFetch,
   searchType = "byParams",
+  disabled = false,
 }: SelectPaginateProps<T>) {
   const dataCacheRef = useRef<Map<string, any>>(new Map());
   const inflightRef = useRef<Map<string, Promise<any>>>(new Map());
@@ -187,7 +189,13 @@ export function SelectPaginate<T>({
 
       const fieldValue = value;
 
-      if (fieldValue && fieldUrl && fieldName && fieldKey) {
+      if (
+        fieldValue?.toString() !== "0" &&
+        fieldValue &&
+        fieldUrl &&
+        fieldName &&
+        fieldKey
+      ) {
         try {
           let data;
           if (searchType === "byId" || fieldKey.toLocaleLowerCase() == "id") {
@@ -246,6 +254,7 @@ export function SelectPaginate<T>({
         classNamePrefix={"field_paginated"}
         debounceTimeout={1000}
         value={selectedValue}
+        isDisabled={disabled}
         loadOptions={loadPaginatedOptions(fieldUrl)}
         onChange={(option) => {
           if (isInitial.current) isInitial.current = false;

@@ -10,6 +10,7 @@ import Link from "next/link";
 import Icon from "@/components/Icon";
 import { RELACIONES_TIPO_CIRCUITO } from "@/core/config/relacionesServicios";
 import { useFetchCached } from "./useFetchCached";
+import BlockUI from "@/components/BlockUi";
 
 function camelToSnake(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
@@ -82,6 +83,7 @@ interface ConfigDataProps {
   networkId: number | null;
   regionId: number | null;
   stationId: number | null;
+  disabled?: boolean;
 }
 
 export default function ConfigData({
@@ -93,6 +95,7 @@ export default function ConfigData({
   networkId,
   regionId,
   stationId,
+  disabled = false,
 }: ConfigDataProps) {
   const fetchCached = useFetchCached();
 
@@ -151,15 +154,21 @@ export default function ConfigData({
     }
   };
 
-  const onChange = async (name: string, value: any) => {
+  const onChange = async (name: string, value: any, inObject?: boolean) => {
     if (name.includes("#")) {
       const [groupKey, fieldKey] = name.split("#");
 
       setFormData((prev) => {
         // Obtenemos el array actual (o lo inicializamos con un objeto vacío)
-        const existingGroup = prev[groupKey] ?? [{}];
-        const updatedGroup = { ...existingGroup[0], [fieldKey]: value };
-        return { ...prev, [groupKey]: [updatedGroup] };
+        if (inObject) {
+          const existingGroup = prev[groupKey] ?? {};
+          const updatedGroup = { ...existingGroup, [fieldKey]: value };
+          return { ...prev, [groupKey]: updatedGroup };
+        } else {
+          const existingGroup = prev[groupKey] ?? [{}];
+          const updatedGroup = { ...existingGroup[0], [fieldKey]: value };
+          return { ...prev, [groupKey]: [updatedGroup] };
+        }
       });
     } else {
       // Si no contiene #, se guarda normalmente
@@ -479,7 +488,7 @@ export default function ConfigData({
             networkId={networkId}
             regionId={regionId}
             stationId={stationId}
-            onChange={onChange}
+            onChange={(nameOC, valueOC) => onChange(nameOC, valueOC, inObject)}
             isPaginated={isPaginated}
             loadPaginatedOptions={loader}
           />
@@ -591,17 +600,18 @@ export default function ConfigData({
     );
 
   return (
-    <TabStrip
-      selected={selectedTab}
-      onSelect={({ selected }) => setSelectedTab(selected)}
-      className="col-span-full"
-      header={<Header />}
-    >
-      {tabsData().map((tab, index) => (
-        <TabStripTab key={index} title={tab.title}>
-          {tab.content()}
-        </TabStripTab>
-      ))}
-    </TabStrip>
+    <BlockUI blocked={disabled} className="col-span-full">
+      <TabStrip
+        selected={selectedTab}
+        onSelect={({ selected }) => setSelectedTab(selected)}
+        header={<Header />}
+      >
+        {tabsData().map((tab, index) => (
+          <TabStripTab key={index} title={tab.title}>
+            {tab.content()}
+          </TabStripTab>
+        ))}
+      </TabStrip>
+    </BlockUI>
   );
 }

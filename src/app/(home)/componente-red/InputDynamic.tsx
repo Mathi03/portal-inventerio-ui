@@ -14,7 +14,7 @@ interface InputDynamicProps {
   name: string;
   label: string;
   required?: boolean;
-  html_form_type: "input" | "select" | "date" | "multiple";
+  html_form_type: "input" | "select" | "date" | "multiple" | "textarea";
   type?: "number" | "string" | "array" | "date" | "boolean";
   value?: string | { label: string; value: string };
   onChange: (name: string, value: string) => void;
@@ -58,6 +58,12 @@ export default function InputDynamic({
     value: string;
   } | null>(null);
   const isInitial = useRef(true);
+
+  const sortedSelectOptions = useMemo(() => {
+    return [...selectOptions].sort((a, b) =>
+      a.text.localeCompare(b.text, "es", { sensitivity: "base" })
+    );
+  }, [selectOptions]);
 
   const renderButton = () => (
     <button
@@ -115,7 +121,7 @@ export default function InputDynamic({
         onChangeValue={(val) => onChange(name, val)}
         disabled={loading}
         helperText={loading ? `Cargando ${label}...` : undefined}
-        options={selectOptions}
+        options={sortedSelectOptions}
         fullWidth
       />
     );
@@ -126,7 +132,7 @@ export default function InputDynamic({
       <SelectField
         name={name}
         label={label}
-        options={selectOptions}
+        options={sortedSelectOptions}
         value={value}
         onChangeValue={(val) => onChange(name, val)}
         placeholder={`Seleccione ${label}`}
@@ -169,6 +175,22 @@ export default function InputDynamic({
     );
   };
 
+  const renderTextArea = () => (
+    <div className="col-span-3">
+      <TextField
+        name={name}
+        optional={!required}
+        label={label}
+        value={value?.toString()}
+        fullWidth
+        multiline
+        onChange={(val) => {
+          onChange(name, val?.target?.value ?? "");
+        }}
+      />
+    </div>
+  );
+
   const renderDate = () => (
     <DateField
       name={name}
@@ -192,6 +214,8 @@ export default function InputDynamic({
         return renderDate();
       case "multiple":
         return renderMultiple();
+      case "textarea":
+        return renderTextArea();
       default:
         return <div>Error: tipo no soportado</div>;
     }
