@@ -32,6 +32,11 @@ const nextConfig: NextConfig = {
         basePath: false,
       },
       {
+        source: "/ms-contacto/:path*",
+        destination: `${process.env.API_URL_CONTACTO}/:path*`,
+        basePath: false,
+      },
+      {
         source: "/estaciones/:path*",
         destination: `${process.env.API_URL_ESTACIONES}/api/:path*`,
         basePath: false,

@@ -596,7 +596,7 @@ export default function CreateForm({
         )}
 
         {tipoComponente?.id?.toString() === "28" ||
-          (tipoComponente?.id?.toString() === "396" && (
+          (tipoComponente?.id?.toString() === "397" && (
             <>
               <hr className="col-span-3" />
               <hgroup className="col-span-3" id="relacion-jerarquica">

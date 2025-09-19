@@ -1,3 +1,4 @@
+import { MS_CONTACTO } from "@/shared/services-v2/constants";
 import axios from "axios";
 
 export const bff = axios.create({
@@ -34,7 +35,7 @@ export const estaciones = axios.create({
 });
 
 export const contacto = axios.create({
-  baseURL: "/test",
+  baseURL: MS_CONTACTO,
   headers: {
     "X-CORRELATION-ID": "111|11|1",
     "X-USER-ID": "12",

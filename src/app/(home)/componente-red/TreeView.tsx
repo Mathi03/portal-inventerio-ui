@@ -375,7 +375,7 @@ const TreeView = ({
         <Modal
           open={openCliente}
           onClose={() => setOpenCliente(false)}
-          size={{ width: "70%", height: "50%" }}
+          size={{ width: "90%", height: "80%" }}
         >
           <ClientInfo clientId={selectedId} />
         </Modal>
