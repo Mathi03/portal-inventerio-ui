@@ -91,7 +91,7 @@ export class ComponenteRedService {
     queryComponenteRed: QueryComponenteRedDto
   ) {
     const response = await bff.get<PaginationDto<ComponenteRedType[]>>(
-      "http://portal-inventario-bff-git-dev-front-oss.apps.tmve-nprod-1.tmve-qa.com/api/"+`v1/portal/components/${attribute}/${value}/attribute`,
+      `v1/portal/components/${attribute}/${value}/attribute`,
       {
         params: queryComponenteRed,
       }
