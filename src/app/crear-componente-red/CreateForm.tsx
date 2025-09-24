@@ -596,26 +596,27 @@ export default function CreateForm({
           </>
         )}
 
-        {tipoComponente?.id?.toString() === "28" ||
-          (tipoComponente?.id?.toString() === "397" && (
-            <>
-              <hr className="col-span-3" />
-              <hgroup className="col-span-3" id="relacion-jerarquica">
-                <h4 className="text-[20px]">Arbol</h4>
-                <p>En esta sección se mostrara las relaciones entre nodos</p>
-              </hgroup>
-              <TreeView
-                tipoComponente={tipoComponente ?? null}
-                attributes={attribute}
-                // attribute={attribute}
-                // onAttributes={onAttributes}
-                // service={service}
-                // onServices={onServices}
-              />
-            </>
-          ))}
+        {tipoComponente?.id?.toString() === "28" && (
+          <>
+            <hr className="col-span-3" />
+            <hgroup className="col-span-3" id="relacion-jerarquica">
+              <h4 className="text-[20px]">Arbol</h4>
+              <p>En esta sección se mostrara las relaciones entre nodos</p>
+            </hgroup>
+            <TreeView
+              tipoComponente={tipoComponente ?? null}
+              attributes={attribute}
+              // attribute={attribute}
+              // onAttributes={onAttributes}
+              // service={service}
+              // onServices={onServices}
+            />
+          </>
+        )}
 
-        {tipoComponente && (
+        {(tipoComponente?.id?.toString() === "5" ||
+          tipoComponente?.id?.toString() === "26" ||
+          tipoComponente?.id?.toString() === "27") && (
           <>
             <hr className="col-span-3" />
             <hgroup className="col-span-3" id="relacion-jerarquica">

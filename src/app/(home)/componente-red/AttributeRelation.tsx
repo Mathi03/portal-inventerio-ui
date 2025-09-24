@@ -50,6 +50,7 @@ const AttributeRelation = ({
       { title: "id", key: "id", maxWidth: "120px" },
       { title: "Nombre", key: "controlName" },
       { title: "Etiqueta", key: "controlLabel" },
+      { title: "Tipo Componente", key: "refComponentTypeLabel" },
       {
         title: "Ver Componente",
         render: (row) => (
