@@ -615,19 +615,19 @@ export default function CreateForm({
             </>
           ))}
 
-        {tipoComponente &&
-            <>
-              <hr className="col-span-3" />
-              <hgroup className="col-span-3" id="relacion-jerarquica">
-                <h4 className="text-[20px]">Relacion de Atributos</h4>
-                <p>En esta sección se mostrara las relaciones entre nodos</p>
-              </hgroup>
-              <AttributeRelation
-                tipoComponente={tipoComponente ?? null}
-                attributes={attribute}
-              />
-            </>
-          }
+        {tipoComponente && (
+          <>
+            <hr className="col-span-3" />
+            <hgroup className="col-span-3" id="relacion-jerarquica">
+              <h4 className="text-[20px]">Relacion de Atributos</h4>
+              <p>En esta sección se mostrara las relaciones entre nodos</p>
+            </hgroup>
+            <AttributeRelation
+              tipoComponente={tipoComponente ?? null}
+              controlId={Number(componenteRed?.controlId)}
+            />
+          </>
+        )}
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="observacion">
           <h4 className="text-[20px]">Observación</h4>

@@ -10,27 +10,28 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AttributeRelationProps = {
   tipoComponente: TipoComponenteType | null;
-  attributes: { [key: string]: any };
   disabled?: boolean;
+  controlId: number;
 };
 
-type AttributeSpec =
-  | "id_control_nodo_a"
-  | "id_control_tarjeta_a"
-  | "id_componente_puerto_a";
+type AttributeSpec = "id_control_nodo_a" | "id_control_nodo_b";
 
-const clienteSpecs: AttributeSpec[] = [
-  "id_control_nodo_a",
-  "id_control_tarjeta_a",
-  "id_componente_puerto_a",
+type ClienteSpecsType = {
+  label: string;
+  name: AttributeSpec;
+};
+
+const clienteSpecs: ClienteSpecsType[] = [
+  { name: "id_control_nodo_a", label: "Cliente" },
+  { name: "id_control_nodo_b", label: "Movistar" },
 ];
 
 const limit = 10;
 
 const AttributeRelation = ({
   tipoComponente,
-  attributes,
   disabled = false,
+  controlId,
 }: AttributeRelationProps) => {
   const { openSnackbar } = useSnackbar();
   const [openForm, setOpenForm] = useState(false);
@@ -71,7 +72,7 @@ const AttributeRelation = ({
     setIsLoading(true);
     const componenteRed = new ComponenteRedService();
     const key = selectedAttribute;
-    const value = attributes[key];
+    const value = controlId?.toString();
     try {
       const response = await componenteRed.findByAttribute(key, value, {
         page,
@@ -91,17 +92,17 @@ const AttributeRelation = ({
     } finally {
       setIsLoading(false);
     }
-  }, [page, openSnackbar, selectedAttribute, attributes]);
+  }, [page, openSnackbar, selectedAttribute, controlId]);
 
   useEffect(() => {
     getComponenteRedes();
   }, [getComponenteRedes]);
 
   /** ---- Validaciones iniciales ---- */
-  const configDataItem = tipoComponente ? tipoComponente.configData?.[0] : null;
-  const configAttributes = configDataItem?.configAttributes ?? [];
+  // const configDataItem = tipoComponente ? tipoComponente.configData?.[0] : null;
+  // const configAttributes = configDataItem?.configAttributes ?? [];
 
-  if (!tipoComponente || configAttributes.length === 0) {
+  if (!tipoComponente) {
     return (
       <div className="p-4 text-center text-sm text-gray-500">
         No existe configuración de atributos
@@ -109,18 +110,18 @@ const AttributeRelation = ({
     );
   }
 
-  const hasValidAttribute = clienteSpecs.some((spec) => spec in attributes);
-  if (!hasValidAttribute) return null;
+  // const hasValidAttribute = clienteSpecs.some((spec) => spec in attributes);
+  // if (!hasValidAttribute) return null;
 
   /** ---- Opciones renderizadas como cards con radio ---- */
-  const availableSpecs = configAttributes.filter((attr) =>
-    clienteSpecs.includes(attr.name as AttributeSpec)
-  );
+  // const availableSpecs = configAttributes.filter((attr) =>
+  //   clienteSpecs.includes(attr.name as AttributeSpec)
+  // );
 
   return (
     <div className="col-span-3 h-[50svh] grid grid-rows-[auto,1fr] gap-4">
       <div className="flex gap-4">
-        {availableSpecs.map((attr) => {
+        {clienteSpecs.map((attr) => {
           const specName = attr.name as AttributeSpec;
           return (
             <label
