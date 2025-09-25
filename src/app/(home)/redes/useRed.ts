@@ -2,7 +2,9 @@ import { CreateRedDto } from "@/core/red/dto/create.dto";
 import { UpdateRedDto } from "@/core/red/dto/update.dto";
 import { RedService } from "@/core/red/red.service";
 import { RedType } from "@/core/red/red.type";
+import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
 import { useSnackbar } from "@telefonica/mistica";
+import axios from "axios";
 import { useCallback, useState } from "react";
 const redService = new RedService();
 
@@ -20,7 +22,7 @@ export default function useRed() {
         .then(() =>
           openSnackbar({
             message: `Red "${name}" creado`,
-          }),
+          })
         )
         .catch(() => {
           openSnackbar({
@@ -29,7 +31,7 @@ export default function useRed() {
           });
         });
     },
-    [openSnackbar],
+    [openSnackbar]
   );
 
   const getRedes = useCallback(
@@ -43,12 +45,23 @@ export default function useRed() {
       limit?: number;
     }) => {
       setLoadingRedes(true);
-      const { data } = await redService.findAll({ page, limit, q: search });
-      setRedes(data.data.data);
-      setRedCount(data.data.total);
-      setLoadingRedes(false);
+      try {
+        const { data } = await redService.findAll({ page, limit, q: search });
+        setRedes(data.data.data);
+        setRedCount(data.data.total);
+      } catch (err) {
+        openSnackbar({
+          message:
+            axios.isAxiosError(err) && err.response
+              ? errorMessageInAPI
+              : errorGeneric,
+          type: "CRITICAL",
+        });
+      } finally {
+        setLoadingRedes(false);
+      }
     },
-    [],
+    [openSnackbar]
   );
 
   const updateRed = useCallback(
@@ -62,16 +75,16 @@ export default function useRed() {
         .then(() =>
           openSnackbar({
             message: `Red ${name} actualizado`,
-          }),
+          })
         )
         .catch(() =>
           openSnackbar({
             message: `Ha ocurrido un error al momento de actualizar la red "${name}"`,
             type: "CRITICAL",
-          }),
+          })
         );
     },
-    [openSnackbar],
+    [openSnackbar]
   );
 
   const deteleRed = useCallback(
@@ -83,10 +96,10 @@ export default function useRed() {
           openSnackbar({
             message: `Ha ocurrido un error al momento de eliminar la red "${name}"`,
             type: "CRITICAL",
-          }),
+          })
         );
     },
-    [openSnackbar],
+    [openSnackbar]
   );
 
   return {

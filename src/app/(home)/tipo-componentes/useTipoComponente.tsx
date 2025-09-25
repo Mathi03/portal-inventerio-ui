@@ -5,7 +5,9 @@ import {
   AllTipoComponenteResponse,
   TipoComponenteType,
 } from "@/core/tipo-componente/tipo-componente.type";
+import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
 import { useSnackbar } from "@telefonica/mistica";
+import axios from "axios";
 import { useCallback, useState } from "react";
 const tipoComponenteService = new TipoComponenteService();
 
@@ -51,39 +53,71 @@ export default function useTipoComponente({
   );
 
   const getTipoComponentes = useCallback(
-    async (params: {
-      search?: string | null;
-      page?: number;
-      limit?: number;
-      [key: string]: any;
-    }) => {
+    async (
+      params: {
+        search?: string | null;
+        page?: number;
+        limit?: number;
+        [key: string]: any;
+      },
+      signal?: AbortSignal
+    ) => {
       setLoadingTipoComponentes(true);
+      try {
+        const { search, ...restFilters } = params;
+        const cleanedFilters = Object.fromEntries(
+          Object.entries(restFilters).filter(
+            ([, value]) => value !== "" && value !== null
+          )
+        );
 
-      const { search, ...restFilters } = params;
+        const { data } = await tipoComponenteService.findAll(
+          {
+            q: search,
+            ...cleanedFilters,
+          },
+          signal
+        );
 
-      const cleanedFilters = Object.fromEntries(
-        Object.entries(restFilters).filter(
-          ([, value]) => value !== "" && value !== null
-        )
-      );
-
-      const { data } = await tipoComponenteService.findAll({
-        q: search,
-        ...cleanedFilters,
-      });
-
-      setTipoComponentes(data.data.data);
-      setTipoComponenteCount(data.data.total);
-      setLoadingTipoComponentes(false);
+        setTipoComponentes(data.data.data);
+        setTipoComponenteCount(data.data.total);
+      } catch (err) {
+        if (axios.isCancel(err)) {
+          console.log("Consulta cancelada");
+          return;
+        }
+        openSnackbar({
+          message:
+            axios.isAxiosError(err) && err.response
+              ? errorMessageInAPI
+              : errorGeneric,
+          type: "CRITICAL",
+        });
+      } finally {
+        setLoadingTipoComponentes(false);
+      }
     },
     []
   );
 
   const allTipoComponentes = useCallback(
-    async ({ idList }: { idList: Number[] }) => {
+    async ({ idList, onError }: { idList: number[]; onError?: () => void }) => {
       setLoadingTipoComponentes(true);
-      const { data } = await tipoComponenteService.All({ idList: idList });
-      setAllTipoComponente(data);
+      try {
+        const { data } = await tipoComponenteService.All({ idList: idList });
+        setAllTipoComponente(data);
+      } catch (err) {
+        openSnackbar({
+          message:
+            axios.isAxiosError(err) && err.response
+              ? errorMessageInAPI
+              : errorGeneric,
+          type: "CRITICAL",
+        });
+        if (onError) onError();
+      } finally {
+        setLoadingTipoComponentes(false);
+      }
     },
     []
   );

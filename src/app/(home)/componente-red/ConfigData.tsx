@@ -8,31 +8,9 @@ import TabStripTab from "@/components/TabStripTab";
 import InputDynamic from "./InputDynamic";
 import Link from "next/link";
 import Icon from "@/components/Icon";
-import { AxiosInstance } from "axios";
-import {
-  bff,
-  cnr,
-  contacto,
-  estaciones,
-  msDirecciones,
-  source,
-} from "@/core/config";
 import { RELACIONES_TIPO_CIRCUITO } from "@/core/config/relacionesServicios";
-
-const urlClientMap: Record<string, AxiosInstance> = {
-  [process.env.NEXT_PUBLIC_API_URL!]: bff,
-  [process.env.NEXT_PUBLIC_API_URL_MS_DIRECCIONES!]: msDirecciones,
-  [process.env.NEXT_PUBLIC_API_URL_ESTACIONES!]: estaciones,
-  [process.env.NEXT_PUBLIC_API_URL_CONTACTO!]: contacto,
-  [process.env.NEXT_PUBLIC_API_URL_CNR!]: cnr,
-};
-
-function getAxiosClientFromUrl(url: string): AxiosInstance {
-  const entry = Object.entries(urlClientMap).find(([baseUrl]) =>
-    url.startsWith(baseUrl)
-  );
-  return entry?.[1] || source;
-}
+import { useFetchCached } from "./useFetchCached";
+import BlockUI from "@/components/BlockUi";
 
 function camelToSnake(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
@@ -42,21 +20,10 @@ function camelToSnake(str: string): string {
 const normalizeApiData = (r: any) =>
   r?.data?.data?.data ?? r?.data?.data ?? r?.data ?? r;
 
-const buildCacheKey = (url: string) => {
-  const u = new URL(url);
-  // orden estable de query:
-  const entries = [...u.searchParams.entries()].sort(([a], [b]) =>
-    a.localeCompare(b)
-  );
-  u.search = "";
-  for (const [k, v] of entries) u.searchParams.append(k, v);
-  return u.toString();
-};
-
 const ensurePaged = (url: string) => {
   const u = new URL(url);
-  if (!u.searchParams.has("page")) u.searchParams.set("page", "1");
-  if (!u.searchParams.has("limit")) u.searchParams.set("limit", "10");
+  u.searchParams.set("page", "1");
+  u.searchParams.set("limit", "10");
   return u.toString();
 };
 
@@ -116,6 +83,7 @@ interface ConfigDataProps {
   networkId: number | null;
   regionId: number | null;
   stationId: number | null;
+  disabled?: boolean;
 }
 
 export default function ConfigData({
@@ -127,7 +95,10 @@ export default function ConfigData({
   networkId,
   regionId,
   stationId,
+  disabled = false,
 }: ConfigDataProps) {
+  const fetchCached = useFetchCached();
+
   const [selectedTab, setSelectedTab] = useState(0);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [dynamicOptions, setDynamicOptions] = useState<Record<string, any[]>>(
@@ -150,36 +121,6 @@ export default function ConfigData({
   const configAttributes = configDataItem?.configAttributes ?? [];
   const configServices = configDataItem?.configServices ?? [];
 
-  const fetchCached = useCallback(async (url: string) => {
-    const key = buildCacheKey(url);
-
-    if (dataCacheRef.current.has(key)) {
-      return dataCacheRef.current.get(key);
-    }
-    if (inflightRef.current.has(key)) {
-      return inflightRef.current.get(key);
-    }
-
-    const parsed = new URL(url);
-    const client = getAxiosClientFromUrl(parsed.origin + parsed.pathname);
-
-    const p = client
-      .get(url)
-      .then((res) => {
-        const data = normalizeApiData(res);
-        dataCacheRef.current.set(key, data);
-        inflightRef.current.delete(key);
-        return data;
-      })
-      .catch((err) => {
-        inflightRef.current.delete(key);
-        throw err;
-      });
-
-    inflightRef.current.set(key, p);
-    return p;
-  }, []);
-
   useEffect(() => {
     dataCacheRef.current.clear();
     inflightRef.current.clear();
@@ -195,7 +136,9 @@ export default function ConfigData({
       if (searchQuery) base.searchParams.set("q", searchQuery);
       const finalUrl = base.toString();
 
-      const data = await fetchCached(finalUrl);
+      const response = await fetchCached(finalUrl);
+      const data = normalizeApiData(response);
+
       const items: any[] = Array.isArray(data) ? data : (data?.items ?? data);
 
       const labelKey = responseFields?.[0] ?? "name";
@@ -211,15 +154,21 @@ export default function ConfigData({
     }
   };
 
-  const onChange = async (name: string, value: any) => {
+  const onChange = async (name: string, value: any, inObject?: boolean) => {
     if (name.includes("#")) {
       const [groupKey, fieldKey] = name.split("#");
 
       setFormData((prev) => {
         // Obtenemos el array actual (o lo inicializamos con un objeto vacío)
-        const existingGroup = prev[groupKey] ?? [{}];
-        const updatedGroup = { ...existingGroup[0], [fieldKey]: value };
-        return { ...prev, [groupKey]: [updatedGroup] };
+        if (inObject) {
+          const existingGroup = prev[groupKey] ?? {};
+          const updatedGroup = { ...existingGroup, [fieldKey]: value };
+          return { ...prev, [groupKey]: updatedGroup };
+        } else {
+          const existingGroup = prev[groupKey] ?? [{}];
+          const updatedGroup = { ...existingGroup[0], [fieldKey]: value };
+          return { ...prev, [groupKey]: [updatedGroup] };
+        }
       });
     } else {
       // Si no contiene #, se guarda normalmente
@@ -302,7 +251,9 @@ export default function ConfigData({
       ) => {
         const u = new URL(url);
         u.searchParams.set("page", String(page));
-        const limit = Number(u.searchParams.get("limit") ?? "10");
+        // const limit = Number(u.searchParams.get("limit") ?? "10");
+        u.searchParams.set("limit", "10");
+        const limit = 10;
         const options = await fetchOptions(
           u.toString(),
           responseFields,
@@ -490,7 +441,11 @@ export default function ConfigData({
     };
   }, [tipoComponente]);
 
-  const renderInputs = (attributes: ConfigDataAttribute[], namePrefix = "") =>
+  const renderInputs = (
+    attributes: ConfigDataAttribute[],
+    namePrefix = "",
+    inObject: boolean = false
+  ) =>
     attributes
       .filter((attr) => attr.html_form_type)
       .map((attr, idx) => {
@@ -514,7 +469,9 @@ export default function ConfigData({
               isPaginated && resolvedAsyncValues[attr.name]
                 ? resolvedAsyncValues[attr.name]
                 : namePrefix.includes("#")
-                  ? formData[namePrefix.split("#")[0]]?.[0]?.[attr.name]
+                  ? inObject
+                    ? formData[namePrefix.split("#")[0]]?.[attr.name]
+                    : formData[namePrefix.split("#")[0]]?.[0]?.[attr.name]
                   : formData[`${namePrefix}${attr.name}`]
             }
             type={attr.type}
@@ -531,14 +488,17 @@ export default function ConfigData({
             networkId={networkId}
             regionId={regionId}
             stationId={stationId}
-            onChange={onChange}
+            onChange={(nameOC, valueOC) => onChange(nameOC, valueOC, inObject)}
             isPaginated={isPaginated}
             loadPaginatedOptions={loader}
           />
         );
       });
 
-  const renderNestedInputs = (attributes: ConfigDataAttribute[]) => {
+  const renderNestedInputs = (
+    attributes: ConfigDataAttribute[],
+    isService: boolean = false
+  ) => {
     const nested = attributes.filter(
       (a) => a.type === "array" && a.atribs_config
     );
@@ -552,7 +512,7 @@ export default function ConfigData({
             <section key={gName} className="mt-3">
               <h5 className="text-[16px] font-medium mb-2">{gName}</h5>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {renderInputs(grouped[gName] || [], `${attr.name}#`)}
+                {renderInputs(grouped[gName] || [], `${attr.name}#`, isService)}
               </div>
             </section>
           ))}
@@ -560,8 +520,10 @@ export default function ConfigData({
       );
     });
   };
-
-  const renderTabContent = (items: ConfigDataAttribute[]) => {
+  const renderTabContent = (
+    items: ConfigDataAttribute[],
+    isService: boolean = false
+  ) => {
     const flatItems = items.filter((a) => a.type !== "array");
     const grouped = groupByGroup(flatItems);
     const groupNames = sortGroupNames(Object.keys(grouped));
@@ -579,7 +541,7 @@ export default function ConfigData({
             </section>
           ))}
         </div>
-        {renderNestedInputs(items)}
+        {renderNestedInputs(items, isService)}
       </div>
     );
   };
@@ -598,7 +560,8 @@ export default function ConfigData({
           renderTabContent(
             filteredConfigServices.length > 0
               ? filteredConfigServices
-              : configServices
+              : configServices,
+            true
           ),
       });
     return tabsToRender;
@@ -637,17 +600,18 @@ export default function ConfigData({
     );
 
   return (
-    <TabStrip
-      selected={selectedTab}
-      onSelect={({ selected }) => setSelectedTab(selected)}
-      className="col-span-full"
-      header={<Header />}
-    >
-      {tabsData().map((tab, index) => (
-        <TabStripTab key={index} title={tab.title}>
-          {tab.content()}
-        </TabStripTab>
-      ))}
-    </TabStrip>
+    <BlockUI blocked={disabled} className="col-span-full">
+      <TabStrip
+        selected={selectedTab}
+        onSelect={({ selected }) => setSelectedTab(selected)}
+        header={<Header />}
+      >
+        {tabsData().map((tab, index) => (
+          <TabStripTab key={index} title={tab.title}>
+            {tab.content()}
+          </TabStripTab>
+        ))}
+      </TabStrip>
+    </BlockUI>
   );
 }

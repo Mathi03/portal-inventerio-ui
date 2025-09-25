@@ -45,7 +45,7 @@ export class ComponenteRedService {
     componenteRed.control = control;
     //GuillermocomponenteRed.service = services;
     componenteRed.relations = relations;*/
-    console.log("getId ===> ", componenteRed)
+    console.log("getId ===> ", componenteRed);
     return componenteRed;
   }
 
@@ -57,11 +57,7 @@ export class ComponenteRedService {
     return await bff.delete(`/v1/portal/components/${id}`);
   }
 
-  public async approve(
-    id: number,
-    approvalComment: string,
-    status: number
-  ) {
+  public async approve(id: number, approvalComment: string, status: number) {
     return await bff.patch(`/v1/portal/components/${id}`, {
       approvalComment,
       status,
@@ -81,6 +77,23 @@ export class ComponenteRedService {
       `/v1/portal/components/${id}/client`,
       {
         params,
+      }
+    );
+    response.data.data.data = response.data.data.data.filter(
+      (componente) => !componente.disabledAt
+    );
+    return response;
+  }
+
+  public async findByAttribute(
+    attribute: string,
+    value: string,
+    queryComponenteRed: QueryComponenteRedDto
+  ) {
+    const response = await bff.get<PaginationDto<ComponenteRedType[]>>(
+      `v1/portal/components/${attribute}/${value}/attribute`,
+      {
+        params: queryComponenteRed,
       }
     );
     response.data.data.data = response.data.data.data.filter(

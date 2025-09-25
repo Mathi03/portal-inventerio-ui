@@ -8,7 +8,7 @@ import RelacionJerarquica from "./Relatcion-jerarquica";
 import { RedService } from "@/core/red/red.service";
 import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
 import { FuenteService } from "@/core/fuente/fuente.service";
-import { msDirecciones } from "@/core/config";
+import { estaciones as estacionesInstance, msDirecciones } from "@/core/config";
 
 import { RedType } from "@/core/red/red.type";
 import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
@@ -17,19 +17,16 @@ import { RegionType } from "@/core/region/region.type";
 import Table from "@/components/Table/Table";
 import Pagination from "@/components/Pagination";
 import { UpdateComponenteRedDto } from "@/core/componente-red/dto/update.dto";
-import { useComponenteRedForm } from "./hooks/useComponenteRedForm";
+import {
+  ModeCreateForm,
+  useComponenteRedForm,
+} from "./hooks/useComponenteRedForm";
 import { SearchableSelectHandle } from "@/components/SearchableSelect";
 import { useModalStore } from "@/hooks/modalStorage";
 import ConfigData from "../(home)/componente-red/ConfigData";
-import { EstacionType } from "@/core/estaciones/estacion.type";
 import TreeView from "../(home)/componente-red/TreeView";
-
-const estaciones: EstacionType[] = [
-  {
-    nombre: "Estación Caracas",
-    id: 1,
-  },
-];
+import { SelectPaginate } from "@/components/SelectPaginate";
+import AttributeRelation from "../(home)/componente-red/AttributeRelation";
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -38,7 +35,7 @@ type FormValues = (CreateComponenteRedDto | UpdateComponenteRedDto) & {
 };
 
 interface BaseCreateFormProps {
-  mode?: "create" | "update" | "approve" | "popup" | "read";
+  mode?: ModeCreateForm;
   componentTypeId?: number;
 }
 
@@ -114,7 +111,9 @@ export default function CreateForm({
   const [fuentes, setFuentes] = useState<FuenteType[]>([]);
   const [regiones, setRegiones] = useState<RegionType[]>([]);
   const [region, setRegion] = useState<RegionType | null>(null);
-  const [estacion, setEstacion] = useState<EstacionType | null>(null);
+  const [estacion, setEstacion] = useState<string | null>(
+    componenteRed?.stationId?.toString() || null
+  );
 
   const [commentPage, setCommentPage] = useState(1);
   const [commentLimit, setCommentLimit] = useState(5);
@@ -155,7 +154,7 @@ export default function CreateForm({
 
   const initialValues = useMemo(
     () => ({
-      componentId: componenteRed?.componentId.toString().trim(),
+      componentId: componenteRed?.componentId?.toString().trim(),
       code: componenteRed?.code,
       observation: componenteRed?.observation?.toString() || "",
       regionId:
@@ -183,56 +182,84 @@ export default function CreateForm({
   const getRedes = useCallback(async () => {
     setIsLoadingRedes(true);
     const redService = new RedService();
-    const { data } = await redService.findAll({});
-    const activeNetworks = data.data.data.filter(
-      (r: RedType) => r.status === 1
-    );
-    setRedes(activeNetworks);
-    if (networkId) {
-      setRed(activeNetworks.find((r) => r.id === networkId) ?? null);
+    if (mode === "create") {
+      const { data } = await redService.findAll({});
+      const activeNetworks = data.data.data.filter(
+        (r: RedType) => r.status === 1
+      );
+      setRedes(activeNetworks);
+      if (networkId) {
+        setRed(activeNetworks.find((r) => r.id === networkId) ?? null);
+      }
+    } else {
+      const { data } = await redService.getById(
+        Number(componenteRed?.refNetworkId)
+      );
+      setRedes([data?.data]);
+      setRed(data?.data ?? null);
     }
+
     setIsLoadingRedes(false);
   }, [networkId]);
 
-  useEffect(() => {
-    if (componenteRed !== undefined && componenteRed !== null) {
-      if (componenteRed.refNetworkId)
-        setRed(
-          redes.find(
-            (r) => r.id?.toString() === componenteRed.refNetworkId?.toString()
-          ) || null
-        );
-      if (componenteRed.regionId)
-        setRegion(
-          regiones.find(
-            (r) => r.id?.toString() === componenteRed.regionId?.toString()
-          ) || null
-        );
-      if (componenteRed.stationId)
-        setEstacion(
-          estaciones.find(
-            (r) => r.id?.toString() === componenteRed.stationId?.toString()
-          ) || null
-        );
-    }
-  }, [redes, componenteRed, regiones, estaciones]);
+  // useEffect(() => {
+  //   if (componenteRed !== undefined && componenteRed !== null) {
+  //     if (componenteRed.refNetworkId)
+  //       setRed(
+  //         redes.find(
+  //           (r) => r.id?.toString() === componenteRed.refNetworkId?.toString()
+  //         ) || null
+  //       );
+  //     if (componenteRed.regionId)
+  //       setRegion(
+  //         regiones.find(
+  //           (r) => r.id?.toString() === componenteRed.regionId?.toString()
+  //         ) || null
+  //       );
+  //     // if (componenteRed.stationId)
+  //     //   setEstacion(
+  //     //     estaciones.find(
+  //     //       (r) => r.id?.toString() === componenteRed.stationId?.toString()
+  //     //     ) || null
+  //     //   );
+  //   }
+  // }, [redes, componenteRed, regiones]);
 
   const getTipoComponentes = useCallback(async () => {
-    if (!red) return;
+    // if (!red) return;
     setIsLoadingTC(true);
     const tcService = new TipoComponenteService();
-    const { data } = await tcService.getByNetworkId(red?.id);
-    const activeComponenteTypes = data.filter(
-      (t: TipoComponenteType) => t.status === 1
-    );
-    setTipoComponentes(activeComponenteTypes);
-    if (mode === "update" && componenteRed) {
-      setTipoComponente(
-        activeComponenteTypes.find(
-          (t: TipoComponenteType) => t.id === +componenteRed.refComponentTypeId
-        ) ?? null
+
+    if (mode === "create") {
+      // Filtro por RedId
+      // -----------------
+      // const { data } = await tcService.getByNetworkId(red?.id);
+      // -----------------
+      // Sin Filtro - todos los tipo componentes
+      const response = await tcService.findAll({});
+      const data = response?.data?.data?.data;
+      // -----------------
+      const activeComponenteTypes = data.filter(
+        (t: TipoComponenteType) => t.status === 1
       );
+      setTipoComponentes(activeComponenteTypes);
+      if (mode !== "create" && componenteRed) {
+        setTipoComponente(
+          activeComponenteTypes.find(
+            (t: TipoComponenteType) =>
+              t.id === +componenteRed.refComponentTypeId
+          ) ?? null
+        );
+      }
+    } else {
+      const response = await tcService.getById(
+        Number(componenteRed?.refComponentTypeId)
+      );
+      const data = response?.data;
+      setTipoComponentes([data]);
+      setTipoComponente(data);
     }
+
     // if (mode === "update" && componentTypeId) {
     //   setTipoComponente(
     //     activeComponenteTypes.find(
@@ -241,11 +268,24 @@ export default function CreateForm({
     //   );
     // }
     setIsLoadingTC(false);
-  }, [red]);
+  }, []);
 
   const getFuentes = useCallback(async () => {
     setIsLoadingFuentes(true);
     const fuenteService = new FuenteService();
+    // if (mode === "create") {
+    //   const { data } = await fuenteService.findAll({
+    //     refNetworkId: red?.id,
+    //   });
+    //   setFuentes(data.data.data.filter((f: FuenteType) => f.status === 1));
+    //   setIsLoadingFuentes(false);
+    // } else {
+    //   const { data } = await fuenteService.getById(
+    //     Number(componenteRed?.refSourceId)
+    //   );
+    //   setFuentes([data.data]);
+    // }
+    // const fuenteService = new FuenteService();
     const { data } = await fuenteService.findAll({
       refNetworkId: red?.id,
     });
@@ -270,11 +310,8 @@ export default function CreateForm({
   useEffect(() => {
     getRedes();
     getRegiones();
-  }, [getRedes, getRegiones]);
-
-  useEffect(() => {
     getTipoComponentes();
-  }, [getTipoComponentes]);
+  }, [getRedes, getRegiones, getTipoComponentes]);
 
   const isValidToSearch = red && red !== null;
 
@@ -310,13 +347,6 @@ export default function CreateForm({
       getConfigRelation();
     }
   }, [tipoComponente]);
-
-  // useEffect(() => {
-  //   getRedes();
-  //   getTipoComponentes();
-  //   getFuentes();
-  //   getRegiones();
-  // }, [getRedes, getTipoComponentes, getFuentes, getRegiones]);
 
   useEffect(() => {
     if (componenteRed) {
@@ -391,7 +421,12 @@ export default function CreateForm({
       </div>
 
       <Form
-        onSubmit={(value) => onSubmit(value as FormValues)}
+        onSubmit={(value) =>
+          onSubmit({
+            ...value,
+            stationId: Number(estacion),
+          } as FormValues)
+        }
         className="grid grid-cols-3 content-start gap-4 px-6"
         initialValues={initialValues}
       >
@@ -430,12 +465,8 @@ export default function CreateForm({
           // ref={networkInputRef}
           name={"refNetworkId" as FormItem}
           label="Red"
-          disabled={
-            mode === "approve" || mode === "popup" || mode === "read"
-              ? true
-              : isLoadingRedes
-          }
-          optional={mode === "approve" || mode === "popup" || mode === "read"}
+          disabled={mode !== "create" ? true : isLoadingRedes}
+          optional={mode !== "create"}
           fullWidth
           helperText={isLoadingRedes ? "Cargando redes..." : undefined}
           options={redes.map((red) => ({
@@ -450,8 +481,8 @@ export default function CreateForm({
         <Select
           name={"refComponentTypeId" as FormItem}
           label="Tipo de componente"
-          disabled={mode === "approve" || mode === "read" ? true : isLoadingTC}
-          optional={mode === "approve" || mode === "read"}
+          disabled={mode !== "create" ? true : isLoadingTC}
+          optional={mode !== "create"}
           fullWidth
           helperText={
             isLoadingTC ? "Cargando tipos de componente..." : undefined
@@ -470,13 +501,13 @@ export default function CreateForm({
           name={"refSourceId" as FormItem}
           label="Fuente"
           disabled={
-            mode === "approve" || mode === "read"
+            mode !== "create"
               ? true
               : !isValidToSearch
                 ? true
                 : isLoadingFuentes
           }
-          optional={mode === "approve" || mode === "read"}
+          optional={mode !== "create"}
           fullWidth
           helperText={isLoadingFuentes ? "Cargando fuentes..." : undefined}
           options={fuentes.map((f) => ({
@@ -506,22 +537,20 @@ export default function CreateForm({
             );
           }}
         />
-        <Select
-          name={"stationId" as FormItem}
+        <SelectPaginate
           label="Estación"
-          disabled={mode === "approve" || mode === "popup" || mode === "read"}
-          optional={mode === "approve" || mode === "popup" || mode === "read"}
-          options={estaciones.map((tc) => ({
-            text: tc.nombre,
-            value: tc.id.toString(),
-          }))}
-          fullWidth
-          onChangeValue={(value) => {
-            setEstacion(
-              estaciones.find((s) => s?.id?.toString() === value?.toString()) ??
-                null
-            );
+          value={estacion ?? ""}
+          clientToFetch={estacionesInstance}
+          searchType="byId"
+          fieldUrl={"v1/estaciones"}
+          fieldKey="id"
+          fieldName="nombre"
+          mapById="estacion"
+          onChange={(value) => {
+            setEstacion(value?.toString() ?? "");
           }}
+          required
+          disabled={mode === "read"}
         />
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="config-adicional"></hgroup>
@@ -533,14 +562,15 @@ export default function CreateForm({
           services={service}
           networkId={Number(red?.id)}
           regionId={Number(region?.id)}
-          stationId={Number(estacion?.id)}
+          stationId={Number(estacion)}
+          disabled={mode === "read"}
           // attribute={attribute}
           // onAttributes={onAttributes}
           // service={service}
           // onServices={onServices}
         />
 
-        {red?.id?.toString() === "16" && (
+        {tipoComponente?.id?.toString() === "28" && (
           <>
             <hr className="col-span-3" />
             <hgroup className="col-span-3" id="relacion-jerarquica">
@@ -566,7 +596,7 @@ export default function CreateForm({
           </>
         )}
 
-        {red?.id?.toString() === "16" && (
+        {tipoComponente?.id?.toString() === "28" && (
           <>
             <hr className="col-span-3" />
             <hgroup className="col-span-3" id="relacion-jerarquica">
@@ -580,6 +610,22 @@ export default function CreateForm({
               // onAttributes={onAttributes}
               // service={service}
               // onServices={onServices}
+            />
+          </>
+        )}
+
+        {(tipoComponente?.id?.toString() === "5" ||
+          tipoComponente?.id?.toString() === "26" ||
+          tipoComponente?.id?.toString() === "27") && (
+          <>
+            <hr className="col-span-3" />
+            <hgroup className="col-span-3" id="relacion-jerarquica">
+              <h4 className="text-[20px]">Relacion de Atributos</h4>
+              <p>En esta sección se mostrara las relaciones entre nodos</p>
+            </hgroup>
+            <AttributeRelation
+              tipoComponente={tipoComponente ?? null}
+              controlId={Number(componenteRed?.controlId)}
             />
           </>
         )}
@@ -614,19 +660,19 @@ export default function CreateForm({
                   { title: "Comentario", render: (row: any) => row.comment },
                 ]}
                 rows={paginatedComments}
+                pagination={
+                  <Pagination
+                    page={commentPage}
+                    limit={commentLimit}
+                    items={parsedComments.length}
+                    onChangePage={(p) => setCommentPage(p)}
+                    onChangeLimit={(l) => {
+                      setCommentLimit(l);
+                      setCommentPage(1);
+                    }}
+                  />
+                }
               />
-              <div className="mt-4">
-                <Pagination
-                  page={commentPage}
-                  limit={commentLimit}
-                  items={parsedComments.length}
-                  onChangePage={(p) => setCommentPage(p)}
-                  onChangeLimit={(l) => {
-                    setCommentLimit(l);
-                    setCommentPage(1);
-                  }}
-                />
-              </div>
             </div>
           </>
         )}

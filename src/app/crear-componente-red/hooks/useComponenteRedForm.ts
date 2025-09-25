@@ -9,6 +9,8 @@ import { ComponenteRedService } from "@/core/componente-red/componente-red.servi
 import { RelacionJerarquicaService } from "@/core/relacion-jerarquica/relacion-jerarquica.service";
 import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
 
+export type ModeCreateForm = "create" | "update" | "approve" | "popup" | "read";
+
 export type FormValues = (CreateComponenteRedDto | UpdateComponenteRedDto) & {
   commentApproval?: string;
 };
@@ -18,7 +20,7 @@ export function useComponenteRedForm({
   mode,
 }: {
   componenteRed?: ComponenteRedType;
-  mode: "create" | "update" | "approve" | "popup";
+  mode: ModeCreateForm;
 }) {
   const { openSnackbar } = useSnackbar();
   const router = useRouter();

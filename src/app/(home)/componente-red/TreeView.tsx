@@ -1,36 +1,22 @@
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { AxiosInstance } from "axios";
-import {
-  bff,
-  msDirecciones,
-  estaciones,
-  contacto,
-  cnr,
-  source, // fallback
-} from "@/core/config";
 import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
 import Modal from "@/components/Modal";
 import CreateForm from "@/app/crear-componente-red/CreateForm";
+import { useFetchCached } from "./useFetchCached";
+import Icon from "@/components/Icon";
+import ClientInfo from "@/components/ClientInfo";
+import { useSnackbar } from "@telefonica/mistica";
 
 type AttrMap = { [key: string]: any };
 type NodeSpec = { key: string; level: number };
 
 const INDENTS = ["", "pl-0", "pl-6", "pl-10", "pl-14", "pl-20"];
 
-const urlClientMap: Record<string, AxiosInstance> = {
-  [process.env.NEXT_PUBLIC_API_URL!]: bff,
-  [process.env.NEXT_PUBLIC_API_URL_MS_DIRECCIONES!]: msDirecciones,
-  [process.env.NEXT_PUBLIC_API_URL_ESTACIONES!]: estaciones,
-  [process.env.NEXT_PUBLIC_API_URL_CONTACTO!]: contacto,
-  [process.env.NEXT_PUBLIC_API_URL_CNR!]: cnr,
-};
-
-function getAxiosClientFromUrl(url: string): AxiosInstance {
-  const entry = Object.entries(urlClientMap).find(([baseUrl]) =>
-    url.startsWith(baseUrl)
-  );
-  return entry?.[1] || source;
+function openNewWindow(id: number | string) {
+  const baseUrl = window.location.origin;
+  const url = `${baseUrl}/detalle-componente-red/${id}`;
+  window.open(url, "_blank");
 }
 
 const toStr = (x: any) => String(x);
@@ -54,19 +40,6 @@ const movistarSpecs: NodeSpec[] = [
 const camelToSnake = (str: string) =>
   str.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase();
 
-const normalizeApiData = (r: any) =>
-  r?.data?.data?.data ?? r?.data?.data ?? r?.data ?? r;
-
-const buildCacheKey = (url: string) => {
-  // normaliza host+path+query (orden estable)
-  const u = new URL(url);
-  const entries = [...u.searchParams.entries()].sort(([a], [b]) =>
-    a.localeCompare(b)
-  );
-  u.search = "";
-  for (const [k, v] of entries) u.searchParams.append(k, v);
-  return u.toString();
-};
 const buildResolvedUrl = (
   source: string,
   valueKey: string,
@@ -97,7 +70,11 @@ const TreeView = ({
   tipoComponente: TipoComponenteType | null;
   attributes: AttrMap | null;
 }) => {
+  const fetchCached = useFetchCached();
+  const { openSnackbar } = useSnackbar();
   const [openForm, setOpenForm] = useState(false);
+  const [openCliente, setOpenCliente] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [componenteRed, setComponenteRed] = useState<any | null>(null);
   const dataCacheRef = useRef<Map<string, any>>(new Map());
   const inflightRef = useRef<Map<string, Promise<any>>>(new Map());
@@ -119,40 +96,10 @@ const TreeView = ({
   );
   const getLabelFromCfg = (name: string) => getCfg(name)?.label || name;
 
-  const cacheRef = useRef<Map<string, any>>(new Map());
   const [resolved, setResolved] = useState<Record<string, string | string[]>>(
     {}
   );
 
-  const fetchCached = useCallback(async (url: string) => {
-    const key = buildCacheKey(url);
-
-    if (dataCacheRef.current.has(key)) {
-      return dataCacheRef.current.get(key);
-    }
-    if (inflightRef.current.has(key)) {
-      return inflightRef.current.get(key);
-    }
-
-    const client = getAxiosClientFromUrl(
-      new URL(url).origin + new URL(url).pathname
-    );
-    const promise = client
-      .get(url)
-      .then((res) => {
-        const normalized = normalizeApiData(res);
-        dataCacheRef.current.set(key, normalized);
-        inflightRef.current.delete(key);
-        return normalized;
-      })
-      .catch((err) => {
-        inflightRef.current.delete(key);
-        throw err;
-      });
-
-    inflightRef.current.set(key, promise);
-    return promise;
-  }, []);
   useEffect(() => {
     dataCacheRef.current.clear();
     inflightRef.current.clear();
@@ -238,6 +185,7 @@ const TreeView = ({
         try {
           if (formType === "select") {
             const id = toStr(rawVal);
+            if (id === "0") return;
             const obj = await getObjById(id);
             const label = getByPath(obj, labelPath) ?? id;
             if (mounted) setResolved((p) => ({ ...p, [key]: String(label) }));
@@ -267,7 +215,7 @@ const TreeView = ({
 
   // === CLICK: abre modal y pasa el resultado de fetchById usando el cacheRef ===
   const handleOpenFormForKey = useCallback(
-    async (k: string) => {
+    async (k: string, open?: boolean) => {
       const cfg: any = getCfg(k);
       const val = attrs[k];
       if (!cfg || val == null) return;
@@ -298,10 +246,14 @@ const TreeView = ({
           : Array.isArray(data?.data)
             ? data.data[0]
             : data;
-
-        setComponenteRed(obj ?? null);
-        setOpenForm(true);
+        if (open && obj) {
+          openNewWindow(obj?.id);
+        } else {
+          setComponenteRed(obj ?? null);
+          setOpenForm(true);
+        }
       } catch (err) {
+        console.error(err);
       }
     },
     [attrs, getCfg, fetchCached]
@@ -334,41 +286,68 @@ const TreeView = ({
   };
 
   const CheckItem = ({ k, level }: { k: string; level: number }) => (
-    <div
-      className={clsx(
-        "flex items-start gap-3",
-        INDENTS[level] || "pl-0",
-        "cursor-pointer hover:bg-neutral-50 rounded-md p-1"
-      )}
-      role="button"
-      onClick={() => handleOpenFormForKey(k)}
-      title="Ver detalle"
-    >
-      <span className="mt-0.5 grid h-5 w-5 place-items-center rounded border border-neutral-300 bg-white shrink-0">
-        <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
-          <path
-            d="M7.5 13.2 4.8 10.5l-1.1 1.1 3.8 3.8 8-8-1.1-1.1-6.9 6.9Z"
-            fill="currentColor"
-          />
-        </svg>
-      </span>
-      <div>
-        <p className="font-medium">{getLabelFromCfg(k)}</p>
-        {renderValue(k, attrs[k])}
+    <div className="flex items-center">
+      <div
+        className={clsx(
+          "flex items-center gap-3 w-full",
+          INDENTS[level] || "pl-0",
+          "cursor-pointer hover:bg-neutral-50 rounded-md p-1"
+        )}
+        role="button"
+        onClick={() => handleOpenFormForKey(k)}
+        title="Ver detalle"
+      >
+        <span className="mt-0.5 grid h-5 w-5 place-items-center rounded border border-neutral-300 bg-white shrink-0">
+          <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
+            <path
+              d="M7.5 13.2 4.8 10.5l-1.1 1.1 3.8 3.8 8-8-1.1-1.1-6.9 6.9Z"
+              fill="currentColor"
+            />
+          </svg>
+        </span>
+        <div>
+          <p className="font-medium">{getLabelFromCfg(k)}</p>
+          {renderValue(k, attrs[k])}
+        </div>
       </div>
+      <Icon
+        icon="open_in_new"
+        className="text-blue-500 cursor-pointer"
+        onClick={() => {
+          handleOpenFormForKey(k, true);
+        }}
+      />
     </div>
   );
 
-  const renderCard = (title: string, specs: NodeSpec[]) => {
+  const renderCard = (title: string, specs: NodeSpec[], keyInfo: string) => {
     const filtered = specs.filter((s) => attrs[s.key] !== undefined);
     if (filtered.length === 0) return null;
 
+    const labelAttribute =
+      allAttributes?.find((a) => a.name === keyInfo)?.label ?? null;
+
     return (
       <section className="rounded-xl border border-neutral-300 bg-white shadow-sm">
-        <header className="border-b border-neutral-200 px-5 py-3">
+        <header className="border-b border-neutral-200 px-5 py-3 flex items-center justify-center">
           <h2 className="text-center text-sm font-semibold tracking-wide text-neutral-700">
             {title}
           </h2>
+          <Icon
+            icon="visibility"
+            className="text-blue-500 ml-1 cursor-pointer"
+            onClick={() => {
+              if (attrs[keyInfo]) {
+                setSelectedId(Number(attrs[keyInfo]));
+                setOpenCliente(true);
+              } else {
+                openSnackbar({
+                  message: "No existe un valor en " + labelAttribute || keyInfo,
+                  type: "CRITICAL",
+                });
+              }
+            }}
+          />
         </header>
         <div className="space-y-5 p-5">
           {filtered.map(({ key, level }) => (
@@ -384,13 +363,23 @@ const TreeView = ({
   return (
     <div className="w-full rounded-lg bg-[#fafafa] border p-4 col-span-3">
       <div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-2">
-        {renderCard("Cliente", clienteSpecs)}
-        {renderCard("Movistar", movistarSpecs)}
+        {renderCard("Cliente", clienteSpecs, "id_cliente")}
+        {renderCard("Movistar", movistarSpecs, "id_lider")}
       </div>
 
       <Modal open={openForm} onClose={() => setOpenForm(false)}>
         <CreateForm mode="read" componenteRed={componenteRed ?? {}} />
       </Modal>
+
+      {selectedId && (
+        <Modal
+          open={openCliente}
+          onClose={() => setOpenCliente(false)}
+          size={{ width: "90%", height: "80%" }}
+        >
+          <ClientInfo clientId={selectedId} />
+        </Modal>
+      )}
     </div>
   );
 };

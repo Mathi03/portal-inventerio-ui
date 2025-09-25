@@ -30,6 +30,7 @@
     "react-select": "^5.10.2",
     "react-select-async-paginate": "^0.7.11",
     "recharts": "^2.15.0",
+    "swr": "^2.3.6",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "uiw": "^4.22.3",

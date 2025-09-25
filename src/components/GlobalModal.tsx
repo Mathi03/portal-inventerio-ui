@@ -29,7 +29,7 @@ export default function GlobalModal() {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[1000] bg-black/50 flex items-center justify-center"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center"
       onClick={closeModal} // click en backdrop cierra
     >
       <div

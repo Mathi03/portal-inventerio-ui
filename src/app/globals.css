@@ -135,6 +135,12 @@ body > div {
   margin-top: 1.25rem;
 }
 
+.field_paginated__control--is-disabled {
+  background-color: white !important;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
 body.modal-open #app-root {
   pointer-events: none;
   /* Si quieres "empujar" al fondo visualmente, puedes usar filter/opacity o z-index negativo */
