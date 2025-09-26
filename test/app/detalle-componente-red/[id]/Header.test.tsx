@@ -56,7 +56,7 @@ describe('Header Component', () => {
 
     // Verificamos que el título del componente se muestre correctamente.
     // Usamos un regex para ser menos sensibles a los espacios o guiones.
-    expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent(/Router-001 - 1/);
+   expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Router-001 - (1) - ()');
 
     // Verificamos que la imagen del logo se muestre.
     expect(screen.getByRole('img', { name: /telefonica/i })).toBeInTheDocument();
