@@ -78,6 +78,8 @@ const TreeView = ({
   const [componenteRed, setComponenteRed] = useState<any | null>(null);
   const dataCacheRef = useRef<Map<string, any>>(new Map());
   const inflightRef = useRef<Map<string, Promise<any>>>(new Map());
+  const [loadingKeys, setLoadingKeys] = useState<Set<string>>(new Set());
+  const [errorKeys, setErrorKeys] = useState<Set<string>>(new Set());
 
   const isReady = !!tipoComponente;
   const attrs = attributes ?? {};
@@ -227,11 +229,17 @@ const TreeView = ({
       if (!isSelect || !hasRemote) return;
 
       try {
+        setLoadingKeys((prev) => new Set(prev).add(k));
+        setErrorKeys((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(k);
+          return newSet;
+        });
+
         const valueKey = (cfg.valores_posibles_response as string[])[1];
         const id = Array.isArray(val) ? toStr(val[0]) : toStr(val);
 
         let url: string;
-
         if (valueKey.toLowerCase() === "id") {
           const baseUrl = cfg.valores_posibles_source.split("?")[0];
           url = `${baseUrl}/${id}`;
@@ -240,7 +248,6 @@ const TreeView = ({
         }
 
         const data = await fetchCached(url);
-
         const obj = Array.isArray(data)
           ? data[0]
           : Array.isArray(data?.data)
@@ -254,6 +261,13 @@ const TreeView = ({
         }
       } catch (err) {
         console.error(err);
+        setErrorKeys((prev) => new Set(prev).add(k));
+      } finally {
+        setLoadingKeys((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(k);
+          return newSet;
+        });
       }
     },
     [attrs, getCfg, fetchCached]
@@ -286,7 +300,7 @@ const TreeView = ({
   };
 
   const CheckItem = ({ k, level }: { k: string; level: number }) => (
-    <div className="flex items-center">
+    <div className="flex items-center justify-between">
       <div
         className={clsx(
           "flex items-center gap-3 w-full",
@@ -307,9 +321,23 @@ const TreeView = ({
         </span>
         <div>
           <p className="font-medium">{getLabelFromCfg(k)}</p>
-          {renderValue(k, attrs[k])}
+          <div className="flex items-center gap-2">
+            {renderValue(k, attrs[k])}
+            {/* Chips de estado */}
+            {loadingKeys.has(k) && (
+              <span className="text-xs bg-blue-100 text-blue-600 rounded-full px-2 py-0.5">
+                Loading...
+              </span>
+            )}
+            {errorKeys.has(k) && (
+              <span className="text-xs bg-red-100 text-red-600 rounded-full px-2 py-0.5">
+                Error
+              </span>
+            )}
+          </div>
         </div>
       </div>
+
       <Icon
         icon="open_in_new"
         className="text-blue-500 cursor-pointer"

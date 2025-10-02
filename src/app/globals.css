@@ -141,6 +141,10 @@ body > div {
   opacity: 0.6;
 }
 
+.has-value .field_paginated__input {
+  margin-top: 1.20rem !important;
+}
+
 body.modal-open #app-root {
   pointer-events: none;
   /* Si quieres "empujar" al fondo visualmente, puedes usar filter/opacity o z-index negativo */
