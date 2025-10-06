@@ -1,0 +1,70 @@
+import React from "react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import Edit from "@/app/(home)/mantenedor-tipo-componente/Edit";
+
+// Mocks para evitar dependencias reales
+jest.mock("@/components/Aside", () => ({ children, ...props }: any) => (
+  <div data-testid="aside" {...props}>
+    {children}
+  </div>
+));
+jest.mock("@/components/Button", () => (props: any) => (
+  <button onClick={props.onClick} disabled={props.showSpinner}>
+    {props.children}
+  </button>
+));
+jest.mock("@/components/InputJson", () => () => <div>InputJson</div>);
+jest.mock("@telefonica/mistica", () => ({
+  Form: ({ onSubmit, children }: any) => (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit({});
+      }}
+    >
+      {children}
+    </form>
+  ),
+  TextField: ({ label }: any) => <input placeholder={label} />,
+}));
+jest.mock("@/core/tipo-componente/tipo-componente.service", () => ({
+  TipoComponenteService: jest.fn().mockImplementation(() => ({
+    update: jest.fn().mockResolvedValue({}),
+  })),
+}));
+
+describe("Edit", () => {
+  const mockOnClose = jest.fn();
+  const mockOnSuccess = jest.fn();
+  const mockTipoComponente = {
+    id: 1,
+    label: "Test",
+    name: "Componente Test",
+    status: 1,
+    configAttributes: { attr: true },
+    configServices: { svc: true },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("renderiza el título y la descripción", () => {
+    render(
+      <Edit
+        tipoComponente={mockTipoComponente}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />
+    );
+    expect(
+      screen.getByText("Editar mantenedor de tipo de componente")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Actualice todo los datos correspondiente para editar con éxito un mantenedor de tipo de componente"
+      )
+    ).toBeInTheDocument();
+  });
+
+});

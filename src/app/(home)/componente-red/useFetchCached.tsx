@@ -34,8 +34,16 @@ const buildCacheKey = (url: string) => {
   return u.toString();
 };
 
-const normalizeApiData = (r: any) =>
-  r?.data?.data?.data ?? r?.data?.data ?? r?.data ?? r;
+const normalizeApiData = (r: any) => {
+  const payload = r?.data?.data?.data ?? r?.data?.data ?? r?.data ?? r;
+
+  // ⚠️ si el backend devuelve estructura de error, la detectamos
+  if (payload?.status === "BAD_REQUEST" || payload?.code >= 400) {
+    throw new Error(payload?.message || "Error en la API");
+  }
+
+  return payload;
+};
 
 const swrFetcher = async (url: string) => {
   const parsed = new URL(url);
@@ -64,12 +72,18 @@ export function useFetchCached() {
     }
 
     // 3. Ejecutar fetcher y guardarlo como inflight
-    const p = swrFetcher(url).then((data) => {
-      // guardar en SWR cache
-      mutate(key, data, false);
-      inflight.delete(key); // limpiar inflight
-      return data;
-    });
+    const p = swrFetcher(url)
+      .then((data) => {
+        // guardar en SWR cache
+        mutate(key, data, false);
+        inflight.delete(key); // limpiar inflight
+        return data;
+      })
+      .catch((err) => {
+        // limpiar inflight si falló, para que un próximo intento vuelva a disparar el fetch
+        inflight.delete(key);
+        throw err;
+      });
 
     inflight.set(key, p);
 

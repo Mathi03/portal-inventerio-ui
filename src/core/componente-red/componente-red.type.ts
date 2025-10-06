@@ -1,5 +1,4 @@
 import { ControlType } from "../control/control.type";
-import { ServicioType } from "../servicio/servicio.type";
 
 export enum CRStatusEnum {
   ACTIVO = 1,
@@ -10,12 +9,13 @@ export interface ComponenteRedType {
   code: string;
   codigo: string;
   controlId: number;
-  controlName : string;
-  controlLabel : string;
+  controlName: string;
+  controlLabel: string;
   stationId: number;
   regionId: number;
   refNetworkId: number;
   refComponentTypeId: number;
+  refComponentTypeLabel: string;
   componentId: number;
   attribute: string;
   service: string;

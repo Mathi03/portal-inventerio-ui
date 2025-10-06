@@ -92,7 +92,7 @@ export default function InputDynamic({
             </div>
           )}
           <AsyncPaginate
-            className="h-[60px] group_field_paginated"
+            className={`h-[60px] group_field_paginated ${selectedValue ? "has-value" : ""}`}
             classNamePrefix={"field_paginated"}
             debounceTimeout={1000}
             value={selectedValue}

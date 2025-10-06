@@ -26,6 +26,7 @@ import { useModalStore } from "@/hooks/modalStorage";
 import ConfigData from "../(home)/componente-red/ConfigData";
 import TreeView from "../(home)/componente-red/TreeView";
 import { SelectPaginate } from "@/components/SelectPaginate";
+import AttributeRelation from "../(home)/componente-red/AttributeRelation";
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -595,24 +596,39 @@ export default function CreateForm({
           </>
         )}
 
-        {tipoComponente?.id?.toString() === "28" ||
-          (tipoComponente?.id?.toString() === "396" && (
-            <>
-              <hr className="col-span-3" />
-              <hgroup className="col-span-3" id="relacion-jerarquica">
-                <h4 className="text-[20px]">Arbol</h4>
-                <p>En esta sección se mostrara las relaciones entre nodos</p>
-              </hgroup>
-              <TreeView
-                tipoComponente={tipoComponente ?? null}
-                attributes={attribute}
-                // attribute={attribute}
-                // onAttributes={onAttributes}
-                // service={service}
-                // onServices={onServices}
-              />
-            </>
-          ))}
+        {(tipoComponente?.id?.toString() === "28" || tipoComponente?.id?.toString() === "398" ) && (
+          <>
+            <hr className="col-span-3" />
+            <hgroup className="col-span-3" id="relacion-jerarquica">
+              <h4 className="text-[20px]">Arbol</h4>
+              <p>En esta sección se mostrara las relaciones entre nodos</p>
+            </hgroup>
+            <TreeView
+              tipoComponente={tipoComponente ?? null}
+              attributes={attribute}
+              // attribute={attribute}
+              // onAttributes={onAttributes}
+              // service={service}
+              // onServices={onServices}
+            />
+          </>
+        )}
+
+        {(tipoComponente?.id?.toString() === "5" ||
+          tipoComponente?.id?.toString() === "26" ||
+          tipoComponente?.id?.toString() === "27") && (
+          <>
+            <hr className="col-span-3" />
+            <hgroup className="col-span-3" id="relacion-jerarquica">
+              <h4 className="text-[20px]">Relacion de Atributos</h4>
+              <p>En esta sección se mostrara las relaciones entre nodos</p>
+            </hgroup>
+            <AttributeRelation
+              tipoComponente={tipoComponente ?? null}
+              controlId={Number(componenteRed?.controlId)}
+            />
+          </>
+        )}
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="observacion">
           <h4 className="text-[20px]">Observación</h4>
@@ -644,19 +660,19 @@ export default function CreateForm({
                   { title: "Comentario", render: (row: any) => row.comment },
                 ]}
                 rows={paginatedComments}
+                pagination={
+                  <Pagination
+                    page={commentPage}
+                    limit={commentLimit}
+                    items={parsedComments.length}
+                    onChangePage={(p) => setCommentPage(p)}
+                    onChangeLimit={(l) => {
+                      setCommentLimit(l);
+                      setCommentPage(1);
+                    }}
+                  />
+                }
               />
-              <div className="mt-4">
-                <Pagination
-                  page={commentPage}
-                  limit={commentLimit}
-                  items={parsedComments.length}
-                  onChangePage={(p) => setCommentPage(p)}
-                  onChangeLimit={(l) => {
-                    setCommentLimit(l);
-                    setCommentPage(1);
-                  }}
-                />
-              </div>
             </div>
           </>
         )}

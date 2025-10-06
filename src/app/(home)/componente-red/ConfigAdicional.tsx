@@ -258,7 +258,7 @@ export default function ConfigAdicional({
                 >
                   Atributos
                 </h4>
-                {tipoComponente.configData.map((configData, configDataKey) => {
+                {tipoComponente.configData?.map((configData, configDataKey) => {
                   // Aquí se agrega el console.log para el primer map
                   // Separar atributos regulares de atributos con atribs_config
                   const regularAttributes = configData.configAttributes.filter(
@@ -378,7 +378,7 @@ export default function ConfigAdicional({
                 >
                   Servicios
                 </h4>
-                {tipoComponente.configData.map((configData, configDataKey) => {
+                {tipoComponente.configData?.map((configData, configDataKey) => {
                   // Aquí se agrega el console.log para el primer map
                   // Separar atributos regulares de atributos con atribs_config
                   const regularServices = configData.configServices.filter(
