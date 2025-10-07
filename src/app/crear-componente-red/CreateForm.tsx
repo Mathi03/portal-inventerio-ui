@@ -425,6 +425,9 @@ export default function CreateForm({
           onSubmit({
             ...value,
             stationId: Number(estacion),
+            refComponentTypeId: tipoComponente?.id,
+            refSourceId: componenteRed?.refSourceId,
+            refNetworkId: red?.id,
           } as FormValues)
         }
         className="grid grid-cols-3 content-start gap-4 px-6"
