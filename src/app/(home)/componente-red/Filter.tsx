@@ -75,9 +75,9 @@ export default function Filter({
     onFilter(formValues);
   };
 
-  // Limpiar: solo limpia el estado local. NO llama onFilter (no dispara petición).
   const handleReset = () => {
     setFormValues(defaultValues);
+    onFilter(defaultValues);
     setClientName("");
   };
 
