@@ -4,7 +4,7 @@ import { PaginationDto } from "../pagination/dto/create.dto";
 import { ServicioService } from "../servicio/servicio.service";
 import { ComponenteRedType } from "./componente-red.type";
 import { CreateComponenteRedDto } from "./dto/create.dto";
-import { QueryComponenteRedDto } from "./dto/search.dto";
+import { ParamsByAttribute, QueryComponenteRedDto } from "./dto/search.dto";
 import { UpdateComponenteRedDto } from "./dto/update.dto";
 
 export class ComponenteRedService {
@@ -72,7 +72,7 @@ export class ComponenteRedService {
     return data?.data;
   }
 
-  public async getByClientId(id: number, params: QueryComponenteRedDto) {
+  public async getByClientId(id: string, params: QueryComponenteRedDto) {
     const response = await bff.get<PaginationDto<ComponenteRedType[]>>(
       `/v1/portal/components/${id}/client`,
       {
@@ -92,6 +92,19 @@ export class ComponenteRedService {
   ) {
     const response = await bff.get<PaginationDto<ComponenteRedType[]>>(
       `v1/portal/components/${attribute}/${value}/attribute`,
+      {
+        params: queryComponenteRed,
+      }
+    );
+    response.data.data.data = response.data.data.data.filter(
+      (componente) => !componente.disabledAt
+    );
+    return response;
+  }
+
+  public async searchByAttributes(queryComponenteRed: ParamsByAttribute) {
+    const response = await bff.get<PaginationDto<ComponenteRedType[]>>(
+      "v1/portal/components/search-by-attributes",
       {
         params: queryComponenteRed,
       }
