@@ -19,6 +19,7 @@ import DetalleTipoComponente from "../DetalleTipoComponente";
 import DetalleRed from "../DetalleRed";
 import DetalleFuente from "../DetalleFuente";
 import DetalleControl from "../DetalleControl";
+import { ParamsByAttribute } from "@/core/componente-red/dto/search.dto";
 
 export default function ComponenteRedPage() {
   const { confirm } = useDialog();
@@ -72,6 +73,7 @@ export default function ComponenteRedPage() {
     setIsLoading(true);
     const componenteRed = new ComponenteRedService();
 
+    // Limpia vacíos
     const cleanedFilter: Partial<typeof filter> = Object.fromEntries(
       Object.entries(filter).filter(
         ([, value]) => value !== null && value !== ""
@@ -81,18 +83,34 @@ export default function ComponenteRedPage() {
     try {
       let data;
 
-      if (cleanedFilter.client_id) {
+      // 1) Si viene circuito -> usar searchByAttributes (solo 4 campos + paginación)
+      if (cleanedFilter.id_tipo_circuito) {
+        const params: ParamsByAttribute = {
+          page,
+          limit,
+          ref_component_type_id: cleanedFilter.ref_component_type_id,
+          ref_network_id: cleanedFilter.ref_network_id,
+          region_id: cleanedFilter.region_id,
+          station_id: cleanedFilter.station_id,
+          attributes: "id_cliente",
+          attributesId: cleanedFilter.client_id, 
+          attributes2: "id_tipo_circuito",
+          attributesId2: cleanedFilter.id_tipo_circuito,
+        };
+
+        const response = await componenteRed.searchByAttributes(params);
+        data = response.data.data;
+      }
+      // 2) Si hay client_id (y NO circuito) -> getByClientId (como estaba)
+      else if (cleanedFilter.client_id) {
         const response = await componenteRed.getByClientId(
           cleanedFilter.client_id,
-          {
-            page,
-            limit,
-          }
+          { page, limit }
         );
         data = response.data.data;
-        console.log("clientes", data);
-      } else {
-        // Llamada normal
+      }
+      // 3) Flujo normal (sin circuito y sin client_id)
+      else {
         const response = await componenteRed.findAll({
           page,
           limit,

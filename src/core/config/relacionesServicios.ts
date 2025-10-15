@@ -22,29 +22,17 @@ export const RELACIONES_TIPO_CIRCUITO = [
   {
     id: 4,
     name: "CPA Entrante",
-    servicios_asociados: [
-      { name: "serv_cpa" },
-      { name: "serv_cpa_final" },
-      { name: "serv_ip" },
-    ],
+    servicios_asociados: [{ name: "serv_cpa" }, { name: "serv_cpa_final" }],
   },
   {
     id: 5,
     name: "CPA Mixto",
-    servicios_asociados: [
-      { name: "serv_cpa" },
-      { name: "serv_cpa_final" },
-      { name: "serv_ip" },
-    ],
+    servicios_asociados: [{ name: "serv_cpa" }, { name: "serv_cpa_final" }],
   },
   {
     id: 6,
     name: "CPA Saliente",
-    servicios_asociados: [
-      { name: "serv_cpa" },
-      { name: "serv_cpa_final" },
-      { name: "serv_ip" },
-    ],
+    servicios_asociados: [{ name: "serv_cpa" }, { name: "serv_cpa_final" }],
   },
   {
     id: 7,
@@ -80,6 +68,7 @@ export const RELACIONES_TIPO_CIRCUITO = [
     id: 13,
     name: "MPLS",
     servicios_asociados: [
+      { name: "serv_ip" },
       { name: "serv_mpls" },
       { name: "serv_MPLS_final" },
       { name: "serv_ip_final" },
@@ -212,6 +201,7 @@ export const RELACIONES_TIPO_CIRCUITO = [
     id: 38,
     name: "M2M RP",
     servicios_asociados: [
+      { name: "serv_ip" },
       { name: "serv_mpls" },
       { name: "serv_ip_final" },
       { name: "serv_m2m" },
