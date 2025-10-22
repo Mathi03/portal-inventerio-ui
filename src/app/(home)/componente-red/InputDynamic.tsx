@@ -164,7 +164,7 @@ export default function InputDynamic({
         name={name}
         optional={!required}
         label={label}
-        value={value}
+        value={value?.toString()}
         fullWidth
         maxLength={255}
         onChange={(e) => {
@@ -196,7 +196,7 @@ export default function InputDynamic({
       name={name}
       optional={!required}
       label={label}
-      value={value}
+      value={value ? value?.toString() : ''}
       fullWidth
       onChange={(val) => {
         onChange(name, val?.target?.value ?? "");

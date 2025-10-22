@@ -27,6 +27,7 @@ import ConfigData from "../(home)/componente-red/ConfigData";
 import TreeView from "../(home)/componente-red/TreeView";
 import { SelectPaginate } from "@/components/SelectPaginate";
 import AttributeRelation from "../(home)/componente-red/AttributeRelation";
+import useErrorHandler from "@/hooks/useErrorHandler";
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -86,6 +87,7 @@ export default function CreateForm({
   stationId,
 }: CreateFormProps) {
   const { closeModal } = useModalStore();
+  const { notifyError } = useErrorHandler();
 
   const networkInputRef = useRef<SearchableSelectHandle>(null);
   const [tipoComponente, setTipoComponente] =
@@ -103,6 +105,12 @@ export default function CreateForm({
   const [isLoadingTC, setIsLoadingTC] = useState(false);
   const [isLoadingFuentes, setIsLoadingFuentes] = useState(false);
   const [isLoadingRegiones, setIsLoadingRegiones] = useState(true);
+  const [redError, setRedError] = useState<string | null>(null);
+  const [tipoComponenteError, setTipoComponenteError] = useState<string | null>(
+    null
+  );
+  const [fuenteError, setFuenteError] = useState<string | null>(null);
+  const [regionError, setRegionError] = useState<string | null>(null);
 
   const [redes, setRedes] = useState<RedType[]>([]);
   const [tipoComponentes, setTipoComponentes] = useState<TipoComponenteType[]>(
@@ -181,26 +189,35 @@ export default function CreateForm({
 
   const getRedes = useCallback(async () => {
     setIsLoadingRedes(true);
+    setRedError(null);
     const redService = new RedService();
-    if (mode === "create") {
-      const { data } = await redService.findAll({});
-      const activeNetworks = data.data.data.filter(
-        (r: RedType) => r.status === 1
-      );
-      setRedes(activeNetworks);
-      if (networkId) {
-        setRed(activeNetworks.find((r) => r.id === networkId) ?? null);
-      }
-    } else {
-      const { data } = await redService.getById(
-        Number(componenteRed?.refNetworkId)
-      );
-      setRedes([data?.data]);
-      setRed(data?.data ?? null);
-    }
 
-    setIsLoadingRedes(false);
-  }, [networkId]);
+    try {
+      if (mode === "create") {
+        const { data } = await redService.findAll({});
+        const activeNetworks = data.data.data.filter(
+          (r: RedType) => r.status === 1
+        );
+        setRedes(activeNetworks);
+        if (networkId) {
+          setRed(activeNetworks.find((r) => r.id === networkId) ?? null);
+        }
+      } else {
+        const { data } = await redService.getById(
+          Number(componenteRed?.refNetworkId)
+        );
+        setRedes([data?.data]);
+        setRed(data?.data ?? null);
+      }
+    } catch (error) {
+      setRedes([]);
+      setRed(null);
+      setRedError("No se pudieron cargar las redes.");
+      notifyError(error, "No se pudieron cargar las redes.");
+    } finally {
+      setIsLoadingRedes(false);
+    }
+  }, [componenteRed?.refNetworkId, mode, networkId, notifyError]);
 
   // useEffect(() => {
   //   if (componenteRed !== undefined && componenteRed !== null) {
@@ -226,86 +243,86 @@ export default function CreateForm({
   // }, [redes, componenteRed, regiones]);
 
   const getTipoComponentes = useCallback(async () => {
-    // if (!red) return;
     setIsLoadingTC(true);
+    setTipoComponenteError(null);
     const tcService = new TipoComponenteService();
 
-    if (mode === "create") {
-      // Filtro por RedId
-      // -----------------
-      // const { data } = await tcService.getByNetworkId(red?.id);
-      // -----------------
-      // Sin Filtro - todos los tipo componentes
-      const response = await tcService.findAll({});
-      const data = response?.data?.data?.data;
-      // -----------------
-      const activeComponenteTypes = data.filter(
-        (t: TipoComponenteType) => t.status === 1
-      );
-      setTipoComponentes(activeComponenteTypes);
-      if (mode !== "create" && componenteRed) {
-        setTipoComponente(
-          activeComponenteTypes.find(
-            (t: TipoComponenteType) =>
-              t.id === +componenteRed.refComponentTypeId
-          ) ?? null
+    try {
+      if (mode === "create") {
+        const response = await tcService.findAll({});
+        const data = response?.data?.data?.data;
+        const activeComponenteTypes = data.filter(
+          (t: TipoComponenteType) => t.status === 1
         );
+        setTipoComponentes(activeComponenteTypes);
+        if (mode !== "create" && componenteRed) {
+          setTipoComponente(
+            activeComponenteTypes.find(
+              (t: TipoComponenteType) =>
+                t.id === +componenteRed.refComponentTypeId
+            ) ?? null
+          );
+        }
+      } else {
+        const response = await tcService.getById(
+          Number(componenteRed?.refComponentTypeId)
+        );
+        const data = response?.data;
+        setTipoComponentes([data]);
+        setTipoComponente(data);
       }
-    } else {
-      const response = await tcService.getById(
-        Number(componenteRed?.refComponentTypeId)
-      );
-      const data = response?.data;
-      setTipoComponentes([data]);
-      setTipoComponente(data);
+    } catch (error) {
+      setTipoComponentes([]);
+      setTipoComponente(null);
+      setTipoComponenteError("No se pudieron cargar los tipos de componente.");
+      notifyError(error, "No se pudieron cargar los tipos de componente.");
+    } finally {
+      setIsLoadingTC(false);
     }
-
-    // if (mode === "update" && componentTypeId) {
-    //   setTipoComponente(
-    //     activeComponenteTypes.find(
-    //       (r: TipoComponenteType) => r.id === componentTypeId
-    //     ) ?? null
-    //   );
-    // }
-    setIsLoadingTC(false);
-  }, []);
+  }, [componenteRed, mode, notifyError]);
 
   const getFuentes = useCallback(async () => {
     setIsLoadingFuentes(true);
+    setFuenteError(null);
     const fuenteService = new FuenteService();
-    // if (mode === "create") {
-    //   const { data } = await fuenteService.findAll({
-    //     refNetworkId: red?.id,
-    //   });
-    //   setFuentes(data.data.data.filter((f: FuenteType) => f.status === 1));
-    //   setIsLoadingFuentes(false);
-    // } else {
-    //   const { data } = await fuenteService.getById(
-    //     Number(componenteRed?.refSourceId)
-    //   );
-    //   setFuentes([data.data]);
-    // }
-    // const fuenteService = new FuenteService();
-    const { data } = await fuenteService.findAll({
-      refNetworkId: red?.id,
-    });
-    setFuentes(data.data.data.filter((f: FuenteType) => f.status === 1));
-    setIsLoadingFuentes(false);
-  }, [red]);
+
+    try {
+      const { data } = await fuenteService.findAll({
+        refNetworkId: red?.id,
+      });
+      setFuentes(data.data.data.filter((f: FuenteType) => f.status === 1));
+    } catch (error) {
+      setFuentes([]);
+      setFuenteError("No se pudieron cargar las fuentes.");
+      notifyError(error, "No se pudieron cargar las fuentes.");
+    } finally {
+      setIsLoadingFuentes(false);
+    }
+  }, [notifyError, red]);
 
   const getRegiones = useCallback(async () => {
     setIsLoadingRegiones(true);
-    const { data } = await msDirecciones.get(
-      "/api/v1/direcciones/regiones",
-      {}
-    );
-    const activeRegions: RegionType[] = data?.data?.data || [];
-    if (regionId) {
-      setRegion(activeRegions.find((r) => r.id === regionId) ?? null);
+    setRegionError(null);
+
+    try {
+      const { data } = await msDirecciones.get(
+        "/api/v1/direcciones/regiones",
+        {}
+      );
+      const activeRegions: RegionType[] = data?.data?.data || [];
+      if (regionId) {
+        setRegion(activeRegions.find((r) => r.id === regionId) ?? null);
+      }
+      setRegiones(activeRegions);
+    } catch (error) {
+      setRegiones([]);
+      setRegion(null);
+      setRegionError("No se pudieron cargar las regiones.");
+      notifyError(error, "No se pudieron cargar las regiones.");
+    } finally {
+      setIsLoadingRegiones(false);
     }
-    setRegiones(activeRegions);
-    setIsLoadingRegiones(false);
-  }, []);
+  }, [notifyError, regionId]);
 
   useEffect(() => {
     getRedes();
@@ -313,13 +330,17 @@ export default function CreateForm({
     getTipoComponentes();
   }, [getRedes, getRegiones, getTipoComponentes]);
 
-  const isValidToSearch = red && red !== null;
+  const isValidToSearch = !!red;
 
   useEffect(() => {
     if (isValidToSearch) {
       getFuentes();
+    } else {
+      setFuentes([]);
+      setFuenteError(null);
+      setIsLoadingFuentes(false);
     }
-  }, [red]);
+  }, [getFuentes, isValidToSearch]);
 
   const getConfigRelation = async () => {
     const tcService = new TipoComponenteService();
@@ -471,7 +492,9 @@ export default function CreateForm({
           disabled={mode !== "create" ? true : isLoadingRedes}
           optional={mode !== "create"}
           fullWidth
-          helperText={isLoadingRedes ? "Cargando redes..." : undefined}
+          helperText={
+            redError ?? (isLoadingRedes ? "Cargando redes..." : undefined)
+          }
           options={redes.map((red) => ({
             text: red.label,
             value: red.id.toString(),
@@ -488,7 +511,8 @@ export default function CreateForm({
           optional={mode !== "create"}
           fullWidth
           helperText={
-            isLoadingTC ? "Cargando tipos de componente..." : undefined
+            tipoComponenteError ??
+            (isLoadingTC ? "Cargando tipos de componente..." : undefined)
           }
           options={tipoComponentes.map((tc) => ({
             text: tc.label,
@@ -512,7 +536,10 @@ export default function CreateForm({
           }
           optional={mode !== "create"}
           fullWidth
-          helperText={isLoadingFuentes ? "Cargando fuentes..." : undefined}
+          helperText={
+            fuenteError ??
+            (isLoadingFuentes ? "Cargando fuentes..." : undefined)
+          }
           options={fuentes.map((f) => ({
             text: f.label,
             value: f.id.toString(),
@@ -528,7 +555,10 @@ export default function CreateForm({
           }
           optional={mode === "approve" || mode === "popup" || mode === "read"}
           fullWidth
-          helperText={isLoadingRegiones ? "Cargando regiones..." : undefined}
+          helperText={
+            regionError ??
+            (isLoadingRegiones ? "Cargando regiones..." : undefined)
+          }
           options={regiones.map((r) => ({
             text: r.nombre,
             value: r.id.toString(),
@@ -599,7 +629,7 @@ export default function CreateForm({
           </>
         )}
 
-        {(tipoComponente?.id?.toString() === "28" || tipoComponente?.id?.toString() === "398" ) && (
+        {tipoComponente?.id?.toString() === "28" && (
           <>
             <hr className="col-span-3" />
             <hgroup className="col-span-3" id="relacion-jerarquica">
