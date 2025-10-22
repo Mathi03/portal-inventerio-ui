@@ -26,14 +26,14 @@ const getByPath = (obj: any, path: string) =>
 const clienteSpecs: NodeSpec[] = [
   { key: "id_control_nodo_a", level: 1 },
   { key: "id_control_tarjeta_a", level: 2 },
-  { key: "id_componente_puerto_a", level: 3 },
+  { key: "id_control_puerto_a", level: 3 },
   { key: "id_control_nodo_dependiente_a", level: 1 },
 ];
 
 const movistarSpecs: NodeSpec[] = [
   { key: "id_control_nodo_b", level: 1 },
   { key: "id_control_tarjeta_b", level: 2 },
-  { key: "id_componente_puerto_b", level: 3 },
+  { key: "id_control_puerto_b", level: 3 },
   { key: "id_control_nodo_dependiente_b", level: 1 },
 ];
 
