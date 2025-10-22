@@ -4,21 +4,30 @@ import Header from "./Header";
 import { ComponenteRedService } from "@/core/componente-red/componente-red.service";
 import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
 import { useParams } from "next/navigation";
-import UpdateForm from "./UpdateForm";
 import NavMenu from "./NavMenu";
 import CreateForm from "@/app/crear-componente-red/CreateForm";
+import useErrorHandler from '@/hooks/useErrorHandler';
 
 export default function DetalleComponenteRed() {
   const { id } = useParams();
   const [componenteRed, setComponenteRed] = useState<ComponenteRedType | null>(
     null,
   );
+  const { notifyError } = useErrorHandler(
+    'No se pudo obtener el detalle del componente.'
+  );
   const getComponenteRed = useCallback(async () => {
-    const componenteRed = new ComponenteRedService();
-    const data = await componenteRed.getById(+id!);
-    console.log("guillermo", data)
-    setComponenteRed(data);
-  }, [id]);
+    if (!id) return;
+
+    try {
+      const componenteRedService = new ComponenteRedService();
+      const data = await componenteRedService.getById(+id);
+      setComponenteRed(data);
+    } catch (error) {
+      setComponenteRed(null);
+      notifyError(error);
+    }
+  }, [id, notifyError]);
 
   useEffect(() => {
     getComponenteRed();

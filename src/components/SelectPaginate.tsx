@@ -9,6 +9,13 @@ import {
 import { AxiosInstance } from "axios";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AsyncPaginate } from "react-select-async-paginate";
+import IconButton from "./IconButton";
+import useErrorHandler from "@/hooks/useErrorHandler";
+
+const STATUS_LOADING_MESSAGE = "Cargando opciones...";
+const STATUS_ERROR_MESSAGE =
+  "No pudimos obtener la información. Intenta nuevamente.";
+const STATUS_RETRYING_MESSAGE = "Reintentando...";
 
 type SelectPaginateProps<T> = {
   label: string;
@@ -85,47 +92,58 @@ export function SelectPaginate<T>({
   const inflightRef = useRef<Map<string, Promise<any>>>(new Map());
   const [selectedValue, setSelectedValue] = useState<any>(null);
   const isInitial = useRef(true);
+  const { notifyError } = useErrorHandler(
+    `No se pudieron cargar las opciones de ${label}.`
+  );
+  const [requestStatus, setRequestStatus] = useState<
+    "idle" | "loading" | "error"
+  >("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const retryRequestRef = useRef<(() => Promise<void>) | null>(null);
 
-  const fetchCached = useCallback(async (url: string) => {
-    const key = buildCacheKey(url);
+  const fetchCached = useCallback(
+    async (url: string) => {
+      const key = buildCacheKey(url);
 
-    if (dataCacheRef.current.has(key)) {
-      return dataCacheRef.current.get(key);
-    }
-    if (inflightRef.current.has(key)) {
-      return inflightRef.current.get(key);
-    }
+      if (dataCacheRef.current.has(key)) {
+        return dataCacheRef.current.get(key);
+      }
+      if (inflightRef.current.has(key)) {
+        return inflightRef.current.get(key);
+      }
 
-    let client;
-    if (clientToFetch) {
-      client = clientToFetch;
-    } else {
-      const parsed = new URL(url);
-      client = getAxiosClientFromUrl(parsed.origin + parsed.pathname);
-    }
+      let client;
+      if (clientToFetch) {
+        client = clientToFetch;
+      } else {
+        const parsed = new URL(url);
+        client = getAxiosClientFromUrl(parsed.origin + parsed.pathname);
+      }
 
-    const p = client
-      .get(url)
-      .then((res) => {
-        const data = normalizeApiData(res);
-        dataCacheRef.current.set(key, data);
-        inflightRef.current.delete(key);
-        return data;
-      })
-      .catch((err) => {
-        inflightRef.current.delete(key);
-        throw err;
-      });
+      const p = client
+        .get(url)
+        .then((res) => {
+          const data = normalizeApiData(res);
+          dataCacheRef.current.set(key, data);
+          inflightRef.current.delete(key);
+          return data;
+        })
+        .catch((err) => {
+          inflightRef.current.delete(key);
+          throw err;
+        });
 
-    inflightRef.current.set(key, p);
-    return p;
-  }, []);
+      inflightRef.current.set(key, p);
+      return p;
+    },
+    [clientToFetch]
+  );
 
-  const fetchOptions = async (
-    url: string,
-    searchQuery = ""
-  ): Promise<{ text: string; value: string }[]> => {
-    try {
+  const fetchOptions = useCallback(
+    async (
+      url: string,
+      searchQuery = ""
+    ): Promise<{ text: string; value: string }[]> => {
       let finalUrl = "";
       if (clientToFetch) {
         finalUrl = url;
@@ -143,11 +161,9 @@ export function SelectPaginate<T>({
         text: String(item?.[fieldName]),
         value: String(item?.[fieldKey]),
       }));
-    } catch (err) {
-      console.error("Error fetching options from", url, err);
-      return [];
-    }
-  };
+    },
+    [clientToFetch, fetchCached, fieldKey, fieldName]
+  );
 
   const loadPaginatedOptions = useCallback(
     (url: string) =>
@@ -157,11 +173,11 @@ export function SelectPaginate<T>({
         { page }: { page: number }
       ) => {
         let urlString = "";
-        let limit;
+        let limit: number;
 
         if (clientToFetch) {
           limit = 10;
-          urlString = url + "?page=" + String(page) + "&limit=" + String(limit);
+          urlString = `${url}?page=${String(page)}&limit=${String(limit)}`;
         } else {
           const u = new URL(url);
           u.searchParams.set("page", String(page));
@@ -171,82 +187,183 @@ export function SelectPaginate<T>({
           urlString = u.toString();
         }
 
-        const options = await fetchOptions(urlString, search);
-        return {
-          options: options.map(({ text, value }) => ({ label: text, value })),
-          hasMore: options.length >= limit,
-          additional: { page: page + 1 },
-        };
+        setRequestStatus("loading");
+        setStatusMessage(STATUS_LOADING_MESSAGE);
+        retryRequestRef.current = null;
+
+        try {
+          const options = await fetchOptions(urlString, search);
+          setRequestStatus("idle");
+          setStatusMessage(null);
+          retryRequestRef.current = null;
+          return {
+            options: options.map(({ text, value }) => ({
+              label: text,
+              value,
+            })),
+            hasMore: options.length >= limit,
+            additional: { page: page + 1 },
+          };
+        } catch (error) {
+          setRequestStatus("error");
+          setStatusMessage(STATUS_ERROR_MESSAGE);
+          retryRequestRef.current = async () => {
+            try {
+              const cacheKey = buildCacheKey(urlString);
+              dataCacheRef.current.delete(cacheKey);
+              inflightRef.current.delete(cacheKey);
+            } catch {
+              // ignore cache cleanup errors
+            }
+            await fetchOptions(urlString, search);
+          };
+          notifyError(error);
+          return {
+            options: [],
+            hasMore: false,
+            additional: { page },
+          };
+        }
       },
-    [fetchOptions]
+    [clientToFetch, fetchOptions, notifyError]
   );
 
-  useEffect(() => {
-    let mounted = true;
+  const handleRetry = useCallback(async () => {
+    if (!retryRequestRef.current) return;
 
-    const resolveInitialAsyncValues = async () => {
-      const out: Record<string, { label: string; value: string }> = {};
+    setRequestStatus("loading");
+    setStatusMessage(STATUS_RETRYING_MESSAGE);
 
-      const fieldValue = value;
+    try {
+      await retryRequestRef.current();
+      setRequestStatus("idle");
+      setStatusMessage(null);
+      retryRequestRef.current = null;
+    } catch (error) {
+      setRequestStatus("error");
+      setStatusMessage(STATUS_ERROR_MESSAGE);
+      notifyError(error);
+    }
+  }, [notifyError]);
 
-      if (
-        fieldValue?.toString() !== "0" &&
-        fieldValue &&
-        fieldUrl &&
-        fieldName &&
-        fieldKey
-      ) {
-        try {
-          let data;
-          if (searchType === "byId" || fieldKey.toLocaleLowerCase() == "id") {
-            const baseUrl = fieldUrl.split("?")[0];
-            const url = `${baseUrl}/${fieldValue}`;
-            data = await fetchCached(url);
-            if (mapById) data = data[mapById];
+  const resolveInitialSelection = useCallback(async () => {
+    const fieldValue = value;
 
-            if (Array.isArray(data)) data = data[0];
-          } else {
-            const u = fieldUrl.startsWith("http")
-              ? new URL(fieldUrl)
-              : new URL(fieldUrl, window.location.origin);
-            u.searchParams.set(camelToSnake(fieldKey), String(fieldValue));
-            const url = ensurePaged(u.toString());
+    if (
+      fieldValue?.toString() !== "0" &&
+      fieldValue &&
+      fieldUrl &&
+      fieldName &&
+      fieldKey
+    ) {
+      let data;
+      if (searchType === "byId" || fieldKey.toLocaleLowerCase() === "id") {
+        const baseUrl = fieldUrl.split("?")[0];
+        const url = `${baseUrl}/${fieldValue}`;
+        data = await fetchCached(url);
+        if (mapById) data = data[mapById];
 
-            const list = await fetchCached(url);
-            const arr = Array.isArray(list) ? list : (list?.data ?? list);
-            data = Array.isArray(arr) ? arr[0] : arr;
-          }
+        if (Array.isArray(data)) data = data[0];
+      } else {
+        const u = fieldUrl.startsWith("http")
+          ? new URL(fieldUrl)
+          : new URL(fieldUrl, window.location.origin);
+        u.searchParams.set(camelToSnake(fieldKey), String(fieldValue));
+        const url = ensurePaged(u.toString());
 
-          if (data && data[fieldKey]) {
-            out[value] = {
-              label: String(data[fieldName]),
-              value: String(data[fieldKey]),
-            };
-          }
-        } catch (error) {
-          console.warn(
-            `Error resolving initial async value for ${value}:`,
-            error
-          );
-        }
+        const list = await fetchCached(url);
+        const arr = Array.isArray(list) ? list : (list?.data ?? list);
+        data = Array.isArray(arr) ? arr[0] : arr;
       }
 
-      if (mounted && value) {
-        setSelectedValue(out[value]);
+      if (data && data[fieldKey]) {
+        return {
+          label: String(data[fieldName]),
+          value: String(data[fieldKey]),
+        };
+      }
+    }
+
+    return null;
+  }, [fetchCached, fieldKey, fieldName, fieldUrl, mapById, searchType, value]);
+
+  useEffect(() => {
+    if (
+      value?.toString() === "0" ||
+      !value ||
+      !fieldUrl ||
+      !fieldName ||
+      !fieldKey
+    ) {
+      return;
+    }
+
+    let mounted = true;
+
+    const run = async (): Promise<void> => {
+      setRequestStatus("loading");
+      setStatusMessage(STATUS_LOADING_MESSAGE);
+      retryRequestRef.current = null;
+
+      try {
+        const resolved = await resolveInitialSelection();
+        if (!mounted) return;
+
+        if (resolved) {
+          setSelectedValue(resolved);
+        }
+
+        setRequestStatus("idle");
+        setStatusMessage(null);
+        retryRequestRef.current = null;
+      } catch (error) {
+        if (!mounted) return;
+
+        setRequestStatus("error");
+        setStatusMessage(STATUS_ERROR_MESSAGE);
+        retryRequestRef.current = async () => {
+          if (!mounted) return;
+          await run();
+        };
+        throw error;
       }
     };
 
-    resolveInitialAsyncValues();
+    run().catch((error) => {
+      if (!mounted) return;
+      notifyError(error);
+    });
+
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [
+    fieldKey,
+    fieldName,
+    fieldUrl,
+    notifyError,
+    resolveInitialSelection,
+    value,
+  ]);
 
   return (
     <div className="relative w-full">
       {selectedValue && (
         <div className="absolute top-2 z-[1] left-3 text-sm text-gray-500 w-5/6 truncate">
           {label} {!required && "(opcional)"}
+        </div>
+      )}
+      {requestStatus === 'error' && (
+        <div className="absolute right-0 z-[1] top-3.5 text-sm text-gray-400">
+          <IconButton
+            icon="cached"
+            onClick={handleRetry}
+            disabled={!retryRequestRef.current || requestStatus === 'loading'}
+            iconSize="!text-lg"
+            className="bg-white mr-0.5"
+            buttonWidth="w-8"
+            buttonHeight="h-8"
+          />
         </div>
       )}
       <AsyncPaginate
@@ -267,6 +384,16 @@ export function SelectPaginate<T>({
         isClearable
         required={required}
       />
+      {/* mensaje para haciendo consulta y mostrar error en caso falle consulta */}
+      {statusMessage && (
+        <div
+          className={`px-4 font-normal text-sm pt-1 ${
+            requestStatus === 'error' ? 'text-[#c8102e]' : 'text-[#58617A]'
+          }`}
+        >
+          {statusMessage}
+        </div>
+      )}
     </div>
   );
 }
