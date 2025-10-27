@@ -117,7 +117,7 @@ export default function InputDynamic({
         name={name}
         label={label}
         optional={!required}
-        value={value?.toString() ?? ""}
+        value={(value ?? '').toString()}
         onChangeValue={(val) => onChange(name, val)}
         disabled={loading}
         helperText={loading ? `Cargando ${label}...` : undefined}
@@ -164,7 +164,7 @@ export default function InputDynamic({
         name={name}
         optional={!required}
         label={label}
-        value={value?.toString()}
+        value={(value ?? '').toString()}
         fullWidth
         maxLength={255}
         onChange={(e) => {
