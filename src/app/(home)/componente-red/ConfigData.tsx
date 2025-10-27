@@ -429,8 +429,6 @@ export default function ConfigData({
     if (shouldUpdateServices) {
       setServices(newServices);
     }
-
-    console.log('FormData', formData, newAttributes);
   }, [formData]);
 
   useEffect(() => {
