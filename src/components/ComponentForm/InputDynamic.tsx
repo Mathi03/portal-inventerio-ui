@@ -1,21 +1,22 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from "react";
 import {
   TextField,
   Select,
   DateField,
-  IntegerField
-} from '@telefonica/mistica';
-import { AsyncPaginate } from 'react-select-async-paginate';
-import SelectField from '@/components/SelectField';
-import Modal from '@/components/Modal';
-import CreateForm from '.';
+  IntegerField,
+} from "@telefonica/mistica";
+import { AsyncPaginate } from "react-select-async-paginate";
+import SelectField from "@/components/SelectField";
+import Modal from "@/components/Modal";
+import CreateForm from ".";
+import IconButton from "../IconButton";
 
 interface InputDynamicProps {
   name: string;
   label: string;
   required?: boolean;
-  html_form_type: 'input' | 'select' | 'date' | 'multiple' | 'textarea';
-  type?: 'number' | 'string' | 'array' | 'date' | 'boolean';
+  html_form_type: "input" | "select" | "date" | "multiple" | "textarea";
+  type?: "number" | "string" | "array" | "date" | "boolean";
   value?: string | { label: string; value: string };
   onChange: (name: string, value: string) => void;
   isCreate?: boolean;
@@ -40,8 +41,8 @@ export default function InputDynamic({
   label,
   required = true,
   html_form_type,
-  value = '',
-  type = 'string',
+  value = "",
+  type = "string",
   onChange,
   isCreate,
   selectOptions = [],
@@ -50,7 +51,7 @@ export default function InputDynamic({
   regionId,
   stationId,
   isPaginated,
-  loadPaginatedOptions
+  loadPaginatedOptions,
 }: InputDynamicProps) {
   const [openForm, setOpenForm] = useState(false);
   const [internalAsyncValue, setInternalAsyncValue] = useState<{
@@ -61,26 +62,26 @@ export default function InputDynamic({
 
   const sortedSelectOptions = useMemo(() => {
     return [...selectOptions].sort((a, b) =>
-      a.text.localeCompare(b.text, 'es', { sensitivity: 'base' })
+      a.text.localeCompare(b.text, "es", { sensitivity: "base" })
     );
   }, [selectOptions]);
 
   const renderButton = () => (
-    <button
-      className="px-6 py-3 bg-blue-600 text-white rounded-full"
-      onClick={(e) => {
-        e.preventDefault();
+    <IconButton
+      onClick={() => {
         setOpenForm(true);
       }}
-    >
-      Crear
-    </button>
+      className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white rounded-2xl"
+      icon="add"
+      buttonHeight="h-10"
+      buttonWidth="w-10"
+    />
   );
 
   const renderSelect = () => {
     if (isPaginated && loadPaginatedOptions) {
       const selectedValue =
-        typeof value === 'object' && value !== null && isInitial.current
+        typeof value === "object" && value !== null && isInitial.current
           ? value
           : internalAsyncValue;
 
@@ -88,14 +89,14 @@ export default function InputDynamic({
         <div className="relative w-full">
           {selectedValue && (
             <div className="absolute top-2 z-[1] left-3 text-sm text-gray-500 w-5/6 truncate">
-              {label} {!required && '(opcional)'}
+              {label} {!required && "(opcional)"}
             </div>
           )}
           <AsyncPaginate
             className={`h-[60px] group_field_paginated ${
-              selectedValue ? 'has-value' : ''
+              selectedValue ? "has-value" : ""
             }`}
-            classNamePrefix={'field_paginated'}
+            classNamePrefix={"field_paginated"}
             debounceTimeout={1000}
             value={selectedValue}
             loadOptions={loadPaginatedOptions}
@@ -103,10 +104,10 @@ export default function InputDynamic({
               if (isInitial.current) isInitial.current = false;
               const selected = option === null ? null : option;
               setInternalAsyncValue(selected);
-              onChange(name, selected === null ? '' : selected.value);
+              onChange(name, selected === null ? "" : selected.value);
             }}
             additional={{ page: 1 }}
-            placeholder={`${label} ${!required && '(opcional)'}`}
+            placeholder={`${label} ${!required && "(opcional)"}`}
             isClearable
             required={required}
           />
@@ -119,7 +120,7 @@ export default function InputDynamic({
         name={name}
         label={label}
         optional={!required}
-        value={(value ?? '').toString()}
+        value={(value ?? "").toString()}
         onChangeValue={(val) => onChange(name, val)}
         disabled={loading}
         helperText={loading ? `Cargando ${label}...` : undefined}
@@ -146,13 +147,13 @@ export default function InputDynamic({
   };
 
   const renderInput = () => {
-    if (type === 'number')
+    if (type === "number")
       return (
         <IntegerField
           name={name}
           optional={!required}
           label={label}
-          value={(value ?? '').toString()}
+          value={(value ?? "").toString()}
           fullWidth
           maxLength={255}
           onChange={(e) => {
@@ -166,7 +167,7 @@ export default function InputDynamic({
         name={name}
         optional={!required}
         label={label}
-        value={(value ?? '').toString()}
+        value={(value ?? "").toString()}
         fullWidth
         maxLength={255}
         onChange={(e) => {
@@ -187,7 +188,7 @@ export default function InputDynamic({
         fullWidth
         multiline
         onChange={(val) => {
-          onChange(name, val?.target?.value ?? '');
+          onChange(name, val?.target?.value ?? "");
         }}
       />
     </div>
@@ -198,25 +199,25 @@ export default function InputDynamic({
       name={name}
       optional={!required}
       label={label}
-      value={value ? value?.toString() : ''}
+      value={value ? value?.toString() : ""}
       fullWidth
       onChange={(val) => {
-        onChange(name, val?.target?.value ?? '');
+        onChange(name, val?.target?.value ?? "");
       }}
     />
   );
 
   const field = useMemo(() => {
     switch (html_form_type) {
-      case 'select':
+      case "select":
         return renderSelect();
-      case 'input':
+      case "input":
         return renderInput();
-      case 'date':
+      case "date":
         return renderDate();
-      case 'multiple':
+      case "multiple":
         return renderMultiple();
-      case 'textarea':
+      case "textarea":
         return renderTextArea();
       default:
         return <div>Error: tipo no soportado</div>;

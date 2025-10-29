@@ -1,32 +1,32 @@
-import Select from '@/components/Select';
-import { Form, IntegerField, Switch, TextField } from '@telefonica/mistica';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Button from '@/components/Button';
-import { CreateComponenteRedDto } from '@/core/componente-red/dto/create.dto';
-import { ComponenteRedType } from '@/core/componente-red/componente-red.type';
-import { RedService } from '@/core/red/red.service';
-import { TipoComponenteService } from '@/core/tipo-componente/tipo-componente.service';
-import { FuenteService } from '@/core/fuente/fuente.service';
-import { estaciones as estacionesInstance, msDirecciones } from '@/core/config';
+import Select from "@/components/Select";
+import { Form, IntegerField, Switch, TextField } from "@telefonica/mistica";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Button from "@/components/Button";
+import { CreateComponenteRedDto } from "@/core/componente-red/dto/create.dto";
+import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
+import { RedService } from "@/core/red/red.service";
+import { TipoComponenteService } from "@/core/tipo-componente/tipo-componente.service";
+import { FuenteService } from "@/core/fuente/fuente.service";
+import { estaciones as estacionesInstance, msDirecciones } from "@/core/config";
 
-import { RedType } from '@/core/red/red.type';
-import { TipoComponenteType } from '@/core/tipo-componente/tipo-componente.type';
-import { FuenteType } from '@/core/fuente/fuente.type';
-import Table from '@/components/Table/Table';
-import { UpdateComponenteRedDto } from '@/core/componente-red/dto/update.dto';
+import { RedType } from "@/core/red/red.type";
+import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
+import { FuenteType } from "@/core/fuente/fuente.type";
+import Table from "@/components/Table/Table";
+import { UpdateComponenteRedDto } from "@/core/componente-red/dto/update.dto";
 import {
   ModeCreateForm,
-  useComponenteRedForm
-} from './hooks/useComponenteRedForm';
-import { SearchableSelectHandle } from '@/components/SearchableSelect';
-import { useModalStore } from '@/hooks/modalStorage';
-import RelacionJerarquica from './Relatcion-jerarquica';
+  useComponenteRedForm,
+} from "./hooks/useComponenteRedForm";
+import { SearchableSelectHandle } from "@/components/SearchableSelect";
+import { useModalStore } from "@/hooks/modalStorage";
+import RelacionJerarquica from "./Relatcion-jerarquica";
 import { RegionType } from "@/core/region/region.type";
-import ConfigData from './ConfigData';
-import TreeView from './TreeView';
-import { SelectPaginate } from '../SelectPaginate';
-import AttributeRelation from './AttributeRelation';
-import useErrorHandler from '@/hooks/useErrorHandler';
+import ConfigData from "./ConfigData";
+import TreeView from "./TreeView";
+import { SelectPaginate } from "../SelectPaginate";
+import AttributeRelation from "./AttributeRelation";
+import useErrorHandler from "@/hooks/useErrorHandler";
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -40,7 +40,7 @@ interface BaseCreateFormProps {
 }
 
 interface PopUpModeProps extends BaseCreateFormProps {
-  mode?: 'popup';
+  mode?: "popup";
   networkId: number | null;
   regionId: number | null;
   stationId: number | null;
@@ -48,7 +48,7 @@ interface PopUpModeProps extends BaseCreateFormProps {
 }
 
 interface CreateModeProps extends BaseCreateFormProps {
-  mode?: 'create';
+  mode?: "create";
   componenteRed?: never;
   networkId?: never;
   regionId?: never;
@@ -56,7 +56,7 @@ interface CreateModeProps extends BaseCreateFormProps {
 }
 
 interface UpdateOrApproveModeProps extends BaseCreateFormProps {
-  mode: 'update' | 'approve';
+  mode: "update" | "approve";
   componenteRed: ComponenteRedType;
   networkId?: never;
   regionId?: never;
@@ -64,7 +64,7 @@ interface UpdateOrApproveModeProps extends BaseCreateFormProps {
 }
 
 interface ReadModeProps extends BaseCreateFormProps {
-  mode: 'read';
+  mode: "read";
   componenteRed: ComponenteRedType;
   networkId?: never;
   regionId?: never;
@@ -78,12 +78,12 @@ type CreateFormProps =
   | ReadModeProps;
 
 export default function CreateForm({
-  mode = 'create',
+  mode = "create",
   componenteRed,
   networkId,
   componentTypeId,
   regionId,
-  stationId
+  stationId,
 }: CreateFormProps) {
   const { closeModal } = useModalStore();
   const { notifyError } = useErrorHandler();
@@ -97,8 +97,6 @@ export default function CreateForm({
 
   const [red, setRed] = useState<RedType | null>(null);
   const [redFather, setRedFather] = useState<RedType | null>(null);
-
-  //ojo validar con como se llama....
 
   const [isLoadingRedes, setIsLoadingRedes] = useState(true);
   const [isLoadingTC, setIsLoadingTC] = useState(false);
@@ -118,12 +116,21 @@ export default function CreateForm({
   const [fuentes, setFuentes] = useState<FuenteType[]>([]);
   const [regiones, setRegiones] = useState<RegionType[]>([]);
   const [region, setRegion] = useState<RegionType | null>(null);
-  const [estacion, setEstacion] = useState<string | null>(
-    componenteRed?.stationId?.toString() || null
-  );
+
+  const getStationId = (): string | null => {
+    if (mode === "popup")
+      if (stationId && stationId !== null) return stationId.toString();
+      else return null;
+    else if (componenteRed?.stationId)
+      return componenteRed?.stationId?.toString();
+    else return null;
+  };
+
+  const [estacion, setEstacion] = useState<string | null>(getStationId());
 
   const [commentPage, setCommentPage] = useState(1);
-  const [commentLimit, setCommentLimit] = useState(5);
+  // const [commentLimit, setCommentLimit] = useState(5);
+  const commentLimit = 5;
 
   const {
     isSubmitting,
@@ -135,17 +142,17 @@ export default function CreateForm({
     setComponenteSeleted,
     isApproved,
     setIsApproved,
-    onSubmit
+    onSubmit,
   } = useComponenteRedForm({ componenteRed, mode });
 
-  const [childName, setChildName] = useState(componenteRed?.controlName ?? '');
-  const [label, setLabel] = useState(componenteRed?.controlLabel ?? '');
+  const [childName, setChildName] = useState(componenteRed?.controlName ?? "");
+  const [label, setLabel] = useState(componenteRed?.controlLabel ?? "");
 
   const convertirFormato = (texto: string): string => {
     return texto
-      .split(' ')
+      .split(" ")
       .map((palabra) => palabra.toUpperCase())
-      .join('_');
+      .join("_");
   };
 
   const handleInputName = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,25 +170,25 @@ export default function CreateForm({
     () => ({
       componentId: componenteRed?.componentId?.toString().trim(),
       code: componenteRed?.code,
-      observation: componenteRed?.observation?.toString() || '',
+      observation: componenteRed?.observation?.toString() || "",
       regionId:
-        componenteRed?.regionId?.toString() || regionId?.toString() || '',
+        componenteRed?.regionId?.toString() || regionId?.toString() || "",
       stationId:
-        componenteRed?.stationId?.toString() || stationId?.toString() || '',
+        componenteRed?.stationId?.toString() || stationId?.toString() || "",
       refNetworkId:
-        componenteRed?.refNetworkId?.toString() || networkId?.toString() || '',
+        componenteRed?.refNetworkId?.toString() || networkId?.toString() || "",
       refComponentTypeId:
         componenteRed?.refComponentTypeId?.toString() ||
         componentTypeId?.toString() ||
-        '',
-      refSourceId: componenteRed?.refSourceId?.toString() || '',
-      status: componenteRed?.status?.toString() || '',
+        "",
+      refSourceId: componenteRed?.refSourceId?.toString() || "",
+      status: componenteRed?.status?.toString() || "",
       label: componenteRed?.controlLabel,
       name: componenteRed?.controlName,
       ...(componenteRed?.attribute
         ? JSON.parse(componenteRed.attribute)[0]
         : {}),
-      ...(componenteRed?.service ? JSON.parse(componenteRed.service)[0] : {})
+      ...(componenteRed?.service ? JSON.parse(componenteRed.service)[0] : {}),
     }),
     [componenteRed, networkId, componentTypeId, stationId, regionId]
   );
@@ -192,7 +199,7 @@ export default function CreateForm({
     const redService = new RedService();
 
     try {
-      if (mode === 'create') {
+      if (mode === "create") {
         const { data } = await redService.findAll({});
         const activeNetworks = data.data.data.filter(
           (r: RedType) => r.status === 1
@@ -200,6 +207,12 @@ export default function CreateForm({
         setRedes(activeNetworks);
         if (networkId) {
           setRed(activeNetworks.find((r) => r.id === networkId) ?? null);
+        }
+      } else if (mode === "popup") {
+        if (networkId !== null) {
+          const { data } = await redService.getById(Number(networkId));
+          setRedes([data?.data]);
+          setRed(data?.data ?? null);
         }
       } else {
         const { data } = await redService.getById(
@@ -211,8 +224,8 @@ export default function CreateForm({
     } catch (error) {
       setRedes([]);
       setRed(null);
-      setRedError('No se pudieron cargar las redes.');
-      notifyError(error, 'No se pudieron cargar las redes.');
+      setRedError("No se pudieron cargar las redes.");
+      notifyError(error, "No se pudieron cargar las redes.");
     } finally {
       setIsLoadingRedes(false);
     }
@@ -247,14 +260,14 @@ export default function CreateForm({
     const tcService = new TipoComponenteService();
 
     try {
-      if (mode === 'create') {
+      if (mode === "create" || mode === "popup") {
         const response = await tcService.findAll({});
         const data = response?.data?.data?.data;
         const activeComponenteTypes = data.filter(
           (t: TipoComponenteType) => t.status === 1
         );
         setTipoComponentes(activeComponenteTypes);
-        if (mode !== 'create' && componenteRed) {
+        if (mode !== "create" && componenteRed) {
           setTipoComponente(
             activeComponenteTypes.find(
               (t: TipoComponenteType) =>
@@ -273,8 +286,8 @@ export default function CreateForm({
     } catch (error) {
       setTipoComponentes([]);
       setTipoComponente(null);
-      setTipoComponenteError('No se pudieron cargar los tipos de componente.');
-      notifyError(error, 'No se pudieron cargar los tipos de componente.');
+      setTipoComponenteError("No se pudieron cargar los tipos de componente.");
+      notifyError(error, "No se pudieron cargar los tipos de componente.");
     } finally {
       setIsLoadingTC(false);
     }
@@ -287,13 +300,13 @@ export default function CreateForm({
 
     try {
       const { data } = await fuenteService.findAll({
-        refNetworkId: red?.id
+        refNetworkId: red?.id,
       });
       setFuentes(data.data.data.filter((f: FuenteType) => f.status === 1));
     } catch (error) {
       setFuentes([]);
-      setFuenteError('No se pudieron cargar las fuentes.');
-      notifyError(error, 'No se pudieron cargar las fuentes.');
+      setFuenteError("No se pudieron cargar las fuentes.");
+      notifyError(error, "No se pudieron cargar las fuentes.");
     } finally {
       setIsLoadingFuentes(false);
     }
@@ -304,20 +317,32 @@ export default function CreateForm({
     setRegionError(null);
 
     try {
-      const { data } = await msDirecciones.get(
-        '/api/v1/direcciones/regiones',
-        {}
-      );
-      const activeRegions: RegionType[] = data?.data?.data || [];
-      if (regionId) {
-        setRegion(activeRegions.find((r) => r.id === regionId) ?? null);
+      if (mode === "popup") {
+        if (regionId !== null) {
+          const { data } = await msDirecciones.get(
+            "/api/v1/direcciones/regiones/" + regionId,
+            {}
+          );
+          const activeRegion: RegionType = data?.data;
+          setRegion(activeRegion);
+          setRegiones([activeRegion]);
+        }
+      } else {
+        const { data } = await msDirecciones.get(
+          "/api/v1/direcciones/regiones",
+          {}
+        );
+        const activeRegions: RegionType[] = data?.data?.data || [];
+        if (regionId) {
+          setRegion(activeRegions.find((r) => r.id === regionId) ?? null);
+        }
+        setRegiones(activeRegions);
       }
-      setRegiones(activeRegions);
     } catch (error) {
       setRegiones([]);
       setRegion(null);
-      setRegionError('No se pudieron cargar las regiones.');
-      notifyError(error, 'No se pudieron cargar las regiones.');
+      setRegionError("No se pudieron cargar las regiones.");
+      notifyError(error, "No se pudieron cargar las regiones.");
     } finally {
       setIsLoadingRegiones(false);
     }
@@ -352,7 +377,7 @@ export default function CreateForm({
 
       if (findNetwork) {
         networkInputRef.current?.setValue(networkFatherId.toString());
-        networkInputRef.current?.setQuery(findNetwork?.label ?? '');
+        networkInputRef.current?.setQuery(findNetwork?.label ?? "");
         setRedFather(findNetwork);
         setComponentTypeFatherId(componentTypeFatherId);
       }
@@ -373,11 +398,11 @@ export default function CreateForm({
       if (componenteRed.attribute) {
         try {
           const parsedAttr = JSON.parse(componenteRed.attribute);
-          if (Array.isArray(parsedAttr) && typeof parsedAttr[0] === 'object') {
+          if (Array.isArray(parsedAttr) && typeof parsedAttr[0] === "object") {
             setAttribute(parsedAttr[0]);
           }
         } catch (err) {
-          console.error('Error al parsear atributo:', err);
+          console.error("Error al parsear atributo:", err);
         }
       }
 
@@ -386,12 +411,12 @@ export default function CreateForm({
           const parsedService = JSON.parse(componenteRed.service);
           if (
             Array.isArray(parsedService) &&
-            typeof parsedService[0] === 'object'
+            typeof parsedService[0] === "object"
           ) {
             setService(parsedService[0]);
           }
         } catch (err) {
-          console.error('Error al parsear service:', err);
+          console.error("Error al parsear service:", err);
         }
       }
     }
@@ -400,15 +425,15 @@ export default function CreateForm({
   const parsedComments = useMemo(() => {
     return (
       componenteRed?.approvalComment
-        ?.split('|')
-        .filter((entry) => entry.trim() !== '')
+        ?.split("|")
+        .filter((entry) => entry.trim() !== "")
         .map((entry, index) => {
-          const [date, userId, comment] = entry.split('$');
+          const [date, userId, comment] = entry.split("$");
           return {
             id: index,
             date: date?.trim(),
             userId: userId?.trim(),
-            comment: comment?.replace(/\n/g, ' ')?.trim()
+            comment: comment?.replace(/\n/g, " ")?.trim(),
           };
         }) ?? []
     );
@@ -424,14 +449,14 @@ export default function CreateForm({
       <div className="flex justify-between">
         <header className="p-6 grid gap-4">
           <h4 className="text-[28px]">
-            {mode === 'create' ? 'Creación' : 'Detalle'} de componente de red
+            {(mode === "create" || mode === "popup") ? "Creación" : "Detalle"} de componente de red
           </h4>
           <p>
             En esta sección, podrás crear y gestionar tus componentes de red de
             manera eficiente y personalizada.
           </p>
         </header>
-        {(mode === 'popup' || mode === 'read') && (
+        {(mode === "popup" || mode === "read") && (
           <div className="p-6">
             <Button variant="primary" onClick={() => closeModal()}>
               Cerrar
@@ -447,7 +472,7 @@ export default function CreateForm({
             stationId: Number(estacion),
             refComponentTypeId: tipoComponente?.id,
             refSourceId: componenteRed?.refSourceId,
-            refNetworkId: red?.id
+            refNetworkId: red?.id,
           } as FormValues)
         }
         className="grid grid-cols-3 content-start gap-4 px-6"
@@ -457,46 +482,46 @@ export default function CreateForm({
           Datos del componente de red
         </h1>
         <TextField
-          name={'controlName' as FormItem}
+          name={"controlName" as FormItem}
           label="Nombre"
           value={childName}
           fullWidth
           maxLength={255}
           onChange={handleInputName}
-          disabled={mode === 'approve' || mode === 'read'}
-          optional={mode === 'approve' || mode === 'read'}
+          disabled={mode === "approve" || mode === "read"}
+          optional={mode === "approve" || mode === "read"}
         />
         <TextField
-          name={'controlLabel' as FormItem}
+          name={"controlLabel" as FormItem}
           label="Etiqueta"
           value={label}
           fullWidth
           maxLength={255}
           onChange={handleInputLabel}
-          disabled={mode === 'approve' || mode === 'read'}
-          optional={mode === 'approve' || mode === 'read'}
+          disabled={mode === "approve" || mode === "read"}
+          optional={mode === "approve" || mode === "read"}
         />
         <IntegerField
-          name={'componentId' as FormItem}
+          name={"componentId" as FormItem}
           label="Componente ID"
           fullWidth
           maxLength={255}
-          disabled={mode === 'approve' || mode === 'read'}
-          optional={mode === 'approve' || mode === 'read'}
+          disabled={mode === "approve" || mode === "read"}
+          optional={mode === "approve" || mode === "read"}
         />
         <Select
           // ref={networkInputRef}
-          name={'refNetworkId' as FormItem}
+          name={"refNetworkId" as FormItem}
           label="Red"
-          disabled={mode !== 'create' ? true : isLoadingRedes}
-          optional={mode !== 'create'}
+          disabled={mode !== "create" ? true : isLoadingRedes}
+          optional={mode !== "create"}
           fullWidth
           helperText={
-            redError ?? (isLoadingRedes ? 'Cargando redes...' : undefined)
+            redError ?? (isLoadingRedes ? "Cargando redes..." : undefined)
           }
           options={redes?.map((red) => ({
             text: red.label,
-            value: red.id.toString()
+            value: red.id.toString(),
           }))}
           onChangeValue={(value) => {
             setRed(redes?.find((r) => r.id === +value) || null);
@@ -504,18 +529,18 @@ export default function CreateForm({
           }}
         />
         <Select
-          name={'refComponentTypeId' as FormItem}
+          name={"refComponentTypeId" as FormItem}
           label="Tipo de componente"
-          disabled={mode !== 'create' ? true : isLoadingTC}
-          optional={mode !== 'create'}
+          disabled={(mode !== "create" && mode !== "popup") ? true : isLoadingTC}
+          optional={(mode !== "create" && mode !== "popup")}
           fullWidth
           helperText={
             tipoComponenteError ??
-            (isLoadingTC ? 'Cargando tipos de componente...' : undefined)
+            (isLoadingTC ? "Cargando tipos de componente..." : undefined)
           }
           options={tipoComponentes?.map((tc) => ({
             text: tc.label,
-            value: tc.id.toString()
+            value: tc.id.toString(),
           }))}
           onChangeValue={(value) =>
             setTipoComponente(
@@ -524,43 +549,43 @@ export default function CreateForm({
           }
         />
         <Select
-          name={'refSourceId' as FormItem}
+          name={"refSourceId" as FormItem}
           label="Fuente"
           disabled={
-            mode !== 'create'
+            (mode !== "create" && mode !== "popup")
               ? true
               : !isValidToSearch
-              ? true
-              : isLoadingFuentes
+                ? true
+                : isLoadingFuentes
           }
-          optional={mode !== 'create'}
+          optional={(mode !== "create" && mode !== "popup")}
           fullWidth
           helperText={
             fuenteError ??
-            (isLoadingFuentes ? 'Cargando fuentes...' : undefined)
+            (isLoadingFuentes ? "Cargando fuentes..." : undefined)
           }
           options={fuentes.map((f) => ({
             text: f.label,
-            value: f.id.toString()
+            value: f.id.toString(),
           }))}
         />
         <Select
-          name={'regionId' as FormItem}
+          name={"regionId" as FormItem}
           label="Región"
           disabled={
-            mode === 'approve' || mode === 'popup' || mode === 'read'
+            mode === "approve" || mode === "popup" || mode === "read"
               ? true
               : isLoadingRegiones
           }
-          optional={mode === 'approve' || mode === 'popup' || mode === 'read'}
+          optional={mode === "approve" || mode === "popup" || mode === "read"}
           fullWidth
           helperText={
             regionError ??
-            (isLoadingRegiones ? 'Cargando regiones...' : undefined)
+            (isLoadingRegiones ? "Cargando regiones..." : undefined)
           }
           options={regiones.map((r) => ({
             text: r.nombre,
-            value: r.id.toString()
+            value: r.id.toString(),
           }))}
           onChangeValue={(value) => {
             setRegion(
@@ -571,18 +596,18 @@ export default function CreateForm({
         />
         <SelectPaginate
           label="Estación"
-          value={estacion ?? ''}
+          value={estacion ?? ""}
           clientToFetch={estacionesInstance}
           searchType="byId"
-          fieldUrl={'api/v1/estaciones'}
+          fieldUrl={"v1/estaciones"}
           fieldKey="id"
           fieldName="nombre"
           mapById="estacion"
           onChange={(value) => {
-            setEstacion(value?.toString() ?? '');
+            setEstacion(value?.toString() ?? "");
           }}
           required
-          disabled={mode === 'read'}
+          disabled={mode === "read"}
         />
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="config-adicional"></hgroup>
@@ -592,17 +617,17 @@ export default function CreateForm({
           setServices={setService}
           attributes={attribute}
           services={service}
-          networkId={Number(red?.id)}
-          regionId={Number(region?.id)}
-          stationId={Number(estacion)}
-          disabled={mode === 'read'}
+          networkId={red ? Number(red?.id) : null}
+          regionId={region ? Number(region?.id) : null}
+          stationId={estacion ? Number(estacion) : null}
+          disabled={mode === "read"}
           // attribute={attribute}
           // onAttributes={onAttributes}
           // service={service}
           // onServices={onServices}
         />
 
-        {tipoComponente?.id?.toString() === '28' && (
+        {tipoComponente?.id?.toString() === "28" && (
           <>
             <hr className="col-span-3" />
             <hgroup className="col-span-3" id="relacion-jerarquica">
@@ -628,7 +653,7 @@ export default function CreateForm({
           </>
         )}
 
-        {tipoComponente?.id?.toString() === '28' && (
+        {tipoComponente?.id?.toString() === "28" && (
           <>
             <hr className="col-span-3" />
             <hgroup className="col-span-3" id="relacion-jerarquica">
@@ -646,9 +671,9 @@ export default function CreateForm({
           </>
         )}
 
-        {(tipoComponente?.id?.toString() === '5' ||
-          tipoComponente?.id?.toString() === '26' ||
-          tipoComponente?.id?.toString() === '27') && (
+        {(tipoComponente?.id?.toString() === "5" ||
+          tipoComponente?.id?.toString() === "26" ||
+          tipoComponente?.id?.toString() === "27") && (
           <>
             <hr className="col-span-3" />
             <hgroup className="col-span-3" id="relacion-jerarquica">
@@ -672,12 +697,12 @@ export default function CreateForm({
         </hgroup>
         <div className="col-span-3">
           <TextField
-            name={'observation' as FormItem}
+            name={"observation" as FormItem}
             label="Observación"
             fullWidth
             multiline
-            disabled={mode === 'approve' || mode === 'read'}
-            optional={mode === 'approve' || mode === 'read'}
+            disabled={mode === "approve" || mode === "read"}
+            optional={mode === "approve" || mode === "read"}
           />
         </div>
         {componenteRed?.approvalComment && (
@@ -688,9 +713,9 @@ export default function CreateForm({
             <div className="flex col-span-3 flex-col">
               <Table
                 columns={[
-                  { title: 'Fecha', render: (row: any) => row.date },
-                  { title: 'ID Usuario', render: (row: any) => row.userId },
-                  { title: 'Comentario', render: (row: any) => row.comment }
+                  { title: "Fecha", render: (row: any) => row.date },
+                  { title: "ID Usuario", render: (row: any) => row.userId },
+                  { title: "Comentario", render: (row: any) => row.comment },
                 ]}
                 rows={paginatedComments}
                 itemPerPage={10}
@@ -700,12 +725,12 @@ export default function CreateForm({
             </div>
           </>
         )}
-        {mode === 'approve' && (
+        {mode === "approve" && (
           <>
             <h4 className="text-[20px] mt-6 col-span-3">Agregar Comentario</h4>
             <div className="col-span-3">
               <TextField
-                name={'commentApproval'}
+                name={"commentApproval"}
                 label="Comentario de aprobación"
                 fullWidth
                 multiline
@@ -724,7 +749,7 @@ export default function CreateForm({
             </div>
           </>
         )}
-        {mode !== 'read' && (
+        {mode !== "read" && (
           <footer className="grid gap-4 p-4 border-t-[1px] border-[#eee] col-span-3 justify-center">
             <Button showSpinner={isSubmitting}>Guardar</Button>
           </footer>
