@@ -1,7 +1,7 @@
 "use client";
+import CreateForm from "@/components/ComponentForm";
 import Header from "./Header";
 import NavMenu from "./NavMenu";
-import CreateForm from "./CreateForm";
 
 export default function DetalleComponenteRed() {
   return (

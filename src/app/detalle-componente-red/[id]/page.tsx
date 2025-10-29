@@ -5,8 +5,8 @@ import { ComponenteRedService } from "@/core/componente-red/componente-red.servi
 import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
 import { useParams } from "next/navigation";
 import NavMenu from "./NavMenu";
-import CreateForm from "@/app/crear-componente-red/CreateForm";
 import useErrorHandler from '@/hooks/useErrorHandler';
+import CreateForm from "@/components/ComponentForm";
 
 export default function DetalleComponenteRed() {
   const { id } = useParams();
