@@ -11,14 +11,14 @@ import Icon from '@/components/Icon';
 import { RELACIONES_TIPO_CIRCUITO } from '@/core/config/relacionesServicios';
 import { useFetchCached } from './hooks/useFetchCached';
 import BlockUI from '@/components/BlockUi';
-import { buildShapeIndex } from './shape'; // [CHG]
-import { getValueAtPath, setValueAtPath } from './path-access'; // [CHG]
+import { buildShapeIndex } from './shape';
+import { getValueAtPath, setValueAtPath } from './path-access';
 
+// ========== HELPERS PUROS (fuera del componente) ==========
 function camelToSnake(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
 }
 
-// === helpers de normalización ===
 const normalizeApiData = (r: any) =>
   r?.data?.data?.data ?? r?.data?.data ?? r?.data ?? r;
 
@@ -30,7 +30,6 @@ const ensurePaged = (url: string) => {
 };
 
 const DEFAULT_GROUP_LABEL = 'Sin agrupación';
-// Priorizar grupo
 const PREFERRED_FIRST_GROUPS = ['Principal'];
 
 function groupByGroup(items: ConfigDataAttribute[]) {
@@ -46,9 +45,6 @@ function groupByGroup(items: ConfigDataAttribute[]) {
 }
 
 function sortGroupNames(names: string[]) {
-  // 1) preferidos primero (en el orden indicado)
-  // 2) alfabético
-  // 3) DEFAULT_GROUP_LABEL al final
   return [...names].sort((a, b) => {
     const ia = PREFERRED_FIRST_GROUPS.indexOf(a);
     const ib = PREFERRED_FIRST_GROUPS.indexOf(b);
@@ -66,7 +62,6 @@ function sortGroupNames(names: string[]) {
   });
 }
 
-// [CHG] Recorre atributos produciendo el path completo con separador '#'
 function walkAttributes(
   items: ConfigDataAttribute[],
   visitor: (attr: ConfigDataAttribute, path: string) => void,
@@ -81,6 +76,7 @@ function walkAttributes(
   });
 }
 
+// ========== TIPOS ==========
 type LoaderFn = (
   search: string,
   loadedOptions: Array<{ label: string; value: string }>,
@@ -103,6 +99,7 @@ interface ConfigDataProps {
   disabled?: boolean;
 }
 
+// ========== COMPONENTE PRINCIPAL ==========
 export default function ConfigData({
   tipoComponente,
   setAttributes,
@@ -121,41 +118,51 @@ export default function ConfigData({
   const [dynamicOptions, setDynamicOptions] = useState<Record<string, any[]>>(
     {}
   );
-
   const [filteredConfigServices, setFilteredConfigServices] = useState<
     ConfigDataAttribute[]
   >([]);
-
   const [resolvedAsyncValues, setResolvedAsyncValues] = useState<
     Record<string, { label: string; value: string }>
   >({});
-  const dataCacheRef = useRef<Map<string, any>>(new Map());
-  const inflightRef = useRef<Map<string, Promise<any>>>(new Map());
 
-  const hasResolvedAsyncValues = useRef(false);
+  // 🔥 CRITICAL: Usar ref para evitar re-inicializaciones
+  const hasInitializedRef = useRef(false);
+  const isResolvingAsyncRef = useRef(false);
 
-  const configDataItem = tipoComponente ? tipoComponente.configData?.[0] : null;
-  const configAttributes = configDataItem?.configAttributes ?? [];
-  const configServices = configDataItem?.configServices ?? [];
+  // Extraer configuración
+  const configDataItem = tipoComponente?.configData?.[0] ?? null;
+  const configAttributes = useMemo(
+    () => configDataItem?.configAttributes ?? [],
+    [configDataItem]
+  );
+  const configServices = useMemo(
+    () => configDataItem?.configServices ?? [],
+    [configDataItem]
+  );
 
+  // 🔥 OPTIMIZACIÓN: Memoizar índices de forma estable
   const attributeShapeIndex = useMemo(
     () => buildShapeIndex(configAttributes, false),
     [configAttributes]
-  ); // [CHG]
+  );
+
   const serviceShapeIndex = useMemo(
     () => buildShapeIndex(configServices, true),
     [configServices]
-  ); // [CHG]
+  );
+
   const serviceRootNames = useMemo(
     () => new Set(configServices.map((attr) => attr.name)),
     [configServices]
-  ); // [CHG]
+  );
+
   const attributeByPath = useMemo(() => {
     const map = new Map<string, ConfigDataAttribute>();
     walkAttributes(configAttributes, (attr, path) => map.set(path, attr));
     walkAttributes(configServices, (attr, path) => map.set(path, attr));
     return map;
-  }, [configAttributes, configServices]); // [CHG]
+  }, [configAttributes, configServices]);
+
   const pickShapeIndex = useCallback(
     (path: string) => {
       const root = path.split('#')[0];
@@ -164,48 +171,47 @@ export default function ConfigData({
         : attributeShapeIndex;
     },
     [attributeShapeIndex, serviceRootNames, serviceShapeIndex]
-  ); // [CHG]
+  );
 
-  useEffect(() => {
-    dataCacheRef.current.clear();
-    inflightRef.current.clear();
-  }, [tipoComponente?.id]);
+  // 🔥 OPTIMIZACIÓN: fetchOptions memoizado con useCallback
+  const fetchOptions = useCallback(
+    async (
+      url: string,
+      responseFields?: string[],
+      searchQuery = ''
+    ): Promise<{ text: string; value: string }[]> => {
+      try {
+        const base = new URL(url, window.location.origin);
+        if (searchQuery) base.searchParams.set('q', searchQuery);
+        const finalUrl = base.toString();
 
-  const fetchOptions = async (
-    url: string,
-    responseFields?: string[],
-    searchQuery = ''
-  ): Promise<{ text: string; value: string }[]> => {
-    try {
-      const base = new URL(url, window.location.origin);
-      if (searchQuery) base.searchParams.set('q', searchQuery);
-      const finalUrl = base.toString();
+        const response = await fetchCached(finalUrl);
+        const data = normalizeApiData(response);
+        const items: any[] = Array.isArray(data) ? data : (data?.items ?? data);
 
-      const response = await fetchCached(finalUrl);
-      const data = normalizeApiData(response);
+        const labelKey = responseFields?.[0] ?? 'name';
+        const valueKey = responseFields?.[1] ?? 'value';
 
-      const items: any[] = Array.isArray(data) ? data : data?.items ?? data;
+        return (items ?? []).map((item: any) => ({
+          text: String(item?.[labelKey]),
+          value: String(item?.[valueKey])
+        }));
+      } catch (err) {
+        console.error('Error fetching options from', url, err);
+        return [];
+      }
+    },
+    [fetchCached]
+  );
 
-      const labelKey = responseFields?.[0] ?? 'name';
-      const valueKey = responseFields?.[1] ?? 'value';
-
-      return (items ?? []).map((item: any) => ({
-        text: String(item?.[labelKey]),
-        value: String(item?.[valueKey])
-      }));
-    } catch (err) {
-      console.error('Error fetching options from', url, err);
-      return [];
-    }
-  };
-
+  // 🔥 OPTIMIZACIÓN: onChange memoizado
   const onChange = useCallback(
     async (name: string, value: any) => {
       setFormData((prev) =>
         setValueAtPath(prev, name, value, pickShapeIndex(name))
-      ); // [CHG]
+      );
 
-      const triggeringAttr = attributeByPath.get(name); // [CHG]
+      const triggeringAttr = attributeByPath.get(name);
 
       if (triggeringAttr?.on_change) {
         const {
@@ -224,21 +230,22 @@ export default function ConfigData({
           setDynamicOptions((prev) => ({
             ...prev,
             [target_name]: options
-          })); // [CHG]
+          }));
 
           setResolvedAsyncValues((prev) => {
             if (!(target_name in prev)) return prev;
             const next = { ...prev };
             delete next[target_name];
             return next;
-          }); // [CHG]
+          });
 
           setFormData((prev) =>
             setValueAtPath(prev, target_name, '', pickShapeIndex(target_name))
-          ); // [CHG]
+          );
         }
       }
 
+      // Manejar cambio de tipo de circuito
       if (name === 'id_tipo_circuito') {
         const relacion = RELACIONES_TIPO_CIRCUITO.find(
           (r) => r.id === parseInt(value)
@@ -254,49 +261,41 @@ export default function ConfigData({
       }
     },
     [attributeByPath, configServices, fetchOptions, pickShapeIndex]
-  ); // [CHG]
+  );
 
-  const fetchValoresPosibles = async (
-    attribute: ConfigDataAttribute,
-    fieldPath: string
-  ) => {
-    if (!attribute.valores_posibles_source) return;
+  // 🔥 OPTIMIZACIÓN: Cargar opciones estáticas solo una vez
+  const fetchValoresPosibles = useCallback(
+    async (attribute: ConfigDataAttribute, fieldPath: string) => {
+      if (!attribute.valores_posibles_source) return;
 
-    const url = ensurePaged(attribute.valores_posibles_source);
+      const url = ensurePaged(attribute.valores_posibles_source);
+      const options = await fetchOptions(
+        url,
+        attribute.valores_posibles_response
+      );
 
-    const options = await fetchOptions(
-      url,
-      attribute.valores_posibles_response
-    );
+      setDynamicOptions((prev) => {
+        const prevOpts = prev[fieldPath] ?? [];
+        const sameLen = prevOpts.length === options.length;
+        const same =
+          sameLen &&
+          prevOpts.every(
+            (o, i) => o.text === options[i].text && o.value === options[i].value
+          );
+        if (same) return prev;
+        return { ...prev, [fieldPath]: options };
+      });
+    },
+    [fetchOptions]
+  );
 
-    // evita re-render si no cambió
-    // setDynamicOptions((prev) => ({ ...prev, [key]: options }));
-
-    setDynamicOptions((prev) => {
-      const prevOpts = prev[fieldPath] ?? [];
-      const sameLen = prevOpts.length === options.length;
-      const same =
-        sameLen &&
-        prevOpts.every(
-          (o, i) => o.text === options[i].text && o.value === options[i].value
-        );
-      if (same) return prev;
-      return { ...prev, [fieldPath]: options };
-    });
-  };
-
+  // 🔥 OPTIMIZACIÓN: loadPaginatedOptions memoizado
   const loadPaginatedOptions = useCallback(
     (url: string, responseFields?: string[]) =>
-      async (
-        search: string,
-        _loadedOptions: any,
-        { page }: { page: number }
-      ) => {
+      async (search: string, _: any, { page }: { page: number }) => {
         const u = new URL(url);
         u.searchParams.set('page', String(page));
-        // const limit = Number(u.searchParams.get("limit") ?? "10");
         u.searchParams.set('limit', '10');
-        const limit = 10;
         const options = await fetchOptions(
           u.toString(),
           responseFields,
@@ -304,7 +303,7 @@ export default function ConfigData({
         );
         return {
           options: options.map(({ text, value }) => ({ label: text, value })),
-          hasMore: options.length >= limit,
+          hasMore: options.length >= 10,
           additional: { page: page + 1 }
         };
       },
@@ -325,90 +324,96 @@ export default function ConfigData({
   const isPaginatedSource = (src?: string) =>
     !!src && src.includes('limit=') && src.includes('page=');
 
-  const prepareInputs = (attributes: ConfigDataAttribute[]) => {
-    walkAttributes(attributes, (attr, path) => {
-      if (
-        attr.valores_posibles_source &&
-        !isPaginatedSource(attr.valores_posibles_source)
-      ) {
-        fetchValoresPosibles(attr, path);
-      }
-    });
-  }; // [CHG]
-
+  // 🔥 OPTIMIZACIÓN: Preparar inputs solo cuando cambia tipoComponente
   useEffect(() => {
+    if (!tipoComponente) return;
+
+    const prepareInputs = (attributes: ConfigDataAttribute[]) => {
+      walkAttributes(attributes, (attr, path) => {
+        if (
+          attr.valores_posibles_source &&
+          !isPaginatedSource(attr.valores_posibles_source)
+        ) {
+          fetchValoresPosibles(attr, path);
+        }
+      });
+    };
+
     prepareInputs(configAttributes);
     prepareInputs(configServices);
     setFilteredConfigServices([]);
-  }, [tipoComponente]);
+  }, [tipoComponente?.id, configAttributes, configServices]);
 
+  // 🔥 FIX CRÍTICO: Inicialización de formData SOLO UNA VEZ
   useEffect(() => {
-    const hasInitialData =
+    const hasData =
       Object.keys(attributes || {}).length > 0 ||
       Object.keys(services || {}).length > 0;
-    if (!hasInitialData) return;
 
-    setFormData((prev) => {
-      if (Object.keys(prev).length > 0) return prev;
-      let nextState: Record<string, any> = {};
+    if (!hasData || hasInitializedRef.current) return;
 
-      walkAttributes(configAttributes, (_, path) => {
-        const value = getValueAtPath(attributes, path, attributeShapeIndex);
-        if (value !== undefined) {
-          nextState = setValueAtPath(
-            nextState,
-            path,
-            value,
-            attributeShapeIndex
-          );
-        }
-      });
+    let nextState: Record<string, any> = {};
 
-      walkAttributes(configServices, (_, path) => {
-        const value = getValueAtPath(services, path, serviceShapeIndex);
-        if (value !== undefined) {
-          nextState = setValueAtPath(nextState, path, value, serviceShapeIndex);
-        }
-      });
-
-      return nextState;
+    walkAttributes(configAttributes, (_, path) => {
+      const value = getValueAtPath(attributes, path, attributeShapeIndex);
+      if (value !== undefined) {
+        nextState = setValueAtPath(nextState, path, value, attributeShapeIndex);
+      }
     });
+
+    walkAttributes(configServices, (_, path) => {
+      const value = getValueAtPath(services, path, serviceShapeIndex);
+      if (value !== undefined) {
+        nextState = setValueAtPath(nextState, path, value, serviceShapeIndex);
+      }
+    });
+
+    if (Object.keys(nextState).length > 0) {
+      setFormData(nextState);
+      hasInitializedRef.current = true;
+    }
   }, [
-    attributeShapeIndex,
     attributes,
+    services,
     configAttributes,
     configServices,
-    serviceShapeIndex,
-    services
-  ]); // [CHG]
+    attributeShapeIndex,
+    serviceShapeIndex
+  ]);
 
+  // 🔥 OPTIMIZACIÓN: Manejar tipo circuito sin causar re-renders
   useEffect(() => {
     const circuitoId = formData.id_tipo_circuito;
-    if (
-      circuitoId !== undefined &&
-      circuitoId !== null &&
-      configServices.length > 0
-    ) {
-      const relacion = RELACIONES_TIPO_CIRCUITO.find(
-        (r) => r.id === parseInt(circuitoId)
-      );
-      if (relacion) {
-        const serviciosFiltrados = configServices.filter((service) =>
-          relacion.servicios_asociados.some((s) => s.name === service.name)
-        );
-        setFilteredConfigServices(serviciosFiltrados);
-      } else {
-        setFilteredConfigServices([]);
-      }
-    }
+    if (circuitoId == null || configServices.length === 0) return;
+
+    const relacion = RELACIONES_TIPO_CIRCUITO.find(
+      (r) => r.id === parseInt(circuitoId)
+    );
+
+    setFilteredConfigServices((prev) => {
+      const newFiltered = relacion
+        ? configServices.filter((service) =>
+            relacion.servicios_asociados.some((s) => s.name === service.name)
+          )
+        : [];
+
+      // Solo actualizar si cambió
+      if (JSON.stringify(prev) === JSON.stringify(newFiltered)) return prev;
+      return newFiltered;
+    });
   }, [formData.id_tipo_circuito, configServices]);
 
+  // 🔥 FIX CRÍTICO: Sincronizar con parent SOLO cuando formData cambia significativamente
+  const lastEmittedRef = useRef<string>('');
+
   useEffect(() => {
+    if (!hasInitializedRef.current) return;
+
     const attributeKeys = configAttributes.map((item) => item.name);
     const serviceKeys = configServices.map((item) => item.name);
 
-    const newAttributes: { [key: string]: any } = {};
-    const newServices: { [key: string]: any } = {};
+    const newAttributes: Record<string, any> = {};
+    const newServices: Record<string, any> = {};
 
     for (const key in formData) {
       if (attributeKeys.includes(key)) {
@@ -418,21 +423,30 @@ export default function ConfigData({
       }
     }
 
-    // ⚠️ Solo actualizamos si hay algo útil que setear
-    const shouldUpdateAttributes = Object.keys(newAttributes).length > 0;
-    const shouldUpdateServices = Object.keys(newServices).length > 0;
+    // 🔥 PREVENIR LOOPS: Solo emitir si realmente cambió
+    const newSignature = JSON.stringify({ newAttributes, newServices });
+    if (newSignature === lastEmittedRef.current) return;
 
-    if (shouldUpdateAttributes) {
+    lastEmittedRef.current = newSignature;
+
+    if (Object.keys(newAttributes).length > 0) {
       setAttributes(newAttributes);
     }
-
-    if (shouldUpdateServices) {
+    if (Object.keys(newServices).length > 0) {
       setServices(newServices);
     }
-  }, [formData]);
+  }, [formData, configAttributes, configServices]);
 
+  // 🔥 OPTIMIZACIÓN: Resolver valores async SOLO UNA VEZ
   useEffect(() => {
-    if (hasResolvedAsyncValues.current || !tipoComponente) return;
+    if (
+      isResolvingAsyncRef.current ||
+      !tipoComponente ||
+      !hasInitializedRef.current
+    )
+      return;
+
+    isResolvingAsyncRef.current = true;
     let mounted = true;
 
     const entries: Array<{ attr: ConfigDataAttribute; path: string }> = [];
@@ -466,9 +480,9 @@ export default function ConfigData({
 
           try {
             const [labelKey, valueKey] = attr.valores_posibles_response;
-
             let data;
-            if (valueKey.toLocaleLowerCase() === 'id') {
+
+            if (valueKey.toLowerCase() === 'id') {
               const baseUrl = attr.valores_posibles_source.split('?')[0];
               const url = `${baseUrl}/${fieldValue}`;
               data = await fetchCached(url);
@@ -478,7 +492,7 @@ export default function ConfigData({
               u.searchParams.set(camelToSnake(valueKey), String(fieldValue));
               const url = ensurePaged(u.toString());
               const list = await fetchCached(url);
-              const arr = Array.isArray(list) ? list : list?.data ?? list;
+              const arr = Array.isArray(list) ? list : (list?.data ?? list);
               data = Array.isArray(arr) ? arr[0] : arr;
             }
 
@@ -489,168 +503,171 @@ export default function ConfigData({
               };
             }
           } catch (error) {
-            console.warn(
-              `Error resolving initial async value for ${path}:`,
-              error
-            );
+            console.warn(`Error resolving async value for ${path}:`, error);
           }
         })
       );
 
       if (mounted) {
         setResolvedAsyncValues(out);
-        hasResolvedAsyncValues.current = true;
       }
     };
 
     resolveInitialAsyncValues();
+
     return () => {
       mounted = false;
     };
-  }, [
-    attributes,
-    configAttributes,
-    configServices,
-    fetchCached,
-    pickShapeIndex,
-    serviceRootNames,
-    services,
-    tipoComponente
-  ]); // [CHG]
+  }, [tipoComponente?.id]);
 
-  const renderNode = (
-    items: ConfigDataAttribute[],
-    prefix = '',
-    heading = 'Atributos principales'
-  ) => {
-    const leaves = items.filter(
-      (attr) => attr.type !== 'array' && attr.html_form_type
-    );
-    const grouped = groupByGroup(leaves);
-    const groupNames = sortGroupNames(Object.keys(grouped));
-    const arrays = items.filter(
-      (attr) =>
-        attr.type === 'array' &&
-        Array.isArray(attr.atribs_config) &&
-        attr.atribs_config.length > 0
-    );
+  // ========== RENDER ==========
+  const renderNode = useCallback(
+    (
+      items: ConfigDataAttribute[],
+      prefix = '',
+      heading = 'Atributos principales'
+    ) => {
+      const leaves = items.filter(
+        (attr) => attr.type !== 'array' && attr.html_form_type
+      );
+      const grouped = groupByGroup(leaves);
+      const groupNames = sortGroupNames(Object.keys(grouped));
+      const arrays = items.filter(
+        (attr) =>
+          attr.type === 'array' &&
+          Array.isArray(attr.atribs_config) &&
+          attr.atribs_config.length > 0
+      );
 
-    return (
-      <div className="flex flex-col gap-6">
-        {leaves.length > 0 && (
-          <div>
-            <h4>{heading}</h4>
-            {groupNames.map((gName) => {
-              const entries = grouped[gName] ?? [];
-              return (
-                <section key={`${prefix || 'root'}-${gName}`} className="mt-3">
-                  <h5 className="text-[16px] font-medium mb-2">{gName}</h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-start">
-                    {entries.map((attr) => {
-                      const fieldPath = prefix
-                        ? `${prefix}#${attr.name}`
-                        : attr.name;
-                      const isPaginated = isPaginatedSource(
-                        attr.valores_posibles_source
-                      );
-                      const loader = isPaginated
-                        ? getLoader(
-                            attr.valores_posibles_source,
-                            attr.valores_posibles_response
-                          )
-                        : undefined;
-                      const shape = pickShapeIndex(fieldPath);
-                      const storedValue = getValueAtPath(
-                        formData,
-                        fieldPath,
-                        shape
-                      );
-                      const value =
-                        isPaginated && resolvedAsyncValues[fieldPath]
-                          ? resolvedAsyncValues[fieldPath]
-                          : storedValue;
+      return (
+        <div className="flex flex-col gap-6">
+          {leaves.length > 0 && (
+            <div>
+              <h4>{heading}</h4>
+              {groupNames.map((gName) => {
+                const entries = grouped[gName] ?? [];
+                return (
+                  <section
+                    key={`${prefix || 'root'}-${gName}`}
+                    className="mt-3"
+                  >
+                    <h5 className="text-[16px] font-medium mb-2">{gName}</h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-start">
+                      {entries.map((attr) => {
+                        const fieldPath = prefix
+                          ? `${prefix}#${attr.name}`
+                          : attr.name;
+                        const isPaginated = isPaginatedSource(
+                          attr.valores_posibles_source
+                        );
+                        const loader = isPaginated
+                          ? getLoader(
+                              attr.valores_posibles_source,
+                              attr.valores_posibles_response
+                            )
+                          : undefined;
+                        const shape = pickShapeIndex(fieldPath);
+                        const storedValue = getValueAtPath(
+                          formData,
+                          fieldPath,
+                          shape
+                        );
+                        const value =
+                          isPaginated && resolvedAsyncValues[fieldPath]
+                            ? resolvedAsyncValues[fieldPath]
+                            : storedValue;
 
-                      return (
-                        <InputDynamic
-                          key={fieldPath}
-                          name={fieldPath}
-                          label={attr.label}
-                          value={value}
-                          type={attr.type}
-                          required={attr.required}
-                          html_form_type={attr.html_form_type}
-                          selectOptions={
-                            dynamicOptions[fieldPath] ||
-                            attr.valores_posibles?.map((i) => ({
-                              text: i.name?.toString(),
-                              value: i.value?.toString()
-                            }))
-                          }
-                          isCreate={attr.is_create}
-                          networkId={networkId}
-                          regionId={regionId}
-                          stationId={stationId}
-                          onChange={(nameOC, valueOC) =>
-                            onChange(nameOC, valueOC)
-                          }
-                          isPaginated={isPaginated}
-                          loadPaginatedOptions={loader}
-                        />
-                      );
-                    })}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
-        )}
-        {arrays.map((attr) => {
-          const nextPrefix = prefix ? `${prefix}#${attr.name}` : attr.name;
-          return (
-            <div key={nextPrefix} className="mt-4">
-              {renderNode(
-                attr.atribs_config ?? [],
-                nextPrefix,
-                `${attr.label} (Atributos secundarios)`
-              )}
+                        return (
+                          <InputDynamic
+                            key={fieldPath}
+                            name={fieldPath}
+                            label={attr.label}
+                            value={value}
+                            type={attr.type}
+                            required={attr.required}
+                            html_form_type={attr.html_form_type}
+                            selectOptions={
+                              dynamicOptions[fieldPath] ||
+                              attr.valores_posibles?.map((i) => ({
+                                text: i.name?.toString(),
+                                value: i.value?.toString()
+                              }))
+                            }
+                            isCreate={attr.is_create}
+                            networkId={networkId}
+                            regionId={regionId}
+                            stationId={stationId}
+                            onChange={onChange}
+                            isPaginated={isPaginated}
+                            loadPaginatedOptions={loader}
+                          />
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
-    );
-  }; // [CHG]
+          )}
+          {arrays.map((attr) => {
+            const nextPrefix = prefix ? `${prefix}#${attr.name}` : attr.name;
+            return (
+              <div key={nextPrefix} className="mt-4">
+                {renderNode(
+                  attr.atribs_config ?? [],
+                  nextPrefix,
+                  `${attr.label} (Atributos secundarios)`
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    },
+    [
+      formData,
+      dynamicOptions,
+      resolvedAsyncValues,
+      getLoader,
+      pickShapeIndex,
+      onChange,
+      networkId,
+      regionId,
+      stationId
+    ]
+  );
 
-  const renderTabContent = (items: ConfigDataAttribute[]) => renderNode(items); // [CHG]
-
-  const tabsData = () => {
-    const tabsToRender = [];
-    if (configAttributes?.length > 0)
-      tabsToRender.push({
+  const tabsData = useMemo(() => {
+    const tabs = [];
+    if (configAttributes?.length > 0) {
+      tabs.push({
         title: 'Atributos',
-        content: () => renderTabContent(configAttributes)
+        content: () => renderNode(configAttributes)
       });
-    if (configServices?.length > 0)
-      tabsToRender.push({
+    }
+    if (configServices?.length > 0) {
+      tabs.push({
         title: 'Servicios',
         content: () =>
-          renderTabContent(
+          renderNode(
             filteredConfigServices.length > 0
               ? filteredConfigServices
               : configServices
           )
       });
-    return tabsToRender;
-  };
+    }
+    return tabs;
+  }, [configAttributes, configServices, filteredConfigServices, renderNode]);
 
-  const Header = () => (
-    <hgroup className="" style={{ marginBottom: '20px' }}>
-      <h4 className="text-[20px]" style={{ marginBottom: '10px' }}>
-        Configuración adicional
-      </h4>
-      {configAttributes?.length == 0 && configServices?.length == 0 ? (
-        <span> No posee configuración</span>
-      ) : (
-        <>
+  const Header = useCallback(
+    () => (
+      <hgroup style={{ marginBottom: '20px' }}>
+        <h4 className="text-[20px]" style={{ marginBottom: '10px' }}>
+          Configuración adicional
+        </h4>
+        {configAttributes?.length === 0 && configServices?.length === 0 ? (
+          <span>No posee configuración</span>
+        ) : (
           <p>
             Esta configuración es dinámica, por lo cual cambia según el criterio
             del administrador. Si desea modificarlo, haga clic en{' '}
@@ -662,17 +679,19 @@ export default function ConfigData({
               <Icon icon="edit" style={{ fontSize: '20px' }} />
             </Link>
           </p>
-        </>
-      )}
-    </hgroup>
+        )}
+      </hgroup>
+    ),
+    [configAttributes, configServices, tipoComponente?.name]
   );
 
-  if (configAttributes?.length == 0 && configServices?.length == 0)
+  if (!configAttributes?.length && !configServices?.length) {
     return (
       <div className="col-span-full">
         <Header />
       </div>
     );
+  }
 
   return (
     <BlockUI blocked={disabled} className="col-span-full">
@@ -681,7 +700,7 @@ export default function ConfigData({
         onSelect={({ selected }) => setSelectedTab(selected)}
         header={<Header />}
       >
-        {tabsData().map((tab, index) => (
+        {tabsData.map((tab, index) => (
           <TabStripTab key={index} title={tab.title}>
             {tab.content()}
           </TabStripTab>
