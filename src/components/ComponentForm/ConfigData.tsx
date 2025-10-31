@@ -14,57 +14,8 @@ import BlockUI from '@/components/BlockUi';
 import { buildShapeIndex } from './shape';
 import { getValueAtPath, setValueAtPath } from './path-access';
 import IconButton from '../IconButton';
-import Modal from '../Modal';
-import Button from '../Button';
 
-// 🔥 NUEVO: Helper para eliminar una clave por path
-const deleteByPath = (
-  obj: Record<string, any>,
-  path: string,
-  separator: string = '#'
-): boolean => {
-  const keys = path.split(separator);
-  const lastKey = keys.pop()!;
-  const target = keys.reduce((acc: any, key: string) => acc?.[key], obj);
-
-  if (target && lastKey in target) {
-    delete target[lastKey];
-    return true;
-  }
-  return false;
-};
-
-// 🔥 NUEVO: Helper para obtener valor por path (sin usar shape)
-const getByPath = (
-  obj: Record<string, any>,
-  path: string,
-  separator: string = '#'
-): any => {
-  return path
-    .split(separator)
-    .reduce((acc: any, key: string) => acc?.[key], obj);
-};
-
-// 🔥 NUEVO: Helper para establecer valor por path (sin usar shape)
-const setByPath = (
-  obj: Record<string, any>,
-  path: string,
-  value: any,
-  separator: string = '#'
-): Record<string, any> => {
-  const keys = path.split(separator);
-  const result = { ...obj };
-  let current: any = result;
-
-  for (let i = 0; i < keys.length - 1; i++) {
-    const key = keys[i];
-    current[key] = { ...current[key] };
-    current = current[key];
-  }
-
-  current[keys[keys.length - 1]] = value;
-  return result;
-};
+// ========== HELPERS PUROS ==========
 function camelToSnake(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
 }
@@ -126,7 +77,6 @@ function walkAttributes(
   });
 }
 
-// 🔥 NUEVO: Tipo para manejar configuraciones dinámicas
 type DynamicConfig = {
   id: string; // UUID único
   name: string; // config_1, config_2, etc
@@ -134,17 +84,61 @@ type DynamicConfig = {
   atribs_config: ConfigDataAttribute[];
 };
 
-// 🔥 NUEVO: Helper para generar ID único
 const generateId = () =>
   `config_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-// 🔥 NUEVO: Re-enumerar configuraciones después de eliminar
 const reindexConfigs = (configs: DynamicConfig[]): DynamicConfig[] => {
   return configs.map((config, index) => ({
     ...config,
     displayIndex: index + 1,
     name: `config_${index + 1}`
   }));
+};
+
+const getByPath = (
+  obj: Record<string, any>,
+  path: string,
+  separator: string = '#'
+): any => {
+  return path
+    .split(separator)
+    .reduce((acc: any, key: string) => acc?.[key], obj);
+};
+
+const setByPath = (
+  obj: Record<string, any>,
+  path: string,
+  value: any,
+  separator: string = '#'
+): Record<string, any> => {
+  const keys = path.split(separator);
+  const result = { ...obj };
+  let current: any = result;
+
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    current[key] = { ...current[key] };
+    current = current[key];
+  }
+
+  current[keys[keys.length - 1]] = value;
+  return result;
+};
+
+const deleteByPath = (
+  obj: Record<string, any>,
+  path: string,
+  separator: string = '#'
+): boolean => {
+  const keys = path.split(separator);
+  const lastKey = keys.pop()!;
+  const target = keys.reduce((acc: any, key: string) => acc?.[key], obj);
+
+  if (target && lastKey in target) {
+    delete target[lastKey];
+    return true;
+  }
+  return false;
 };
 
 // ========== TIPOS ==========
@@ -185,19 +179,6 @@ export default function ConfigData({
   const fetchCached = useFetchCached();
 
   const [selectedTab, setSelectedTab] = useState(0);
-  const [modalAtribs, setModalAtribs] = useState<{
-    open: boolean;
-    label: string;
-    fields: ConfigDataAttribute[];
-    masterPath: string;
-  }>({
-    open: false,
-    label: '',
-    fields: [],
-    masterPath: ''
-  });
-
-  // 🔥 NUEVO: Estructura mejorada para manejar múltiples configuraciones
   const [dynamicConfigs, setDynamicConfigs] = useState<
     Record<string, DynamicConfig[]>
   >({});
@@ -259,7 +240,6 @@ export default function ConfigData({
     [attributeShapeIndex, serviceRootNames, serviceShapeIndex]
   );
 
-  // 🔥 NUEVO: Agregar configuración dinámica
   const addDynamicConfig = useCallback(
     (masterPath: string, fields: ConfigDataAttribute[]) => {
       setDynamicConfigs((prev) => {
@@ -279,7 +259,6 @@ export default function ConfigData({
     []
   );
 
-  // 🔥 NUEVO: Eliminar configuración y re-enumerar
   const removeDynamicConfig = useCallback(
     (masterPath: string, configId: string) => {
       setDynamicConfigs((prev) => {
@@ -291,7 +270,6 @@ export default function ConfigData({
         const filtered = existing.filter((config) => config.id !== configId);
         const reindexed = reindexConfigs(filtered);
 
-        // 🔥 CRÍTICO: Re-enumerar formData
         setFormData((prevFormData) => {
           let newFormData = { ...prevFormData };
 
@@ -303,7 +281,6 @@ export default function ConfigData({
           const masterData = getByPath(newFormData, masterPath) || {};
           const newMasterData: Record<string, any> = {};
 
-          // Copiar datos que no son configuraciones (campos directos del master)
           Object.keys(masterData).forEach((key) => {
             if (!key.match(/^config_\d+$/)) {
               newMasterData[key] = masterData[key];
@@ -508,12 +485,7 @@ export default function ConfigData({
     prepareInputs(configAttributes);
     prepareInputs(configServices);
     setFilteredConfigServices([]);
-  }, [
-    tipoComponente?.id,
-    configAttributes,
-    configServices,
-    fetchValoresPosibles
-  ]);
+  }, [tipoComponente?.id, configAttributes, configServices]);
 
   useEffect(() => {
     if (hasInitializedDynamicConfigsRef.current || !tipoComponente) return;
@@ -816,7 +788,7 @@ export default function ConfigData({
                     className="mt-3"
                   >
                     <h5 className="text-[16px] font-medium mb-2">{gName}</h5>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-start">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
                       {entries.map((attr) => {
                         const fieldPath = prefix
                           ? `${prefix}#${attr.name}`
