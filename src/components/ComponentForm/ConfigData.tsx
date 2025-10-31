@@ -14,8 +14,57 @@ import BlockUI from '@/components/BlockUi';
 import { buildShapeIndex } from './shape';
 import { getValueAtPath, setValueAtPath } from './path-access';
 import IconButton from '../IconButton';
+import Modal from '../Modal';
+import Button from '../Button';
 
-// ========== HELPERS PUROS ==========
+// 🔥 NUEVO: Helper para eliminar una clave por path
+const deleteByPath = (
+  obj: Record<string, any>,
+  path: string,
+  separator: string = '#'
+): boolean => {
+  const keys = path.split(separator);
+  const lastKey = keys.pop()!;
+  const target = keys.reduce((acc: any, key: string) => acc?.[key], obj);
+
+  if (target && lastKey in target) {
+    delete target[lastKey];
+    return true;
+  }
+  return false;
+};
+
+// 🔥 NUEVO: Helper para obtener valor por path (sin usar shape)
+const getByPath = (
+  obj: Record<string, any>,
+  path: string,
+  separator: string = '#'
+): any => {
+  return path
+    .split(separator)
+    .reduce((acc: any, key: string) => acc?.[key], obj);
+};
+
+// 🔥 NUEVO: Helper para establecer valor por path (sin usar shape)
+const setByPath = (
+  obj: Record<string, any>,
+  path: string,
+  value: any,
+  separator: string = '#'
+): Record<string, any> => {
+  const keys = path.split(separator);
+  const result = { ...obj };
+  let current: any = result;
+
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    current[key] = { ...current[key] };
+    current = current[key];
+  }
+
+  current[keys[keys.length - 1]] = value;
+  return result;
+};
 function camelToSnake(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
 }
@@ -98,52 +147,6 @@ const reindexConfigs = (configs: DynamicConfig[]): DynamicConfig[] => {
   }));
 };
 
-const getByPath = (
-  obj: Record<string, any>,
-  path: string,
-  separator: string = '#'
-): any => {
-  return path
-    .split(separator)
-    .reduce((acc: any, key: string) => acc?.[key], obj);
-};
-
-const setByPath = (
-  obj: Record<string, any>,
-  path: string,
-  value: any,
-  separator: string = '#'
-): Record<string, any> => {
-  const keys = path.split(separator);
-  const result = { ...obj };
-  let current: any = result;
-
-  for (let i = 0; i < keys.length - 1; i++) {
-    const key = keys[i];
-    current[key] = { ...current[key] };
-    current = current[key];
-  }
-
-  current[keys[keys.length - 1]] = value;
-  return result;
-};
-
-const deleteByPath = (
-  obj: Record<string, any>,
-  path: string,
-  separator: string = '#'
-): boolean => {
-  const keys = path.split(separator);
-  const lastKey = keys.pop()!;
-  const target = keys.reduce((acc: any, key: string) => acc?.[key], obj);
-
-  if (target && lastKey in target) {
-    delete target[lastKey];
-    return true;
-  }
-  return false;
-};
-
 // ========== TIPOS ==========
 type LoaderFn = (
   search: string,
@@ -182,6 +185,19 @@ export default function ConfigData({
   const fetchCached = useFetchCached();
 
   const [selectedTab, setSelectedTab] = useState(0);
+  const [modalAtribs, setModalAtribs] = useState<{
+    open: boolean;
+    label: string;
+    fields: ConfigDataAttribute[];
+    masterPath: string;
+  }>({
+    open: false,
+    label: '',
+    fields: [],
+    masterPath: ''
+  });
+
+  // 🔥 NUEVO: Estructura mejorada para manejar múltiples configuraciones
   const [dynamicConfigs, setDynamicConfigs] = useState<
     Record<string, DynamicConfig[]>
   >({});
@@ -243,6 +259,7 @@ export default function ConfigData({
     [attributeShapeIndex, serviceRootNames, serviceShapeIndex]
   );
 
+  // 🔥 NUEVO: Agregar configuración dinámica
   const addDynamicConfig = useCallback(
     (masterPath: string, fields: ConfigDataAttribute[]) => {
       setDynamicConfigs((prev) => {
@@ -262,6 +279,7 @@ export default function ConfigData({
     []
   );
 
+  // 🔥 NUEVO: Eliminar configuración y re-enumerar
   const removeDynamicConfig = useCallback(
     (masterPath: string, configId: string) => {
       setDynamicConfigs((prev) => {
@@ -273,6 +291,7 @@ export default function ConfigData({
         const filtered = existing.filter((config) => config.id !== configId);
         const reindexed = reindexConfigs(filtered);
 
+        // 🔥 CRÍTICO: Re-enumerar formData
         setFormData((prevFormData) => {
           let newFormData = { ...prevFormData };
 
@@ -284,6 +303,7 @@ export default function ConfigData({
           const masterData = getByPath(newFormData, masterPath) || {};
           const newMasterData: Record<string, any> = {};
 
+          // Copiar datos que no son configuraciones (campos directos del master)
           Object.keys(masterData).forEach((key) => {
             if (!key.match(/^config_\d+$/)) {
               newMasterData[key] = masterData[key];
@@ -488,7 +508,12 @@ export default function ConfigData({
     prepareInputs(configAttributes);
     prepareInputs(configServices);
     setFilteredConfigServices([]);
-  }, [tipoComponente?.id, configAttributes, configServices]);
+  }, [
+    tipoComponente?.id,
+    configAttributes,
+    configServices,
+    fetchValoresPosibles
+  ]);
 
   useEffect(() => {
     if (hasInitializedDynamicConfigsRef.current || !tipoComponente) return;
@@ -640,8 +665,6 @@ export default function ConfigData({
   const lastEmittedRef = useRef<string>('');
 
   useEffect(() => {
-    console.log('useEffect', hasInitializedRef.current);
-
     if (!hasInitializedRef.current) return;
 
     const attributeKeys = configAttributes.map((item) => item.name);
@@ -657,9 +680,6 @@ export default function ConfigData({
         newServices[key] = formData[key];
       }
     }
-    console.log('useEffect FormData');
-    console.log('newAttributes', newAttributes);
-    console.log('newServices', newServices);
 
     const newSignature = JSON.stringify({ newAttributes, newServices });
     if (newSignature === lastEmittedRef.current) return;
