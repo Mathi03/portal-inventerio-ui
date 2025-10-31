@@ -263,7 +263,7 @@ export default function CreateForm({
       refSourceId: componenteRed?.refSourceId?.toString() || '',
       status: componenteRed?.status?.toString() || '',
       label: componenteRed?.controlLabel,
-      name: componenteRed?.controlName,
+      name: componenteRed?.controlName
     }),
     [
       componenteRed,
@@ -280,7 +280,11 @@ export default function CreateForm({
   // 🔥 OPTIMIZACIÓN 6: Evitar fetching innecesario en modo read/approve
   // ============================================
   const shouldFetchData = useMemo(
-    () => mode === 'create' || mode === 'popup' || mode === 'update',
+    () =>
+      mode === 'create' ||
+      mode === 'popup' ||
+      mode === 'update' ||
+      mode === 'read',
     [mode]
   );
 
