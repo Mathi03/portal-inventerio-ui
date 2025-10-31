@@ -1,6 +1,6 @@
 import Select from '@/components/Select';
 import { Form, IntegerField, Switch, TextField } from '@telefonica/mistica';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, memo } from 'react';
 import Button from '@/components/Button';
 import { CreateComponenteRedDto } from '@/core/componente-red/dto/create.dto';
 import { ComponenteRedType } from '@/core/componente-red/componente-red.type';
@@ -18,7 +18,6 @@ import {
   ModeCreateForm,
   useComponenteRedForm
 } from './hooks/useComponenteRedForm';
-import { SearchableSelectHandle } from '@/components/SearchableSelect';
 import { useModalStore } from '@/hooks/modalStorage';
 import RelacionJerarquica from './Relatcion-jerarquica';
 import { RegionType } from '@/core/region/region.type';
@@ -27,6 +26,7 @@ import TreeView from './TreeView';
 import { SelectPaginate } from '../SelectPaginate';
 import AttributeRelation from './AttributeRelation';
 import useErrorHandler from '@/hooks/useErrorHandler';
+import SearchableSelect from '../SearchableSelect';
 
 type FormItem = keyof CreateComponenteRedDto;
 
@@ -77,6 +77,63 @@ type CreateFormProps =
   | PopUpModeProps
   | ReadModeProps;
 
+// ============================================
+// 🔥 OPTIMIZACIÓN 1: Memoizar componentes pesados
+// ============================================
+const MemoizedConfigData = memo(ConfigData);
+const MemoizedTreeView = memo(TreeView);
+const MemoizedRelacionJerarquica = memo(RelacionJerarquica);
+const MemoizedAttributeRelation = memo(AttributeRelation);
+
+// ============================================
+// 🔥 OPTIMIZACIÓN 2: Helper para parsing seguro
+// ============================================
+const safeParseJSON = <T,>(json: string | undefined, defaultValue: T): T => {
+  if (!json) return defaultValue;
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) && parsed[0] ? parsed[0] : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+};
+
+// ============================================
+// 🔥 OPTIMIZACIÓN 3: Reducir estados redundantes
+// ============================================
+interface FormState {
+  red: RedType | null;
+  tipoComponente: TipoComponenteType | null;
+  fuente: FuenteType | null;
+  region: RegionType | null;
+  estacion: string | null;
+  redFather: RedType | null;
+  componentTypeFatherId: number | null;
+  childName: string;
+  label: string;
+}
+
+interface LoadingState {
+  redes: boolean;
+  tipoComponentes: boolean;
+  fuentes: boolean;
+  regiones: boolean;
+}
+
+interface DataState {
+  redes: RedType[];
+  tipoComponentes: TipoComponenteType[];
+  fuentes: FuenteType[];
+  regiones: RegionType[];
+}
+
+interface ErrorState {
+  redes: string | null;
+  tipoComponentes: string | null;
+  fuentes: string | null;
+  regiones: string | null;
+}
+
 export default function CreateForm({
   mode = 'create',
   componenteRed,
@@ -88,50 +145,58 @@ export default function CreateForm({
   const { closeModal } = useModalStore();
   const { notifyError } = useErrorHandler();
 
-  const networkInputRef = useRef<SearchableSelectHandle>(null);
-  const [tipoComponente, setTipoComponente] =
-    useState<TipoComponenteType | null>();
-  const [componentTypeFatherId, setComponentTypeFatherId] = useState<
-    number | null
-  >(null);
+  // ============================================
+  // 🔥 OPTIMIZACIÓN 4: Consolidar estados relacionados
+  // ============================================
+  const [formState, setFormState] = useState<FormState>(() => ({
+    red: null,
+    tipoComponente: null,
+    fuente: null,
+    region: null,
+    estacion:
+      stationId?.toString() ?? componenteRed?.stationId?.toString() ?? null,
+    redFather: null,
+    componentTypeFatherId: null,
+    childName: componenteRed?.controlName ?? '',
+    label: componenteRed?.controlLabel ?? ''
+  }));
 
-  const [red, setRed] = useState<RedType | null>(null);
-  const [fuente, setFuente] = useState<FuenteType | null>(null);
-  const [redFather, setRedFather] = useState<RedType | null>(null);
+  const [loading, setLoading] = useState<LoadingState>({
+    redes: false,
+    tipoComponentes: false,
+    fuentes: false,
+    regiones: false
+  });
 
-  const [isLoadingRedes, setIsLoadingRedes] = useState(true);
-  const [isLoadingTC, setIsLoadingTC] = useState(false);
-  const [isLoadingFuentes, setIsLoadingFuentes] = useState(false);
-  const [isLoadingRegiones, setIsLoadingRegiones] = useState(true);
-  const [redError, setRedError] = useState<string | null>(null);
-  const [tipoComponenteError, setTipoComponenteError] = useState<string | null>(
-    null
-  );
-  const [fuenteError, setFuenteError] = useState<string | null>(null);
-  const [regionError, setRegionError] = useState<string | null>(null);
+  const [data, setData] = useState<DataState>({
+    redes: [],
+    tipoComponentes: [],
+    fuentes: [],
+    regiones: []
+  });
 
-  const [redes, setRedes] = useState<RedType[]>([]);
-  const [tipoComponentes, setTipoComponentes] = useState<TipoComponenteType[]>(
-    []
-  );
-  const [fuentes, setFuentes] = useState<FuenteType[]>([]);
-  const [regiones, setRegiones] = useState<RegionType[]>([]);
-  const [region, setRegion] = useState<RegionType | null>(null);
-
-  const getStationId = (): string | null => {
-    if (mode === 'popup')
-      if (stationId && stationId !== null) return stationId.toString();
-      else return null;
-    else if (componenteRed?.stationId)
-      return componenteRed?.stationId?.toString();
-    else return null;
-  };
-
-  const [estacion, setEstacion] = useState<string | null>(getStationId());
+  const [errors, setErrors] = useState<ErrorState>({
+    redes: null,
+    tipoComponentes: null,
+    fuentes: null,
+    regiones: null
+  });
 
   const [commentPage, setCommentPage] = useState(1);
-  // const [commentLimit, setCommentLimit] = useState(5);
   const commentLimit = 5;
+
+  // ============================================
+  // 🔥 OPTIMIZACIÓN 5: Parsear attributes/services SOLO en initialValues
+  // ============================================
+  const parsedAttributes = useMemo(
+    () => safeParseJSON(componenteRed?.attribute, {}),
+    [componenteRed?.attribute]
+  );
+
+  const parsedServices = useMemo(
+    () => safeParseJSON(componenteRed?.service, {}),
+    [componenteRed?.service]
+  );
 
   const {
     isSubmitting,
@@ -144,28 +209,41 @@ export default function CreateForm({
     isApproved,
     setIsApproved,
     onSubmit
-  } = useComponenteRedForm({ componenteRed, mode });
+  } = useComponenteRedForm({
+    componenteRed,
+    mode,
+    parsedAttributes,
+    parsedServices
+  });
 
-  const [childName, setChildName] = useState(componenteRed?.controlName ?? '');
-  const [label, setLabel] = useState(componenteRed?.controlLabel ?? '');
-
-  const convertirFormato = (texto: string): string => {
+  const convertirFormato = useCallback((texto: string): string => {
     return texto
       .split(' ')
       .map((palabra) => palabra.toUpperCase())
       .join('_');
-  };
+  }, []);
 
-  const handleInputName = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const nuevoValor = e.target.value;
-    setChildName(nuevoValor);
-    setLabel(convertirFormato(nuevoValor));
-  };
+  const handleInputName = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const nuevoValor = e.target.value;
+      setFormState((prev) => ({
+        ...prev,
+        childName: nuevoValor,
+        label: convertirFormato(nuevoValor)
+      }));
+    },
+    [convertirFormato]
+  );
 
-  const handleInputLabel = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const nuevoValor = e.target.value;
-    setLabel(convertirFormato(nuevoValor));
-  };
+  const handleInputLabel = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFormState((prev) => ({
+        ...prev,
+        label: convertirFormato(e.target.value)
+      }));
+    },
+    [convertirFormato]
+  );
 
   const initialValues = useMemo(
     () => ({
@@ -186,249 +264,267 @@ export default function CreateForm({
       status: componenteRed?.status?.toString() || '',
       label: componenteRed?.controlLabel,
       name: componenteRed?.controlName,
-      ...(componenteRed?.attribute
-        ? JSON.parse(componenteRed.attribute)[0]
-        : {}),
-      ...(componenteRed?.service ? JSON.parse(componenteRed.service)[0] : {})
     }),
-    [componenteRed, networkId, componentTypeId, stationId, regionId]
+    [
+      componenteRed,
+      networkId,
+      componentTypeId,
+      stationId,
+      regionId,
+      parsedAttributes,
+      parsedServices
+    ]
+  );
+
+  // ============================================
+  // 🔥 OPTIMIZACIÓN 6: Evitar fetching innecesario en modo read/approve
+  // ============================================
+  const shouldFetchData = useMemo(
+    () => mode === 'create' || mode === 'popup' || mode === 'update',
+    [mode]
   );
 
   const getRedes = useCallback(async () => {
-    setIsLoadingRedes(true);
-    setRedError(null);
+    if (!shouldFetchData && mode !== 'update') return;
+
+    setLoading((prev) => ({ ...prev, redes: true }));
+    setErrors((prev) => ({ ...prev, redes: null }));
     const redService = new RedService();
 
     try {
       if (mode === 'create') {
-        const { data } = await redService.findAll({});
-        const activeNetworks = data.data.data.filter(
+        const { data: response } = await redService.findAll({});
+        const activeNetworks = response.data.data.filter(
           (r: RedType) => r.status === 1
         );
-        setRedes(activeNetworks);
+        setData((prev) => ({ ...prev, redes: activeNetworks }));
         if (networkId) {
-          setRed(activeNetworks.find((r) => r.id === networkId) ?? null);
+          setFormState((prev) => ({
+            ...prev,
+            red: activeNetworks.find((r) => r.id === networkId) ?? null
+          }));
         }
       } else if (mode === 'popup') {
         if (networkId !== null) {
-          const { data } = await redService.getById(Number(networkId));
-          setRedes([data?.data]);
-          setRed(data?.data ?? null);
+          const { data: response } = await redService.getById(
+            Number(networkId)
+          );
+          setData((prev) => ({ ...prev, redes: [response?.data] }));
+          setFormState((prev) => ({ ...prev, red: response?.data ?? null }));
         }
       } else {
-        const { data } = await redService.getById(
+        const { data: response } = await redService.getById(
           Number(componenteRed?.refNetworkId)
         );
-        setRedes([data?.data]);
-        setRed(data?.data ?? null);
+        setData((prev) => ({ ...prev, redes: [response?.data] }));
+        setFormState((prev) => ({ ...prev, red: response?.data ?? null }));
       }
     } catch (error) {
-      setRedes([]);
-      setRed(null);
-      setRedError('No se pudieron cargar las redes.');
+      setData((prev) => ({ ...prev, redes: [] }));
+      setFormState((prev) => ({ ...prev, red: null }));
+      setErrors((prev) => ({
+        ...prev,
+        redes: 'No se pudieron cargar las redes.'
+      }));
       notifyError(error, 'No se pudieron cargar las redes.');
     } finally {
-      setIsLoadingRedes(false);
+      setLoading((prev) => ({ ...prev, redes: false }));
     }
-  }, [componenteRed?.refNetworkId, mode, networkId, notifyError]);
-
-  // useEffect(() => {
-  //   if (componenteRed !== undefined && componenteRed !== null) {
-  //     if (componenteRed.refNetworkId)
-  //       setRed(
-  //         redes.find(
-  //           (r) => r.id?.toString() === componenteRed.refNetworkId?.toString()
-  //         ) || null
-  //       );
-  //     if (componenteRed.regionId)
-  //       setRegion(
-  //         regiones.find(
-  //           (r) => r.id?.toString() === componenteRed.regionId?.toString()
-  //         ) || null
-  //       );
-  //     // if (componenteRed.stationId)
-  //     //   setEstacion(
-  //     //     estaciones.find(
-  //     //       (r) => r.id?.toString() === componenteRed.stationId?.toString()
-  //     //     ) || null
-  //     //   );
-  //   }
-  // }, [redes, componenteRed, regiones]);
+  }, [
+    componenteRed?.refNetworkId,
+    mode,
+    networkId,
+    notifyError,
+    shouldFetchData
+  ]);
 
   const getTipoComponentes = useCallback(async () => {
-    setIsLoadingTC(true);
-    setTipoComponenteError(null);
+    if (!shouldFetchData && mode !== 'update') return;
+
+    setLoading((prev) => ({ ...prev, tipoComponentes: true }));
+    setErrors((prev) => ({ ...prev, tipoComponentes: null }));
     const tcService = new TipoComponenteService();
 
     try {
       if (mode === 'create' || mode === 'popup') {
         const response = await tcService.findAll({});
-        const data = response?.data?.data?.data;
-        const activeComponenteTypes = data.filter(
+        const activeTypes = response?.data?.data?.data.filter(
           (t: TipoComponenteType) => t.status === 1
         );
-        setTipoComponentes(activeComponenteTypes);
+        setData((prev) => ({ ...prev, tipoComponentes: activeTypes }));
         if (mode !== 'create' && componenteRed) {
-          setTipoComponente(
-            activeComponenteTypes.find(
-              (t: TipoComponenteType) =>
-                t.id === +componenteRed.refComponentTypeId
-            ) ?? null
-          );
+          setFormState((prev) => ({
+            ...prev,
+            tipoComponente:
+              activeTypes.find(
+                (t: TipoComponenteType) =>
+                  t.id === +componenteRed.refComponentTypeId
+              ) ?? null
+          }));
         }
       } else {
         const response = await tcService.getById(
           Number(componenteRed?.refComponentTypeId)
         );
-        const data = response?.data;
-        setTipoComponentes([data]);
-        setTipoComponente(data);
+        setData((prev) => ({ ...prev, tipoComponentes: [response?.data] }));
+        setFormState((prev) => ({ ...prev, tipoComponente: response?.data }));
       }
     } catch (error) {
-      setTipoComponentes([]);
-      setTipoComponente(null);
-      setTipoComponenteError('No se pudieron cargar los tipos de componente.');
+      setData((prev) => ({ ...prev, tipoComponentes: [] }));
+      setFormState((prev) => ({ ...prev, tipoComponente: null }));
+      setErrors((prev) => ({
+        ...prev,
+        tipoComponentes: 'No se pudieron cargar los tipos de componente.'
+      }));
       notifyError(error, 'No se pudieron cargar los tipos de componente.');
     } finally {
-      setIsLoadingTC(false);
+      setLoading((prev) => ({ ...prev, tipoComponentes: false }));
     }
-  }, [componenteRed, mode, notifyError]);
+  }, [componenteRed, mode, notifyError, shouldFetchData]);
 
   const getFuentes = useCallback(async () => {
-    setIsLoadingFuentes(true);
-    setFuenteError(null);
+    if (!formState.red || (!shouldFetchData && mode !== 'update')) return;
+
+    setLoading((prev) => ({ ...prev, fuentes: true }));
+    setErrors((prev) => ({ ...prev, fuentes: null }));
     const fuenteService = new FuenteService();
 
     try {
-      const { data } = await fuenteService.findAll({
-        refNetworkId: red?.id
+      const { data: response } = await fuenteService.findAll({
+        refNetworkId: formState.red?.id
       });
-      const activeSources: FuenteType[] = data?.data?.data || [];
-      setFuentes(activeSources?.filter((f: FuenteType) => f.status === 1));
+      const activeSources: FuenteType[] = response?.data?.data || [];
+      const filtered = activeSources.filter((f: FuenteType) => f.status === 1);
+      setData((prev) => ({ ...prev, fuentes: filtered }));
+
       if (mode !== 'create' && mode !== 'popup') {
-        setFuente(
-          activeSources?.find((r) => r.id === componenteRed?.refSourceId) ??
+        setFormState((prev) => ({
+          ...prev,
+          fuente:
+            activeSources?.find((r) => r.id === componenteRed?.refSourceId) ??
             null
-        );
+        }));
       }
     } catch (error) {
-      setFuentes([]);
-      setFuenteError('No se pudieron cargar las fuentes.');
+      setData((prev) => ({ ...prev, fuentes: [] }));
+      setErrors((prev) => ({
+        ...prev,
+        fuentes: 'No se pudieron cargar las fuentes.'
+      }));
       notifyError(error, 'No se pudieron cargar las fuentes.');
     } finally {
-      setIsLoadingFuentes(false);
+      setLoading((prev) => ({ ...prev, fuentes: false }));
     }
-  }, [notifyError, red]);
+  }, [
+    notifyError,
+    formState.red,
+    mode,
+    componenteRed?.refSourceId,
+    shouldFetchData
+  ]);
 
   const getRegiones = useCallback(async () => {
-    setIsLoadingRegiones(true);
-    setRegionError(null);
+    if (!shouldFetchData && mode !== 'update') return;
+
+    setLoading((prev) => ({ ...prev, regiones: true }));
+    setErrors((prev) => ({ ...prev, regiones: null }));
 
     try {
       if (mode === 'popup') {
         if (regionId !== null) {
-          const { data } = await msDirecciones.get(
+          const { data: response } = await msDirecciones.get(
             '/api/v1/direcciones/regiones/' + regionId,
             {}
           );
-          const activeRegion: RegionType = data?.data;
-          setRegion(activeRegion);
-          setRegiones([activeRegion]);
+          const activeRegion: RegionType = response?.data;
+          setFormState((prev) => ({ ...prev, region: activeRegion }));
+          setData((prev) => ({ ...prev, regiones: [activeRegion] }));
         }
       } else {
-        const { data } = await msDirecciones.get(
+        const { data: response } = await msDirecciones.get(
           '/api/v1/direcciones/regiones',
           {}
         );
-        const activeRegions: RegionType[] = data?.data?.data || [];
+        const activeRegions: RegionType[] = response?.data?.data || [];
         if (regionId) {
-          setRegion(activeRegions.find((r) => r.id === regionId) ?? null);
+          setFormState((prev) => ({
+            ...prev,
+            region: activeRegions.find((r) => r.id === regionId) ?? null
+          }));
         }
-        setRegiones(activeRegions);
+        setData((prev) => ({ ...prev, regiones: activeRegions }));
       }
     } catch (error) {
-      setRegiones([]);
-      setRegion(null);
-      setRegionError('No se pudieron cargar las regiones.');
+      setData((prev) => ({ ...prev, regiones: [] }));
+      setFormState((prev) => ({ ...prev, region: null }));
+      setErrors((prev) => ({
+        ...prev,
+        regiones: 'No se pudieron cargar las regiones.'
+      }));
       notifyError(error, 'No se pudieron cargar las regiones.');
     } finally {
-      setIsLoadingRegiones(false);
+      setLoading((prev) => ({ ...prev, regiones: false }));
     }
-  }, [notifyError, regionId]);
+  }, [notifyError, regionId, mode, shouldFetchData]);
+
+  // ============================================
+  // 🔥 OPTIMIZACIÓN 7: Ejecutar fetch solo cuando es necesario
+  // ============================================
+  useEffect(() => {
+    if (shouldFetchData || mode === 'update') {
+      getRedes();
+      getRegiones();
+      getTipoComponentes();
+    }
+  }, [shouldFetchData, mode]); // Dependencias simplificadas
 
   useEffect(() => {
-    getRedes();
-    getRegiones();
-    getTipoComponentes();
-  }, [getRedes, getRegiones, getTipoComponentes]);
-
-  const isValidToSearch = !!red;
-
-  useEffect(() => {
-    if (isValidToSearch) {
+    if (formState.red && (shouldFetchData || mode === 'update')) {
       getFuentes();
-    } else {
-      setFuentes([]);
-      setFuenteError(null);
-      setIsLoadingFuentes(false);
     }
-  }, [getFuentes, isValidToSearch]);
+  }, [formState.red, shouldFetchData, mode]);
 
-  const getConfigRelation = async () => {
-    const tcService = new TipoComponenteService();
-    const { data } = await tcService.All({ idList: [tipoComponente?.id] });
-    if (data?.length > 0 && data[0].configRelation?.length > 0) {
-      const networkFatherId = data[0].configRelation[0].networkFatherId;
-      const componentTypeFatherId =
-        data[0].configRelation[0].componentTypeFatherId;
-      const findNetwork = redes.find((r) => r.id === networkFatherId);
-
-      if (findNetwork) {
-        networkInputRef.current?.setValue(networkFatherId.toString());
-        networkInputRef.current?.setQuery(findNetwork?.label ?? '');
-        setRedFather(findNetwork);
-        setComponentTypeFatherId(componentTypeFatherId);
-      }
-    } else {
-      setRedFather(null);
-      setComponentTypeFatherId(null);
-    }
-  };
-
+  // ============================================
+  // 🔥 OPTIMIZACIÓN 8: Simplificar getConfigRelation
+  // ============================================
   useEffect(() => {
-    if (tipoComponente) {
-      getConfigRelation();
-    }
-  }, [tipoComponente]);
+    if (!formState.tipoComponente) return;
 
-  useEffect(() => {
-    if (componenteRed) {
-      if (componenteRed.attribute) {
-        try {
-          const parsedAttr = JSON.parse(componenteRed.attribute);
-          if (Array.isArray(parsedAttr) && typeof parsedAttr[0] === 'object') {
-            setAttribute(parsedAttr[0]);
-          }
-        } catch (err) {
-          console.error('Error al parsear atributo:', err);
-        }
-      }
+    const getConfigRelation = async () => {
+      const tcService = new TipoComponenteService();
+      const { data: response } = await tcService.All({
+        idList: [formState.tipoComponente?.id]
+      });
 
-      if (componenteRed.service) {
-        try {
-          const parsedService = JSON.parse(componenteRed.service);
-          if (
-            Array.isArray(parsedService) &&
-            typeof parsedService[0] === 'object'
-          ) {
-            setService(parsedService[0]);
-          }
-        } catch (err) {
-          console.error('Error al parsear service:', err);
+      if (response?.length > 0 && response[0].configRelation?.length > 0) {
+        const { networkFatherId, componentTypeFatherId } =
+          response[0].configRelation[0];
+        const findNetwork = data.redes.find((r) => r.id === networkFatherId);
+
+        if (findNetwork) {
+          setFormState((prev) => ({
+            ...prev,
+            redFather: findNetwork,
+            componentTypeFatherId
+          }));
         }
+      } else {
+        setFormState((prev) => ({
+          ...prev,
+          redFather: null,
+          componentTypeFatherId: null
+        }));
       }
-    }
-  }, [componenteRed]);
+    };
+
+    getConfigRelation();
+  }, [formState.tipoComponente?.id, data.redes]);
+
+  // ============================================
+  // 🔥 OPTIMIZACIÓN 9: Remover useEffect innecesario
+  // Ya no es necesario porque parsedAttributes y parsedServices
+  // se calculan con useMemo y se pasan directamente a ConfigData
+  // ============================================
 
   const parsedComments = useMemo(() => {
     return (
@@ -447,9 +543,22 @@ export default function CreateForm({
     );
   }, [componenteRed?.approvalComment]);
 
-  const paginatedComments = parsedComments.slice(
-    (commentPage - 1) * commentLimit,
-    commentPage * commentLimit
+  const paginatedComments = useMemo(
+    () =>
+      parsedComments.slice(
+        (commentPage - 1) * commentLimit,
+        commentPage * commentLimit
+      ),
+    [parsedComments, commentPage, commentLimit]
+  );
+
+  // ============================================
+  // 🔥 OPTIMIZACIÓN 10: Memoizar valores costosos
+  // ============================================
+  const isReadOnly = mode === 'approve' || mode === 'read';
+  const showTreeView = formState.tipoComponente?.id?.toString() === '28';
+  const showAttributeRelation = ['5', '26', '27'].includes(
+    formState.tipoComponente?.id?.toString() ?? ''
   );
 
   return (
@@ -478,10 +587,10 @@ export default function CreateForm({
         onSubmit={(value) =>
           onSubmit({
             ...value,
-            stationId: Number(estacion),
-            refComponentTypeId: tipoComponente?.id,
-            refSourceId: fuente?.id,
-            refNetworkId: red?.id
+            stationId: Number(formState.estacion),
+            refComponentTypeId: formState.tipoComponente?.id,
+            refSourceId: formState.fuente?.id,
+            refNetworkId: formState.red?.id
           } as FormValues)
         }
         className="grid grid-cols-3 content-start gap-4 px-6"
@@ -493,22 +602,22 @@ export default function CreateForm({
         <TextField
           name={'controlName' as FormItem}
           label="Nombre"
-          value={childName}
+          value={formState.childName}
           fullWidth
           maxLength={255}
           onChange={handleInputName}
-          disabled={mode === 'approve' || mode === 'read'}
-          optional={mode === 'approve' || mode === 'read'}
+          disabled={isReadOnly}
+          optional={isReadOnly}
         />
         <TextField
           name={'controlLabel' as FormItem}
           label="Etiqueta"
-          value={label}
+          value={formState.label}
           fullWidth
           maxLength={255}
           onChange={handleInputLabel}
-          disabled={mode === 'approve' || mode === 'read'}
-          optional={mode === 'approve' || mode === 'read'}
+          disabled={isReadOnly}
+          optional={isReadOnly}
         />
         <IntegerField
           name={'componentId' as FormItem}
@@ -518,43 +627,53 @@ export default function CreateForm({
           disabled={mode === 'approve' || mode === 'read'}
           optional={mode === 'approve' || mode === 'read'}
         />
-        <Select
-          // ref={networkInputRef}
+        <SearchableSelect
           name={'refNetworkId' as FormItem}
           label="Red"
-          disabled={mode !== 'create' ? true : isLoadingRedes}
+          disabled={mode !== 'create' ? true : loading.redes}
           optional={mode !== 'create'}
           fullWidth
           helperText={
-            redError ?? (isLoadingRedes ? 'Cargando redes...' : undefined)
+            errors.redes ?? (loading.redes ? 'Cargando redes...' : undefined)
           }
-          options={redes?.map((red) => ({
+          options={data.redes?.map((red) => ({
             text: red.label,
             value: red.id.toString()
           }))}
           onChangeValue={(value) => {
-            setRed(redes?.find((r) => r.id === +value) || null);
-            setTipoComponente(null);
+            setFormState((prev) => ({
+              ...prev,
+              red: data.redes?.find((r) => r.id === +value) || null,
+              tipoComponente: null
+            }));
           }}
         />
-        <Select
+        <SearchableSelect
           name={'refComponentTypeId' as FormItem}
           label="Tipo de componente"
-          disabled={mode !== 'create' && mode !== 'popup' ? true : isLoadingTC}
+          disabled={
+            mode !== 'create' && mode !== 'popup'
+              ? true
+              : loading.tipoComponentes
+          }
           optional={mode !== 'create' && mode !== 'popup'}
           fullWidth
           helperText={
-            tipoComponenteError ??
-            (isLoadingTC ? 'Cargando tipos de componente...' : undefined)
+            errors.tipoComponentes ??
+            (loading.tipoComponentes
+              ? 'Cargando tipos de componente...'
+              : undefined)
           }
-          options={tipoComponentes?.map((tc) => ({
+          options={data.tipoComponentes?.map((tc) => ({
             text: tc.label,
             value: tc.id.toString()
           }))}
           onChangeValue={(value) =>
-            setTipoComponente(
-              tipoComponentes.find((t) => t.id === +value) || null
-            )
+            setFormState((prev) => ({
+              ...prev,
+              tipoComponente:
+                data.tipoComponentes.find((t) => t.id === +value) || null
+            }))
           }
         />
         <Select
@@ -563,25 +682,28 @@ export default function CreateForm({
           disabled={
             mode !== 'create' && mode !== 'popup'
               ? true
-              : !isValidToSearch
+              : !formState.red
                 ? true
-                : isLoadingFuentes
+                : loading.fuentes
           }
           optional={mode !== 'create' && mode !== 'popup'}
           fullWidth
           helperText={
-            fuenteError ??
-            (isLoadingFuentes ? 'Cargando fuentes...' : undefined)
+            errors.fuentes ??
+            (loading.fuentes ? 'Cargando fuentes...' : undefined)
           }
-          options={fuentes.map((f) => ({
+          options={data.fuentes.map((f) => ({
             text: f.label,
             value: f.id.toString()
           }))}
           onChangeValue={(value) => {
-            setFuente(
-              fuentes?.find((r) => r?.id?.toString() === value?.toString()) ??
-                null
-            );
+            setFormState((prev) => ({
+              ...prev,
+              fuente:
+                data.fuentes?.find(
+                  (r) => r?.id?.toString() === value?.toString()
+                ) ?? null
+            }));
           }}
         />
         <Select
@@ -590,28 +712,31 @@ export default function CreateForm({
           disabled={
             mode === 'approve' || mode === 'popup' || mode === 'read'
               ? true
-              : isLoadingRegiones
+              : loading.regiones
           }
           optional={mode === 'approve' || mode === 'popup' || mode === 'read'}
           fullWidth
           helperText={
-            regionError ??
-            (isLoadingRegiones ? 'Cargando regiones...' : undefined)
+            errors.regiones ??
+            (loading.regiones ? 'Cargando regiones...' : undefined)
           }
-          options={regiones.map((r) => ({
+          options={data.regiones.map((r) => ({
             text: r.nombre,
             value: r.id.toString()
           }))}
           onChangeValue={(value) => {
-            setRegion(
-              regiones?.find((r) => r?.id?.toString() === value?.toString()) ??
-                null
-            );
+            setFormState((prev) => ({
+              ...prev,
+              region:
+                data.regiones?.find(
+                  (r) => r?.id?.toString() === value?.toString()
+                ) ?? null
+            }));
           }}
         />
         <SelectPaginate
           label="Estación"
-          value={estacion ?? ''}
+          value={formState.estacion ?? ''}
           clientToFetch={estacionesInstance}
           searchType="byId"
           fieldUrl={'v1/estaciones'}
@@ -619,30 +744,29 @@ export default function CreateForm({
           fieldName="nombre"
           mapById="estacion"
           onChange={(value) => {
-            setEstacion(value?.toString() ?? '');
+            setFormState((prev) => ({
+              ...prev,
+              estacion: value?.toString() ?? ''
+            }));
           }}
           required
           disabled={mode === 'read'}
         />
         <hr className="col-span-3" />
         <hgroup className="col-span-3" id="config-adicional"></hgroup>
-        <ConfigData
-          tipoComponente={tipoComponente ?? null}
+        <MemoizedConfigData
+          tipoComponente={formState.tipoComponente ?? null}
           setAttributes={setAttribute}
           setServices={setService}
           attributes={attribute}
           services={service}
-          networkId={red ? Number(red?.id) : null}
-          regionId={region ? Number(region?.id) : null}
-          stationId={estacion ? Number(estacion) : null}
+          networkId={formState.red ? Number(formState.red?.id) : null}
+          regionId={formState.region ? Number(formState.region?.id) : null}
+          stationId={formState.estacion ? Number(formState.estacion) : null}
           disabled={mode === 'read'}
-          // attribute={attribute}
-          // onAttributes={onAttributes}
-          // service={service}
-          // onServices={onServices}
         />
 
-        {tipoComponente?.id?.toString() === '28' && (
+        {showTreeView && (
           <>
             <hr className="col-span-3" />
             <hgroup className="col-span-3" id="relacion-jerarquica">
@@ -651,9 +775,9 @@ export default function CreateForm({
                 En esta sección podra relacionar componentes de red entre si
               </p>
             </hgroup>
-            <RelacionJerarquica
-              red={redFather}
-              tipoComponenteId={componentTypeFatherId}
+            <MemoizedRelacionJerarquica
+              red={formState.redFather}
+              tipoComponenteId={formState.componentTypeFatherId}
               onSelected={(componente) =>
                 setComponenteSeleted([...componenteSeleted, componente])
               }
@@ -665,38 +789,27 @@ export default function CreateForm({
                 );
               }}
             />
-          </>
-        )}
-
-        {tipoComponente?.id?.toString() === '28' && (
-          <>
             <hr className="col-span-3" />
             <hgroup className="col-span-3" id="relacion-jerarquica">
               <h4 className="text-[20px]">Arbol</h4>
               <p>En esta sección se mostrara las relaciones entre nodos</p>
             </hgroup>
-            <TreeView
-              tipoComponente={tipoComponente ?? null}
+            <MemoizedTreeView
+              tipoComponente={formState.tipoComponente ?? null}
               attributes={attribute}
-              // attribute={attribute}
-              // onAttributes={onAttributes}
-              // service={service}
-              // onServices={onServices}
             />
           </>
         )}
 
-        {(tipoComponente?.id?.toString() === '5' ||
-          tipoComponente?.id?.toString() === '26' ||
-          tipoComponente?.id?.toString() === '27') && (
+        {showAttributeRelation && (
           <>
             <hr className="col-span-3" />
             <hgroup className="col-span-3" id="relacion-jerarquica">
               <h4 className="text-[20px]">Relacion de Atributos</h4>
               <p>En esta sección se mostrara las relaciones entre nodos</p>
             </hgroup>
-            <AttributeRelation
-              tipoComponente={tipoComponente ?? null}
+            <MemoizedAttributeRelation
+              tipoComponente={formState.tipoComponente ?? null}
               controlId={Number(componenteRed?.controlId)}
             />
           </>

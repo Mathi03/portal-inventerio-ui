@@ -579,11 +579,17 @@ export default function ConfigData({
   ]);
 
   useEffect(() => {
+   if (hasInitializedRef.current) return;
+
     const hasData =
       Object.keys(attributes || {}).length > 0 ||
       Object.keys(services || {}).length > 0;
 
-    if (!hasData || hasInitializedRef.current) return;
+    if (!hasData) {
+      setFormData({});
+      hasInitializedRef.current = true;
+      return;
+    }
 
     let nextState: Record<string, any> = {};
 

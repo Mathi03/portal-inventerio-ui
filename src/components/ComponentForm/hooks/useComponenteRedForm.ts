@@ -17,17 +17,21 @@ export type FormValues = (CreateComponenteRedDto | UpdateComponenteRedDto) & {
 
 export function useComponenteRedForm({
   componenteRed,
-  mode
+  mode,
+  parsedAttributes,
+  parsedServices
 }: {
   componenteRed?: ComponenteRedType;
   mode: ModeCreateForm;
+  parsedAttributes: any;
+  parsedServices: any;
 }) {
   const { openSnackbar } = useSnackbar();
   const router = useRouter();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [attribute, setAttribute] = useState<any>({});
-  const [service, setService] = useState<any>({});
+  const [attribute, setAttribute] = useState<any>(parsedAttributes);
+  const [service, setService] = useState<any>(parsedServices);
   const [componenteSeleted, setComponenteSeleted] = useState<
     ComponenteRedType[]
   >([]);
@@ -199,8 +203,6 @@ export function useComponenteRedForm({
 
   const onSubmit = useCallback(
     async (form: FormValues) => {
-      console.log('forma data', form);
-
       if (mode === 'create') return onCreate(form as CreateComponenteRedDto);
       if (mode === 'update') return onUpdate(form as UpdateComponenteRedDto);
       if (mode === 'approve') return onApprove(form);
