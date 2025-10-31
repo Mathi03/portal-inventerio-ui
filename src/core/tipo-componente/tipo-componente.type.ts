@@ -48,7 +48,7 @@ interface OnChange {
 
 export interface ConfigDataAttribute {
   name: string;
-  type: "number" | "string" | "array" | "date" | "boolean";
+  type: "number" | "string" | "array" | "date" | "boolean" | "master";
   label: string;
   default: boolean;
   required: boolean;
@@ -59,6 +59,7 @@ export interface ConfigDataAttribute {
   valores_posibles_response?: string[];
   on_change?: OnChange;
   depend_of?: string;
+  fields?: ConfigDataAttribute[];
   atribs_config: ConfigDataAttribute[];
   is_create?: boolean;
 }

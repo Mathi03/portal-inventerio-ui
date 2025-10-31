@@ -13,8 +13,9 @@ import { useFetchCached } from './hooks/useFetchCached';
 import BlockUI from '@/components/BlockUi';
 import { buildShapeIndex } from './shape';
 import { getValueAtPath, setValueAtPath } from './path-access';
+import IconButton from '../IconButton';
 
-// ========== HELPERS PUROS (fuera del componente) ==========
+// ========== HELPERS PUROS ==========
 function camelToSnake(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
 }
@@ -76,6 +77,73 @@ function walkAttributes(
   });
 }
 
+// 🔥 NUEVO: Tipo para manejar configuraciones dinámicas
+type DynamicConfig = {
+  id: string; // UUID único
+  name: string; // config_1, config_2, etc
+  displayIndex: number; // 1, 2, 3, etc
+  atribs_config: ConfigDataAttribute[];
+};
+
+// 🔥 NUEVO: Helper para generar ID único
+const generateId = () =>
+  `config_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+// 🔥 NUEVO: Re-enumerar configuraciones después de eliminar
+const reindexConfigs = (configs: DynamicConfig[]): DynamicConfig[] => {
+  return configs.map((config, index) => ({
+    ...config,
+    displayIndex: index + 1,
+    name: `config_${index + 1}`
+  }));
+};
+
+const getByPath = (
+  obj: Record<string, any>,
+  path: string,
+  separator: string = '#'
+): any => {
+  return path
+    .split(separator)
+    .reduce((acc: any, key: string) => acc?.[key], obj);
+};
+
+const setByPath = (
+  obj: Record<string, any>,
+  path: string,
+  value: any,
+  separator: string = '#'
+): Record<string, any> => {
+  const keys = path.split(separator);
+  const result = { ...obj };
+  let current: any = result;
+
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    current[key] = { ...current[key] };
+    current = current[key];
+  }
+
+  current[keys[keys.length - 1]] = value;
+  return result;
+};
+
+const deleteByPath = (
+  obj: Record<string, any>,
+  path: string,
+  separator: string = '#'
+): boolean => {
+  const keys = path.split(separator);
+  const lastKey = keys.pop()!;
+  const target = keys.reduce((acc: any, key: string) => acc?.[key], obj);
+
+  if (target && lastKey in target) {
+    delete target[lastKey];
+    return true;
+  }
+  return false;
+};
+
 // ========== TIPOS ==========
 type LoaderFn = (
   search: string,
@@ -114,6 +182,10 @@ export default function ConfigData({
   const fetchCached = useFetchCached();
 
   const [selectedTab, setSelectedTab] = useState(0);
+  const [dynamicConfigs, setDynamicConfigs] = useState<
+    Record<string, DynamicConfig[]>
+  >({});
+
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [dynamicOptions, setDynamicOptions] = useState<Record<string, any[]>>(
     {}
@@ -125,11 +197,10 @@ export default function ConfigData({
     Record<string, { label: string; value: string }>
   >({});
 
-  // 🔥 CRITICAL: Usar ref para evitar re-inicializaciones
   const hasInitializedRef = useRef(false);
   const isResolvingAsyncRef = useRef(false);
+  const hasInitializedDynamicConfigsRef = useRef(false);
 
-  // Extraer configuración
   const configDataItem = tipoComponente?.configData?.[0] ?? null;
   const configAttributes = useMemo(
     () => configDataItem?.configAttributes ?? [],
@@ -140,7 +211,6 @@ export default function ConfigData({
     [configDataItem]
   );
 
-  // 🔥 OPTIMIZACIÓN: Memoizar índices de forma estable
   const attributeShapeIndex = useMemo(
     () => buildShapeIndex(configAttributes, false),
     [configAttributes]
@@ -173,7 +243,88 @@ export default function ConfigData({
     [attributeShapeIndex, serviceRootNames, serviceShapeIndex]
   );
 
-  // 🔥 OPTIMIZACIÓN: fetchOptions memoizado con useCallback
+  const addDynamicConfig = useCallback(
+    (masterPath: string, fields: ConfigDataAttribute[]) => {
+      setDynamicConfigs((prev) => {
+        const existing = prev[masterPath] || [];
+        const newConfig: DynamicConfig = {
+          id: generateId(),
+          name: `config_${existing.length + 1}`,
+          displayIndex: existing.length + 1,
+          atribs_config: fields
+        };
+        return {
+          ...prev,
+          [masterPath]: [...existing, newConfig]
+        };
+      });
+    },
+    []
+  );
+
+  const removeDynamicConfig = useCallback(
+    (masterPath: string, configId: string) => {
+      setDynamicConfigs((prev) => {
+        const existing = prev[masterPath] || [];
+        const configToRemove = existing.find((c) => c.id === configId);
+
+        if (!configToRemove) return prev;
+
+        const filtered = existing.filter((config) => config.id !== configId);
+        const reindexed = reindexConfigs(filtered);
+
+        setFormData((prevFormData) => {
+          let newFormData = { ...prevFormData };
+
+          // 1. Eliminar la configuración removida del formData
+          const configPathToRemove = `${masterPath}#${configToRemove.name}`;
+          deleteByPath(newFormData, configPathToRemove);
+
+          // 2. Re-mapear configuraciones restantes
+          const masterData = getByPath(newFormData, masterPath) || {};
+          const newMasterData: Record<string, any> = {};
+
+          Object.keys(masterData).forEach((key) => {
+            if (!key.match(/^config_\d+$/)) {
+              newMasterData[key] = masterData[key];
+            }
+          });
+
+          // Re-enumerar configuraciones con sus nuevos nombres
+          reindexed.forEach((config) => {
+            const oldConfigData = masterData[config.name];
+
+            // Si ya existe data con el nombre correcto, la mantenemos
+            if (oldConfigData) {
+              newMasterData[config.name] = oldConfigData;
+            } else {
+              // Buscar la data del nombre antiguo
+              const oldIndex = existing.findIndex((c) => c.id === config.id);
+              if (oldIndex !== -1) {
+                const oldConfig = existing[oldIndex];
+                const oldData = masterData[oldConfig.name];
+                if (oldData) {
+                  newMasterData[config.name] = oldData;
+                }
+              }
+            }
+          });
+
+          // Actualizar el formData con la nueva estructura re-enumerada
+          newFormData = setByPath(newFormData, masterPath, newMasterData);
+
+          return newFormData;
+        });
+
+        return {
+          ...prev,
+          [masterPath]: reindexed
+        };
+      });
+    },
+    []
+  );
+
   const fetchOptions = useCallback(
     async (
       url: string,
@@ -204,7 +355,6 @@ export default function ConfigData({
     [fetchCached]
   );
 
-  // 🔥 OPTIMIZACIÓN: onChange memoizado
   const onChange = useCallback(
     async (name: string, value: any) => {
       setFormData((prev) =>
@@ -245,7 +395,6 @@ export default function ConfigData({
         }
       }
 
-      // Manejar cambio de tipo de circuito
       if (name === 'id_tipo_circuito') {
         const relacion = RELACIONES_TIPO_CIRCUITO.find(
           (r) => r.id === parseInt(value)
@@ -263,7 +412,6 @@ export default function ConfigData({
     [attributeByPath, configServices, fetchOptions, pickShapeIndex]
   );
 
-  // 🔥 OPTIMIZACIÓN: Cargar opciones estáticas solo una vez
   const fetchValoresPosibles = useCallback(
     async (attribute: ConfigDataAttribute, fieldPath: string) => {
       if (!attribute.valores_posibles_source) return;
@@ -289,7 +437,6 @@ export default function ConfigData({
     [fetchOptions]
   );
 
-  // 🔥 OPTIMIZACIÓN: loadPaginatedOptions memoizado
   const loadPaginatedOptions = useCallback(
     (url: string, responseFields?: string[]) =>
       async (search: string, _: any, { page }: { page: number }) => {
@@ -324,7 +471,6 @@ export default function ConfigData({
   const isPaginatedSource = (src?: string) =>
     !!src && src.includes('limit=') && src.includes('page=');
 
-  // 🔥 OPTIMIZACIÓN: Preparar inputs solo cuando cambia tipoComponente
   useEffect(() => {
     if (!tipoComponente) return;
 
@@ -344,7 +490,97 @@ export default function ConfigData({
     setFilteredConfigServices([]);
   }, [tipoComponente?.id, configAttributes, configServices]);
 
-  // 🔥 FIX CRÍTICO: Inicialización de formData SOLO UNA VEZ
+  useEffect(() => {
+    if (hasInitializedDynamicConfigsRef.current || !tipoComponente) return;
+
+    const initializeDynamicConfigs = () => {
+      const newDynamicConfigs: Record<string, DynamicConfig[]> = {};
+
+      // Función para buscar atributos master y extraer sus configuraciones
+      const findMasterAttributes = (
+        items: ConfigDataAttribute[],
+        basePath = '',
+        sourceData: any
+      ) => {
+        items.forEach((attr) => {
+          const currentPath = basePath ? `${basePath}#${attr.name}` : attr.name;
+
+          if (
+            attr.type === 'master' &&
+            Array.isArray(attr.fields) &&
+            attr.fields.length > 0
+          ) {
+            // Buscar datos existentes para este master
+            const masterData = getValueAtPath(
+              sourceData,
+              currentPath,
+              pickShapeIndex(currentPath)
+            );
+
+            if (masterData && typeof masterData === 'object') {
+              const configs: DynamicConfig[] = [];
+
+              // Extraer todas las configuraciones (config_1, config_2, etc)
+              Object.keys(masterData).forEach((key) => {
+                const match = key.match(/^config_(\d+)$/);
+                if (match) {
+                  const configNumber = parseInt(match[1], 10);
+                  configs.push({
+                    id: generateId(),
+                    name: key,
+                    displayIndex: configNumber,
+                    atribs_config: attr.fields ?? []
+                  });
+                }
+              });
+
+              // Ordenar por número de configuración
+              configs.sort((a, b) => a.displayIndex - b.displayIndex);
+
+              if (configs.length > 0) {
+                newDynamicConfigs[currentPath] = configs;
+              }
+            }
+          }
+
+          // Recursión para atributos anidados
+          if (
+            Array.isArray(attr.atribs_config) &&
+            attr.atribs_config.length > 0
+          ) {
+            findMasterAttributes(attr.atribs_config, currentPath, sourceData);
+          }
+        });
+      };
+
+      // Buscar en attributes
+      if (Object.keys(attributes || {}).length > 0) {
+        findMasterAttributes(configAttributes, '', attributes);
+      }
+
+      // Buscar en services
+      if (Object.keys(services || {}).length > 0) {
+        findMasterAttributes(configServices, '', services);
+      }
+
+      // Aplicar configuraciones encontradas
+      if (Object.keys(newDynamicConfigs).length > 0) {
+        setDynamicConfigs(newDynamicConfigs);
+      }
+
+      hasInitializedDynamicConfigsRef.current = true;
+    };
+
+    initializeDynamicConfigs();
+  }, [
+    tipoComponente,
+    attributes,
+    services,
+    configAttributes,
+    configServices,
+    pickShapeIndex
+  ]);
+
   useEffect(() => {
     const hasData =
       Object.keys(attributes || {}).length > 0 ||
@@ -381,7 +617,6 @@ export default function ConfigData({
     serviceShapeIndex
   ]);
 
-  // 🔥 OPTIMIZACIÓN: Manejar tipo circuito sin causar re-renders
   useEffect(() => {
     const circuitoId = formData.id_tipo_circuito;
     if (circuitoId == null || configServices.length === 0) return;
@@ -397,16 +632,16 @@ export default function ConfigData({
           )
         : [];
 
-      // Solo actualizar si cambió
       if (JSON.stringify(prev) === JSON.stringify(newFiltered)) return prev;
       return newFiltered;
     });
   }, [formData.id_tipo_circuito, configServices]);
 
-  // 🔥 FIX CRÍTICO: Sincronizar con parent SOLO cuando formData cambia significativamente
   const lastEmittedRef = useRef<string>('');
 
   useEffect(() => {
+    console.log('useEffect', hasInitializedRef.current);
+
     if (!hasInitializedRef.current) return;
 
     const attributeKeys = configAttributes.map((item) => item.name);
@@ -422,8 +657,10 @@ export default function ConfigData({
         newServices[key] = formData[key];
       }
     }
+    console.log('useEffect FormData');
+    console.log('newAttributes', newAttributes);
+    console.log('newServices', newServices);
 
-    // 🔥 PREVENIR LOOPS: Solo emitir si realmente cambió
     const newSignature = JSON.stringify({ newAttributes, newServices });
     if (newSignature === lastEmittedRef.current) return;
 
@@ -437,7 +674,6 @@ export default function ConfigData({
     }
   }, [formData, configAttributes, configServices]);
 
-  // 🔥 OPTIMIZACIÓN: Resolver valores async SOLO UNA VEZ
   useEffect(() => {
     if (
       isResolvingAsyncRef.current ||
@@ -528,7 +764,8 @@ export default function ConfigData({
       heading = 'Atributos principales'
     ) => {
       const leaves = items.filter(
-        (attr) => attr.type !== 'array' && attr.html_form_type
+        (attr) =>
+          attr.type !== 'array' && attr.type !== 'master' && attr.html_form_type
       );
       const grouped = groupByGroup(leaves);
       const groupNames = sortGroupNames(Object.keys(grouped));
@@ -537,6 +774,13 @@ export default function ConfigData({
           attr.type === 'array' &&
           Array.isArray(attr.atribs_config) &&
           attr.atribs_config.length > 0
+      );
+
+      const masters = items.filter(
+        (attr) =>
+          attr.type === 'master' &&
+          Array.isArray(attr.fields) &&
+          attr.fields.length > 0
       );
 
       return (
@@ -609,6 +853,7 @@ export default function ConfigData({
               })}
             </div>
           )}
+
           {arrays.map((attr) => {
             const nextPrefix = prefix ? `${prefix}#${attr.name}` : attr.name;
             return (
@@ -621,6 +866,73 @@ export default function ConfigData({
               </div>
             );
           })}
+
+          {/* 🔥 NUEVO: Renderizado de atributos tipo MASTER */}
+          {masters.map((attr) => {
+            const masterPath = prefix ? `${prefix}#${attr.name}` : attr.name;
+            const configs = dynamicConfigs[masterPath] || [];
+
+            return (
+              <div
+                key={masterPath}
+                className="mt-4 border rounded-lg p-4 bg-gray-50"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold">{attr.label}</h4>
+                  <IconButton
+                    onClick={() => {
+                      addDynamicConfig(masterPath, attr?.fields ?? []);
+                    }}
+                    className="bg-blue-600 text-white hover:bg-blue-700 rounded-full"
+                    icon="add"
+                    buttonHeight="h-10"
+                    buttonWidth="w-10"
+                    title="Agregar configuración"
+                  />
+                </div>
+
+                {/* Lista de configuraciones */}
+                {configs.length === 0 ? (
+                  <p className="text-gray-500 text-sm italic">
+                    No hay configuraciones. Haz clic en + para agregar una.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {configs.map((config) => {
+                      const configPath = `${masterPath}#${config.name}`;
+                      return (
+                        <div
+                          key={config.id}
+                          className="border rounded-md p-4 bg-white shadow-sm"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <h5 className="font-medium text-blue-600">
+                              Configuración #{config.displayIndex}
+                            </h5>
+                            <IconButton
+                              onClick={() =>
+                                removeDynamicConfig(masterPath, config.id)
+                              }
+                              className="bg-red-500 text-white hover:bg-red-600 rounded-full"
+                              icon="delete"
+                              buttonHeight="h-8"
+                              buttonWidth="w-8"
+                              title="Eliminar configuración"
+                            />
+                          </div>
+                          {renderNode(
+                            config.atribs_config,
+                            configPath,
+                            `Campos de configuración #${config.displayIndex}`
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       );
     },
@@ -628,12 +940,14 @@ export default function ConfigData({
       formData,
       dynamicOptions,
       resolvedAsyncValues,
+      dynamicConfigs,
       getLoader,
       pickShapeIndex,
       onChange,
       networkId,
       regionId,
-      stationId
+      stationId,
+      removeDynamicConfig
     ]
   );
 

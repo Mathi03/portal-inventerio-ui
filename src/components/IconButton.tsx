@@ -47,6 +47,7 @@ interface IconButtonProps {
   buttonHeight?: HeightClass;
   iconSize?: TextSizeClass;
   className?: React.HTMLAttributes<HTMLElement>['className'];
+  title?: string;
 }
 
 export default function IconButton({
@@ -56,7 +57,8 @@ export default function IconButton({
   buttonWidth = 'w-9',
   buttonHeight = 'h-9',
   iconSize = 'text-xl',
-  className = ''
+  className = '',
+  title
 }: IconButtonProps) {
   return (
     <button
@@ -66,6 +68,7 @@ export default function IconButton({
       className={`material-symbols-outlined cursor-pointer hover:bg-[#0066FF]/15 hover:text-[#0066FF] rounded-full duration-200 flex items-center justify-center ${buttonWidth} ${buttonHeight} ${iconSize} ${
         disabled ? 'opacity-35' : ''
       } ${className}`}
+      title={title}
     >
       {icon}
     </button>

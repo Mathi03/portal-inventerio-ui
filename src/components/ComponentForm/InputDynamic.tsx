@@ -16,7 +16,7 @@ interface InputDynamicProps {
   label: string;
   required?: boolean;
   html_form_type: "input" | "select" | "date" | "multiple" | "textarea";
-  type?: "number" | "string" | "array" | "date" | "boolean";
+  type?: "number" | "string" | "array" | "date" | "boolean" | "master";
   value?: string | { label: string; value: string };
   onChange: (name: string, value: string) => void;
   isCreate?: boolean;
