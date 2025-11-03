@@ -28,10 +28,11 @@ const TypeEnum = z.union(
     z.literal("array"),
     z.literal("date"),
     z.literal("boolean"),
+    z.literal("master"),
   ],
   {
     invalid_type_error:
-      "El tipo debe ser uno de: 'number', 'string', 'array', 'date' o 'boolean'",
+      "El tipo debe ser uno de: 'number', 'string', 'array', 'date', 'master' o 'boolean'",
     required_error:
       "El tipo debe ser uno de: 'number', 'string', 'array', 'date' o 'boolean'",
   }
@@ -102,6 +103,7 @@ const itemSchema = z.object({
   on_change: onChangeSchema.optional(),
   depend_of: z.string().optional(),
   group: z.string().optional(),
+  fields: z.array(atribsConfigSchema).optional(),
   atribs_config: z.array(atribsConfigSchema).optional(),
   status: z.union([z.string(), z.number()]).optional(),
   is_create: z.boolean().optional(),

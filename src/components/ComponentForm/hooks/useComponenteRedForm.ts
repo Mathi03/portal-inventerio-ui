@@ -1,15 +1,15 @@
-import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
-import axios from "axios";
-import { useSnackbar } from "@telefonica/mistica";
-import { CreateComponenteRedDto } from "@/core/componente-red/dto/create.dto";
-import { UpdateComponenteRedDto } from "@/core/componente-red/dto/update.dto";
-import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
-import { ComponenteRedService } from "@/core/componente-red/componente-red.service";
-import { RelacionJerarquicaService } from "@/core/relacion-jerarquica/relacion-jerarquica.service";
-import { errorGeneric, errorMessageInAPI } from "@/types/errorMessageInAPI";
+import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
+import { useSnackbar } from '@telefonica/mistica';
+import { CreateComponenteRedDto } from '@/core/componente-red/dto/create.dto';
+import { UpdateComponenteRedDto } from '@/core/componente-red/dto/update.dto';
+import { ComponenteRedType } from '@/core/componente-red/componente-red.type';
+import { ComponenteRedService } from '@/core/componente-red/componente-red.service';
+import { RelacionJerarquicaService } from '@/core/relacion-jerarquica/relacion-jerarquica.service';
+import { errorGeneric, errorMessageInAPI } from '@/types/errorMessageInAPI';
 
-export type ModeCreateForm = "create" | "update" | "approve" | "popup" | "read";
+export type ModeCreateForm = 'create' | 'update' | 'approve' | 'popup' | 'read';
 
 export type FormValues = (CreateComponenteRedDto | UpdateComponenteRedDto) & {
   commentApproval?: string;
@@ -18,16 +18,20 @@ export type FormValues = (CreateComponenteRedDto | UpdateComponenteRedDto) & {
 export function useComponenteRedForm({
   componenteRed,
   mode,
+  parsedAttributes,
+  parsedServices
 }: {
   componenteRed?: ComponenteRedType;
   mode: ModeCreateForm;
+  parsedAttributes: any;
+  parsedServices: any;
 }) {
   const { openSnackbar } = useSnackbar();
   const router = useRouter();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [attribute, setAttribute] = useState<any>({});
-  const [service, setService] = useState<any>({});
+  const [attribute, setAttribute] = useState<any>(parsedAttributes);
+  const [service, setService] = useState<any>(parsedServices);
   const [componenteSeleted, setComponenteSeleted] = useState<
     ComponenteRedType[]
   >([]);
@@ -43,7 +47,7 @@ export function useComponenteRedForm({
             superiorControlId: selected.controlId,
             refComponentTypeId: componenteRed.refComponentTypeId,
             refNetworkId: componenteRed.refNetworkId,
-            status: 1,
+            status: 1
           })
         )
       );
@@ -71,12 +75,12 @@ export function useComponenteRedForm({
           idControl: 0,
           label: form.controlLabel,
           name: form.controlName,
-          status: 0,
+          status: 0
         },
-        code: "",
-        codigo: "",
+        code: '',
+        codigo: '',
         controlId: 1,
-        componentId: Number(form.componentId),
+        componentId: Number(form.componentId)
       };
 
       if (isUpdate) {
@@ -84,7 +88,7 @@ export function useComponenteRedForm({
           ...basePayload,
           serviceModified: true,
           relationModified: true,
-          approvalComment: (form as any).commentApproval ?? "",
+          approvalComment: (form as any).commentApproval ?? ''
         } as UpdateComponenteRedDto;
       }
 
@@ -103,10 +107,10 @@ export function useComponenteRedForm({
         const { data } = await service.create(payload);
         await createRelacionJerarquicas(data.data);
         openSnackbar({
-          message: "Componente creado exitosamente",
-          type: "INFORMATIVE",
+          message: 'Componente creado exitosamente',
+          type: 'INFORMATIVE'
         });
-        router.push("/componente-red");
+        router.push('/componente-red');
       } catch (err) {
         console.error(err);
         openSnackbar({
@@ -114,7 +118,7 @@ export function useComponenteRedForm({
             axios.isAxiosError(err) && err.response
               ? errorMessageInAPI
               : errorGeneric,
-          type: "CRITICAL",
+          type: 'CRITICAL'
         });
       } finally {
         setIsSubmitting(false);
@@ -134,15 +138,15 @@ export function useComponenteRedForm({
           ...basePayload,
           serviceModified: true,
           relationModified: true,
-          approvalComment: form.approvalComment ?? "",
+          approvalComment: form.approvalComment ?? ''
         };
         const { data } = await service.update(componenteRed?.id!, payload);
         await createRelacionJerarquicas(data.data);
         openSnackbar({
-          message: "Componente actualizado exitosamente",
-          type: "INFORMATIVE",
+          message: 'Componente actualizado exitosamente',
+          type: 'INFORMATIVE'
         });
-        router.push("/componente-red");
+        router.push('/componente-red');
       } catch (err) {
         console.error(err);
         openSnackbar({
@@ -150,7 +154,7 @@ export function useComponenteRedForm({
             axios.isAxiosError(err) && err.response
               ? errorMessageInAPI
               : errorGeneric,
-          type: "CRITICAL",
+          type: 'CRITICAL'
         });
       } finally {
         setIsSubmitting(false);
@@ -161,7 +165,7 @@ export function useComponenteRedForm({
       createRelacionJerarquicas,
       componenteRed?.id,
       openSnackbar,
-      router,
+      router
     ]
   );
 
@@ -173,14 +177,14 @@ export function useComponenteRedForm({
       try {
         await service.approve(
           componenteRed?.id!,
-          form.commentApproval ?? "",
+          form.commentApproval ?? '',
           isApproved ? 1 : 4
         );
         openSnackbar({
-          message: "Componente aprobado correctamente",
-          type: "INFORMATIVE",
+          message: 'Componente aprobado correctamente',
+          type: 'INFORMATIVE'
         });
-        router.push("/componente-red");
+        router.push('/componente-red');
       } catch (err) {
         console.error(err);
         openSnackbar({
@@ -188,7 +192,7 @@ export function useComponenteRedForm({
             axios.isAxiosError(err) && err.response
               ? errorMessageInAPI
               : errorGeneric,
-          type: "CRITICAL",
+          type: 'CRITICAL'
         });
       } finally {
         setIsSubmitting(false);
@@ -199,11 +203,9 @@ export function useComponenteRedForm({
 
   const onSubmit = useCallback(
     async (form: FormValues) => {
-      console.log("forma data", form);
-      
-      if (mode === "create") return onCreate(form as CreateComponenteRedDto);
-      if (mode === "update") return onUpdate(form as UpdateComponenteRedDto);
-      if (mode === "approve") return onApprove(form);
+      if (mode === 'create') return onCreate(form as CreateComponenteRedDto);
+      if (mode === 'update') return onUpdate(form as UpdateComponenteRedDto);
+      if (mode === 'approve') return onApprove(form);
     },
     [mode, onCreate, onUpdate, onApprove]
   );
@@ -218,6 +220,6 @@ export function useComponenteRedForm({
     setComponenteSeleted,
     isApproved,
     setIsApproved,
-    onSubmit,
+    onSubmit
   };
 }

@@ -1,20 +1,20 @@
-import { useSWRConfig } from "swr";
-import { AxiosInstance } from "axios";
+import { useSWRConfig } from 'swr';
+import { AxiosInstance } from 'axios';
 import {
   bff,
-  cnr,
   contacto,
   estaciones,
   msDirecciones,
-  source,
-} from "@/core/config";
+  cnr,
+  source
+} from '@/core/config';
 
 const urlClientMap: Record<string, AxiosInstance> = {
   [process.env.NEXT_PUBLIC_API_URL!]: bff,
   [process.env.NEXT_PUBLIC_API_URL_MS_DIRECCIONES!]: msDirecciones,
   [process.env.NEXT_PUBLIC_API_URL_ESTACIONES!]: estaciones,
   [process.env.NEXT_PUBLIC_API_URL_CONTACTO!]: contacto,
-  [process.env.NEXT_PUBLIC_API_URL_CNR!]: cnr,
+  [process.env.NEXT_PUBLIC_API_URL_CNR!]: cnr
 };
 
 function getAxiosClientFromUrl(url: string): AxiosInstance {
@@ -29,7 +29,7 @@ const buildCacheKey = (url: string) => {
   const entries = [...u.searchParams.entries()].sort(([a], [b]) =>
     a.localeCompare(b)
   );
-  u.search = "";
+  u.search = '';
   for (const [k, v] of entries) u.searchParams.append(k, v);
   return u.toString();
 };
@@ -38,8 +38,8 @@ const normalizeApiData = (r: any) => {
   const payload = r?.data?.data?.data ?? r?.data?.data ?? r?.data ?? r;
 
   // ⚠️ si el backend devuelve estructura de error, la detectamos
-  if (payload?.status === "BAD_REQUEST" || payload?.code >= 400) {
-    throw new Error(payload?.message || "Error en la API");
+  if (payload?.status === 'BAD_REQUEST' || payload?.code >= 400) {
+    throw new Error(payload?.message || 'Error en la API');
   }
 
   return payload;
@@ -57,7 +57,7 @@ const inflight = new Map<string, Promise<any>>();
 export function useFetchCached() {
   const { cache, mutate } = useSWRConfig();
 
-  const fetchCached = async <T = any,>(url: string): Promise<T> => {
+  const fetchCached = async <T = any>(url: string): Promise<T> => {
     const key = buildCacheKey(url);
 
     // 1. Buscar en cache global (ya resuelto)

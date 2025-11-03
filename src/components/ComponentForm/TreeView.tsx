@@ -1,44 +1,44 @@
-import clsx from "clsx";
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
-import Modal from "@/components/Modal";
-import CreateForm from "@/app/crear-componente-red/CreateForm";
-import { useFetchCached } from "./useFetchCached";
-import Icon from "@/components/Icon";
-import ClientInfo from "@/components/ClientInfo";
-import { useSnackbar } from "@telefonica/mistica";
+import clsx from 'clsx';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { TipoComponenteType } from '@/core/tipo-componente/tipo-componente.type';
+import Modal from '@/components/Modal';
+import CreateForm from '.';
+import { useFetchCached } from './hooks/useFetchCached';
+import Icon from '@/components/Icon';
+import ClientInfo from '@/components/ClientInfo';
+import { useSnackbar } from '@telefonica/mistica';
 
 type AttrMap = { [key: string]: any };
 type NodeSpec = { key: string; level: number };
 
-const INDENTS = ["", "pl-0", "pl-6", "pl-10", "pl-14", "pl-20"];
+const INDENTS = ['', 'pl-0', 'pl-6', 'pl-10', 'pl-14', 'pl-20'];
 
 function openNewWindow(id: number | string) {
   const baseUrl = window.location.origin;
   const url = `${baseUrl}/detalle-componente-red/${id}`;
-  window.open(url, "_blank");
+  window.open(url, '_blank');
 }
 
 const toStr = (x: any) => String(x);
 const getByPath = (obj: any, path: string) =>
-  path.split(".").reduce((acc, k) => (acc == null ? acc : acc[k]), obj);
+  path.split('.').reduce((acc, k) => (acc == null ? acc : acc[k]), obj);
 
 const clienteSpecs: NodeSpec[] = [
-  { key: "id_control_nodo_a", level: 1 },
-  { key: "id_control_tarjeta_a", level: 2 },
-  { key: "id_control_puerto_a", level: 3 },
-  { key: "id_control_nodo_dependiente_a", level: 1 },
+  { key: 'id_control_nodo_a', level: 1 },
+  { key: 'id_control_tarjeta_a', level: 2 },
+  { key: 'id_control_puerto_a', level: 3 },
+  { key: 'id_control_nodo_dependiente_a', level: 1 }
 ];
 
 const movistarSpecs: NodeSpec[] = [
-  { key: "id_control_nodo_b", level: 1 },
-  { key: "id_control_tarjeta_b", level: 2 },
-  { key: "id_control_puerto_b", level: 3 },
-  { key: "id_control_nodo_dependiente_b", level: 1 },
+  { key: 'id_control_nodo_b', level: 1 },
+  { key: 'id_control_tarjeta_b', level: 2 },
+  { key: 'id_control_puerto_b', level: 3 },
+  { key: 'id_control_nodo_dependiente_b', level: 1 }
 ];
 
 const camelToSnake = (str: string) =>
-  str.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase();
+  str.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
 
 const buildResolvedUrl = (
   source: string,
@@ -57,15 +57,15 @@ const buildResolvedUrl = (
   }
 
   // normalizamos paginación
-  urlObj.searchParams.set("page", "1");
-  urlObj.searchParams.set("limit", "10");
+  urlObj.searchParams.set('page', '1');
+  urlObj.searchParams.set('limit', '10');
 
   return urlObj.toString();
 };
 
 const TreeView = ({
   tipoComponente,
-  attributes,
+  attributes
 }: {
   tipoComponente: TipoComponenteType | null;
   attributes: AttrMap | null;
@@ -127,12 +127,12 @@ const TreeView = ({
       if (!cfg) return;
 
       const formType = cfg.html_form_type as
-        | "input"
-        | "select"
-        | "date"
-        | "multiple";
+        | 'input'
+        | 'select'
+        | 'date'
+        | 'multiple';
 
-      if (formType !== "select" && formType !== "multiple") return;
+      if (formType !== 'select' && formType !== 'multiple') return;
 
       // 1) opciones estáticas
       if (Array.isArray(cfg.valores_posibles)) {
@@ -140,7 +140,7 @@ const TreeView = ({
           value: number | string;
           name: string;
         }>;
-        if (formType === "select") {
+        if (formType === 'select') {
           const found = opts.find((o) => toStr(o.value) === toStr(rawVal));
           if (mounted && found)
             setResolved((p) => ({ ...p, [key]: found.name }));
@@ -161,8 +161,8 @@ const TreeView = ({
 
         const getObjById = async (id: string) => {
           // normaliza URL para key de cache
-          if (valueKey.toLowerCase() === "id") {
-            const baseUrl = cfg.valores_posibles_source.split("?")[0];
+          if (valueKey.toLowerCase() === 'id') {
+            const baseUrl = cfg.valores_posibles_source.split('?')[0];
             const url = `${baseUrl}/${id}`;
             const data = await fetchCached(url);
             // si el endpoint devuelve una lista, toma el primero
@@ -178,16 +178,16 @@ const TreeView = ({
             const list = Array.isArray(data)
               ? data
               : Array.isArray(data?.data)
-                ? data.data
-                : data;
+              ? data.data
+              : data;
             return Array.isArray(list) ? list[0] : list;
           }
         };
 
         try {
-          if (formType === "select") {
+          if (formType === 'select') {
             const id = toStr(rawVal);
-            if (id === "0") return;
+            if (id === '0') return;
             const obj = await getObjById(id);
             const label = getByPath(obj, labelPath) ?? id;
             if (mounted) setResolved((p) => ({ ...p, [key]: String(label) }));
@@ -223,7 +223,7 @@ const TreeView = ({
       if (!cfg || val == null) return;
 
       const isSelect =
-        cfg.html_form_type === "select" || cfg.html_form_type === "multiple";
+        cfg.html_form_type === 'select' || cfg.html_form_type === 'multiple';
       const hasRemote = !!cfg.valores_posibles_source;
 
       if (!isSelect || !hasRemote) return;
@@ -240,8 +240,8 @@ const TreeView = ({
         const id = Array.isArray(val) ? toStr(val[0]) : toStr(val);
 
         let url: string;
-        if (valueKey.toLowerCase() === "id") {
-          const baseUrl = cfg.valores_posibles_source.split("?")[0];
+        if (valueKey.toLowerCase() === 'id') {
+          const baseUrl = cfg.valores_posibles_source.split('?')[0];
           url = `${baseUrl}/${id}`;
         } else {
           url = buildResolvedUrl(cfg.valores_posibles_source, valueKey, id);
@@ -251,8 +251,8 @@ const TreeView = ({
         const obj = Array.isArray(data)
           ? data[0]
           : Array.isArray(data?.data)
-            ? data.data[0]
-            : data;
+          ? data.data[0]
+          : data;
         if (open && obj) {
           openNewWindow(obj?.id);
         } else {
@@ -280,16 +280,16 @@ const TreeView = ({
     if (Array.isArray(val)) {
       return (
         <p className="text-xs leading-4 text-neutral-500">
-          {val.filter(Boolean).join(" · ")}
+          {val.filter(Boolean).join(' · ')}
         </p>
       );
     }
-    if (typeof val === "object") {
+    if (typeof val === 'object') {
       const { title, subtitle, line1, line2 } = val as any;
       return (
         <p className="text-xs leading-4 text-neutral-500">
           {[title, subtitle, line1, line2].filter(Boolean).map((t, i) => (
-            <span key={i} className={i ? "block" : ""}>
+            <span key={i} className={i ? 'block' : ''}>
               {t}
             </span>
           ))}
@@ -303,9 +303,9 @@ const TreeView = ({
     <div className="flex items-center justify-between">
       <div
         className={clsx(
-          "flex items-center gap-3 w-full",
-          INDENTS[level] || "pl-0",
-          "cursor-pointer hover:bg-neutral-50 rounded-md p-1"
+          'flex items-center gap-3 w-full',
+          INDENTS[level] || 'pl-0',
+          'cursor-pointer hover:bg-neutral-50 rounded-md p-1'
         )}
         role="button"
         onClick={() => handleOpenFormForKey(k)}
@@ -337,7 +337,6 @@ const TreeView = ({
           </div>
         </div>
       </div>
-
       <Icon
         icon="open_in_new"
         className="text-blue-500 cursor-pointer"
@@ -370,8 +369,8 @@ const TreeView = ({
                 setOpenCliente(true);
               } else {
                 openSnackbar({
-                  message: "No existe un valor en " + labelAttribute || keyInfo,
-                  type: "CRITICAL",
+                  message: 'No existe un valor en ' + labelAttribute || keyInfo,
+                  type: 'CRITICAL'
                 });
               }
             }}
@@ -391,8 +390,8 @@ const TreeView = ({
   return (
     <div className="w-full rounded-lg bg-[#fafafa] border p-4 col-span-3">
       <div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-2">
-        {renderCard("Cliente", clienteSpecs, "id_cliente")}
-        {renderCard("Movistar", movistarSpecs, "id_lider")}
+        {renderCard('Cliente', clienteSpecs, 'id_cliente')}
+        {renderCard('Movistar', movistarSpecs, 'id_lider')}
       </div>
 
       <Modal open={openForm} onClose={() => setOpenForm(false)}>
@@ -403,7 +402,7 @@ const TreeView = ({
         <Modal
           open={openCliente}
           onClose={() => setOpenCliente(false)}
-          size={{ width: "90%", height: "80%" }}
+          size={{ width: '90%', height: '80%' }}
         >
           <ClientInfo clientId={selectedId} />
         </Modal>

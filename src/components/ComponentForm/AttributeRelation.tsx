@@ -1,12 +1,12 @@
-import CreateForm from "@/app/crear-componente-red/CreateForm";
-import Icon from "@/components/Icon";
-import Modal from "@/components/Modal";
-import Table, { TableColumn } from "@/components/Table/Table";
-import { ComponenteRedService } from "@/core/componente-red/componente-red.service";
-import { ComponenteRedType } from "@/core/componente-red/componente-red.type";
-import { TipoComponenteType } from "@/core/tipo-componente/tipo-componente.type";
-import { useSnackbar } from "@telefonica/mistica";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import Icon from '@/components/Icon';
+import Modal from '@/components/Modal';
+import Table, { TableColumn } from '@/components/Table/Table';
+import { ComponenteRedService } from '@/core/componente-red/componente-red.service';
+import { ComponenteRedType } from '@/core/componente-red/componente-red.type';
+import { TipoComponenteType } from '@/core/tipo-componente/tipo-componente.type';
+import { useSnackbar } from '@telefonica/mistica';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import CreateForm from '.';
 
 type AttributeRelationProps = {
   tipoComponente: TipoComponenteType | null;
@@ -14,7 +14,7 @@ type AttributeRelationProps = {
   controlId: number;
 };
 
-type AttributeSpec = "id_control_nodo_a" | "id_control_nodo_b";
+type AttributeSpec = 'id_control_nodo_a' | 'id_control_nodo_b';
 
 type ClienteSpecsType = {
   label: string;
@@ -22,8 +22,8 @@ type ClienteSpecsType = {
 };
 
 const clienteSpecs: ClienteSpecsType[] = [
-  { name: "id_control_nodo_a", label: "Cliente" },
-  { name: "id_control_nodo_b", label: "Movistar" },
+  { name: 'id_control_nodo_a', label: 'Cliente' },
+  { name: 'id_control_nodo_b', label: 'Movistar' }
 ];
 
 const limit = 10;
@@ -31,7 +31,7 @@ const limit = 10;
 const AttributeRelation = ({
   tipoComponente,
   disabled = false,
-  controlId,
+  controlId
 }: AttributeRelationProps) => {
   const { openSnackbar } = useSnackbar();
   const [openForm, setOpenForm] = useState(false);
@@ -47,12 +47,12 @@ const AttributeRelation = ({
 
   const columns = useMemo<TableColumn<ComponenteRedType>[]>(
     () => [
-      { title: "id", key: "id", maxWidth: "120px" },
-      { title: "Nombre", key: "controlName" },
-      { title: "Etiqueta", key: "controlLabel" },
-      { title: "Tipo Componente", key: "refComponentTypeLabel" },
+      { title: 'id', key: 'id', maxWidth: '120px' },
+      { title: 'Nombre', key: 'controlName' },
+      { title: 'Etiqueta', key: 'controlLabel' },
+      { title: 'Tipo Componente', key: 'refComponentTypeLabel' },
       {
-        title: "Ver Componente",
+        title: 'Ver Componente',
         render: (row) => (
           <Icon
             icon="open_in_new"
@@ -62,8 +62,8 @@ const AttributeRelation = ({
               setOpenForm(true);
             }}
           />
-        ),
-      },
+        )
+      }
     ],
     []
   );
@@ -77,16 +77,16 @@ const AttributeRelation = ({
     try {
       const response = await componenteRed.findByAttribute(key, value, {
         page,
-        limit,
+        limit
       });
       const data = response.data.data;
       setComponenteRedes(data.data);
       setItems(data.total);
     } catch (error) {
-      console.error("Error al obtener componentes de red:", error);
+      console.error('Error al obtener componentes de red:', error);
       openSnackbar({
-        message: "Error al cargar datos relación de atributos",
-        type: "CRITICAL",
+        message: 'Error al cargar datos relación de atributos',
+        type: 'CRITICAL'
       });
       setComponenteRedes([]);
       setItems(0);
@@ -130,10 +130,10 @@ const AttributeRelation = ({
               className={`flex items-center gap-2 cursor-pointer border rounded-lg p-3 shadow-sm w-48
                 ${
                   selectedAttribute === specName
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-300"
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300'
                 }
-                ${disabled ? "opacity-50 cursor-not-allowed" : ""}
+                ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
               `}
               onClick={() => !disabled && setSelectedAttribute(specName)}
             >
@@ -158,7 +158,6 @@ const AttributeRelation = ({
           itemPerPage={limit}
           item={items}
           onPageChange={(p) => setPage(p)}
-          compact
         />
       )}
       {cmpntRed && (

@@ -5,53 +5,88 @@ import { createPortal } from 'react-dom';
 import { useModalStore } from '@/hooks/modalStorage';
 
 export default function GlobalModal() {
-  const { isOpen, content, size, closeModal } = useModalStore();
+  const modals = useModalStore((s) => s.modals);
+  const closeModal = useModalStore((s) => s.closeModal);
 
-  // Bloqueo de scroll + marca en body para estilo global
+  // Bloqueo de scroll cuando hay modales abiertos
   useEffect(() => {
-    if (isOpen) {
+    if (modals.length > 0) {
       document.body.classList.add('modal-open');
       document.documentElement.style.overflow = 'hidden';
     } else {
       document.body.classList.remove('modal-open');
       document.documentElement.style.overflow = '';
     }
+
     return () => {
       document.body.classList.remove('modal-open');
       document.documentElement.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [modals.length]);
 
-  if (!isOpen || !content) return null;
-
-  const width = size?.width ?? '90%';
-  const height = size?.height ?? '90%';
+  if (modals.length === 0) return null;
 
   return createPortal(
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center"
-      onClick={closeModal} // click en backdrop cierra
-    >
-      <div
-        className="bg-white rounded-xl shadow-lg p-2"
-        style={{ width, height }}
-        onClick={(e) => e.stopPropagation()} // evita cerrar al click interno
-        role="dialog"
-        aria-modal="true"
-      >
-        <EscListener onEsc={closeModal} />
-        {content}
-      </div>
-    </div>,
+    <>
+      {modals.map((modal, index) => {
+        const width = modal.size?.width ?? '90%';
+        const height = modal.size?.height ?? '90%';
+        const zIndex = 1000 + index * 10;
+
+        return (
+          <div
+            key={modal.id}
+            className="fixed inset-0 flex items-center justify-center"
+            style={{
+              zIndex,
+              backgroundColor:
+                index === 0 ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.3)'
+            }}
+            onClick={() => closeModal(modal.id)}
+          >
+            <div
+              className="bg-white rounded-xl shadow-lg p-2"
+              style={{ width, height }}
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+            >
+              <EscListener
+                onEsc={() => closeModal(modal.id)}
+                isTopModal={index === modals.length - 1}
+              />
+              {modal.content}
+            </div>
+          </div>
+        );
+      })}
+    </>,
     document.body
   );
 }
 
-function EscListener({ onEsc }: { onEsc: () => void }) {
+function EscListener({
+  onEsc,
+  isTopModal
+}: {
+  onEsc: () => void;
+  isTopModal: boolean;
+}) {
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onEsc(); };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [onEsc]);
+    // Solo el modal superior debe responder a ESC
+    if (!isTopModal) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onEsc();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onEsc, isTopModal]);
+
   return null;
 }

@@ -5,17 +5,18 @@ import {
   DateField,
   IntegerField,
 } from "@telefonica/mistica";
-import CreateForm from "@/app/crear-componente-red/CreateForm";
 import { AsyncPaginate } from "react-select-async-paginate";
 import SelectField from "@/components/SelectField";
 import Modal from "@/components/Modal";
+import CreateForm from ".";
+import IconButton from "../IconButton";
 
 interface InputDynamicProps {
   name: string;
   label: string;
   required?: boolean;
   html_form_type: "input" | "select" | "date" | "multiple" | "textarea";
-  type?: "number" | "string" | "array" | "date" | "boolean";
+  type?: "number" | "string" | "array" | "date" | "boolean" | "master";
   value?: string | { label: string; value: string };
   onChange: (name: string, value: string) => void;
   isCreate?: boolean;
@@ -66,15 +67,15 @@ export default function InputDynamic({
   }, [selectOptions]);
 
   const renderButton = () => (
-    <button
-      className="px-6 py-3 bg-blue-600 text-white rounded-full"
-      onClick={(e) => {
-        e.preventDefault();
+    <IconButton
+      onClick={() => {
         setOpenForm(true);
       }}
-    >
-      Crear
-    </button>
+      className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white rounded-2xl"
+      icon="add"
+      buttonHeight="h-10"
+      buttonWidth="w-10"
+    />
   );
 
   const renderSelect = () => {
@@ -92,7 +93,9 @@ export default function InputDynamic({
             </div>
           )}
           <AsyncPaginate
-            className={`h-[60px] group_field_paginated ${selectedValue ? "has-value" : ""}`}
+            className={`h-[60px] group_field_paginated ${
+              selectedValue ? "has-value" : ""
+            }`}
             classNamePrefix={"field_paginated"}
             debounceTimeout={1000}
             value={selectedValue}
@@ -117,7 +120,7 @@ export default function InputDynamic({
         name={name}
         label={label}
         optional={!required}
-        value={(value ?? '').toString()}
+        value={(value ?? "").toString()}
         onChangeValue={(val) => onChange(name, val)}
         disabled={loading}
         helperText={loading ? `Cargando ${label}...` : undefined}
@@ -150,7 +153,7 @@ export default function InputDynamic({
           name={name}
           optional={!required}
           label={label}
-          value={value?.toString() ?? ""}
+          value={(value ?? "").toString()}
           fullWidth
           maxLength={255}
           onChange={(e) => {
@@ -164,7 +167,7 @@ export default function InputDynamic({
         name={name}
         optional={!required}
         label={label}
-        value={(value ?? '').toString()}
+        value={(value ?? "").toString()}
         fullWidth
         maxLength={255}
         onChange={(e) => {
@@ -196,7 +199,7 @@ export default function InputDynamic({
       name={name}
       optional={!required}
       label={label}
-      value={value ? value?.toString() : ''}
+      value={value ? value?.toString() : ""}
       fullWidth
       onChange={(val) => {
         onChange(name, val?.target?.value ?? "");
