@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useSnackbar } from '@telefonica/mistica';
@@ -8,6 +8,7 @@ import { ComponenteRedType } from '@/core/componente-red/componente-red.type';
 import { ComponenteRedService } from '@/core/componente-red/componente-red.service';
 import { RelacionJerarquicaService } from '@/core/relacion-jerarquica/relacion-jerarquica.service';
 import { errorGeneric, errorMessageInAPI } from '@/types/errorMessageInAPI';
+import { useHierarchyRelations } from './useHierarchyRelations';
 
 export type ModeCreateForm = 'create' | 'update' | 'approve' | 'popup' | 'read';
 
@@ -37,9 +38,26 @@ export function useComponenteRedForm({
   >([]);
   const [isApproved, setIsApproved] = useState(false);
 
+  const { parents, isLoading: loadingRelations } = useHierarchyRelations({
+    componenteRedId: componenteRed?.id,
+    mode,
+    shouldLoad: mode !== 'create' && mode !== 'popup'
+  });
+
+  useEffect(() => {
+    if (mode === 'create' || mode === 'popup' || loadingRelations) return;
+
+    if (parents.length > 0 && componenteSeleted.length === 0) {
+      setComponenteSeleted(parents);
+    }
+  }, [parents, loadingRelations, mode]);
+
   const createRelacionJerarquicas = useCallback(
     async (componenteRed: ComponenteRedType) => {
+      if (componenteSeleted.length === 0) return;
+
       const relacionJerarquicaService = new RelacionJerarquicaService();
+
       await Promise.all(
         componenteSeleted.map((selected) =>
           relacionJerarquicaService.create({
@@ -53,6 +71,26 @@ export function useComponenteRedForm({
       );
     },
     [componenteSeleted]
+  );
+
+  // PREPARADO: Función para eliminar relaciones
+  const deleteRelacionJerarquicas = useCallback(
+    async (componenteRed: ComponenteRedType, toDelete: ComponenteRedType[]) => {
+      if (toDelete.length === 0) return;
+
+      const relacionJerarquicaService = new RelacionJerarquicaService();
+
+      // Implementar cuando el servicio tenga el método delete
+      // await Promise.all(
+      //   toDelete.map((selected) =>
+      //     relacionJerarquicaService.delete({
+      //       controlId: componenteRed.controlId,
+      //       superiorControlId: selected.controlId
+      //     })
+      //   )
+      // );
+    },
+    []
   );
 
   const buildPayload = useCallback(
@@ -141,7 +179,28 @@ export function useComponenteRedForm({
           approvalComment: form.approvalComment ?? ''
         };
         const { data } = await service.update(componenteRed?.id!, payload);
-        await createRelacionJerarquicas(data.data);
+
+        const existingIds = new Set(parents.map((p) => p.id));
+        const selectedIds = new Set(componenteSeleted.map((c) => c.id));
+
+        // Componentes a agregar (nuevos)
+        const toCreate = componenteSeleted.filter(
+          (c) => !existingIds.has(c.id)
+        );
+
+        // Componentes a eliminar (desseleccionados) - preparado para futuro
+        // const toDelete = parents.filter(p => !selectedIds.has(p.id));
+
+        // Crear nuevas relaciones
+        if (toCreate.length > 0) {
+          await createRelacionJerarquicas(data.data);
+        }
+
+        // PREPARADO: Eliminar relaciones (cuando esté disponible)
+        // if (toDelete.length > 0) {
+        //   await deleteRelacionJerarquicas(data.data, toDelete);
+        // }
+
         openSnackbar({
           message: 'Componente actualizado exitosamente',
           type: 'INFORMATIVE'
@@ -165,7 +224,9 @@ export function useComponenteRedForm({
       createRelacionJerarquicas,
       componenteRed?.id,
       openSnackbar,
-      router
+      router,
+      parents,
+      componenteSeleted
     ]
   );
 
@@ -220,6 +281,7 @@ export function useComponenteRedForm({
     setComponenteSeleted,
     isApproved,
     setIsApproved,
-    onSubmit
+    onSubmit,
+    loadingRelations
   };
 }

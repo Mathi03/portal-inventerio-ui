@@ -12,13 +12,17 @@ interface RelacionJerarquicaProps {
   red?: RedType | null;
   onSelected: (componente: ComponenteRedType) => void;
   onDeselected: (componente: ComponenteRedType) => void;
+  selectedComponents?: ComponenteRedType[];
+  disabled?: boolean;
 }
 
 export default function RelacionJerarquica({
   tipoComponenteId,
   red,
   onSelected,
-  onDeselected
+  onDeselected,
+  selectedComponents = [],
+  disabled = false
 }: RelacionJerarquicaProps) {
   const { openSnackbar } = useSnackbar();
   const [isLoading, setIsLoading] = useState(false);
@@ -26,10 +30,20 @@ export default function RelacionJerarquica({
     []
   );
   const [totalItems, setTotalItems] = useState(0);
-
   const [currentPage, setCurrentPage] = useState(1);
   const [filter, setFilter] = useState<Record<string, any>>({});
+
   const itemPerPage = 10;
+
+  const selectedIds = useMemo(
+    () => new Set(selectedComponents.map((c) => c.id)),
+    [selectedComponents]
+  );
+
+  const isSelected = useCallback(
+    (componentId: number) => selectedIds.has(componentId),
+    [selectedIds]
+  );
 
   const columns = useMemo<TableColumn<ComponenteRedType>[]>(
     () => [
@@ -38,9 +52,11 @@ export default function RelacionJerarquica({
         render: (row) => (
           <Checkbox
             name={`check-${row.id}`}
+            checked={isSelected(row.id)}
             onChange={(checked) =>
               checked ? onSelected(row) : onDeselected(row)
             }
+            disabled={disabled}
           />
         )
       },
@@ -57,7 +73,7 @@ export default function RelacionJerarquica({
         key: 'controlLabel'
       }
     ],
-    [onSelected, onDeselected]
+    [onSelected, onDeselected, isSelected, disabled]
   );
 
   const getComponenteRedes = useCallback(async () => {
@@ -112,7 +128,13 @@ export default function RelacionJerarquica({
   };
 
   return (
-    <div className="col-span-3 h-[50svh] grid grid-rows-[1fr]">
+    <div className="col-span-3 h-[50svh] flex flex-col">
+      {selectedComponents.length > 0 && (
+        <div className="mb-2 text-sm text-gray-600">
+          {selectedComponents.length} componente(s) seleccionado(s)
+        </div>
+      )}
+
       <Table
         item={totalItems}
         itemPerPage={itemPerPage}
@@ -120,6 +142,7 @@ export default function RelacionJerarquica({
         rows={componenteRedes}
         isLoading={isLoading}
         onPageChange={handlePageChange}
+        compact
       />
     </div>
   );

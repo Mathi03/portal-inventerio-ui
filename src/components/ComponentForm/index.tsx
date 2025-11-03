@@ -792,6 +792,8 @@ export default function CreateForm({
                   )
                 );
               }}
+              selectedComponents={componenteSeleted}
+              disabled={mode === 'read' || mode === 'approve'}
             />
             <hr className="col-span-3" />
             <hgroup className="col-span-3" id="relacion-jerarquica">

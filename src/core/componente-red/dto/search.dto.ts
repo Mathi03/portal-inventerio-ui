@@ -1,3 +1,5 @@
+import { ComponenteRedType } from "../componente-red.type";
+
 export interface QueryComponenteRedDto {
   page?: number;
   limit?: number;
@@ -27,4 +29,35 @@ export interface ParamsByAttribute {
   attributes2?: string;
   attributesId?: string;
   attributesId2?: string;
+}
+
+export interface ParamsByGetHierarchyRelations {
+  limit_children?: number;
+  limit_parent?: number;
+  page_children?: number;
+  page_parent?: number;
+}
+
+interface RelationPaginationData<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+  prev: number;
+  next: number;
+  pages: number;
+  last: number;
+  first: number;
+}
+
+export interface HierarchyRelationsResponse {
+  success: boolean;
+  data: {
+    componentId: number;
+    parents: RelationPaginationData<ComponenteRedType>;
+    children: RelationPaginationData<ComponenteRedType>;
+  };
+  timestamp: number;
 }
