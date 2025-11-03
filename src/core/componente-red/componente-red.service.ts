@@ -1,18 +1,23 @@
-import { bff } from "../config";
-import { ControlService } from "../control/control.service";
-import { PaginationDto } from "../pagination/dto/create.dto";
-import { ServicioService } from "../servicio/servicio.service";
-import { ComponenteRedType } from "./componente-red.type";
-import { CreateComponenteRedDto } from "./dto/create.dto";
-import { ParamsByAttribute, QueryComponenteRedDto } from "./dto/search.dto";
-import { UpdateComponenteRedDto } from "./dto/update.dto";
+import { bff } from '../config';
+import { ControlService } from '../control/control.service';
+import { PaginationDto } from '../pagination/dto/create.dto';
+import { ServicioService } from '../servicio/servicio.service';
+import { ComponenteRedType } from './componente-red.type';
+import { CreateComponenteRedDto } from './dto/create.dto';
+import {
+  HierarchyRelationsResponse,
+  ParamsByAttribute,
+  ParamsByGetHierarchyRelations,
+  QueryComponenteRedDto
+} from './dto/search.dto';
+import { UpdateComponenteRedDto } from './dto/update.dto';
 
 export class ComponenteRedService {
   private controlService = new ControlService();
   private servicioService = new ServicioService();
   public async create(createComponenteRed: CreateComponenteRedDto) {
     const response = await bff.post(
-      "/v1/portal/components",
+      '/v1/portal/components',
       createComponenteRed
     );
     return response;
@@ -20,9 +25,9 @@ export class ComponenteRedService {
 
   public async findAll(queryComponenteRed: QueryComponenteRedDto) {
     const response = await bff.get<PaginationDto<ComponenteRedType[]>>(
-      "/v1/portal/components",
+      '/v1/portal/components',
       {
-        params: queryComponenteRed,
+        params: queryComponenteRed
       }
     );
     response.data.data.data = response.data.data.data.filter(
@@ -33,7 +38,7 @@ export class ComponenteRedService {
 
   public async getById(id: number) {
     const {
-      data: { data: componenteRed },
+      data: { data: componenteRed }
     } = await bff.get<{ data: ComponenteRedType }>(
       `/v1/portal/components/${id}`
     );
@@ -45,7 +50,7 @@ export class ComponenteRedService {
     componenteRed.control = control;
     //GuillermocomponenteRed.service = services;
     componenteRed.relations = relations;*/
-    console.log("getId ===> ", componenteRed);
+    console.log('getId ===> ', componenteRed);
     return componenteRed;
   }
 
@@ -60,7 +65,7 @@ export class ComponenteRedService {
   public async approve(id: number, approvalComment: string, status: number) {
     return await bff.patch(`/v1/portal/components/${id}`, {
       approvalComment,
-      status,
+      status
     });
   }
   public async getRelations(id: number) {
@@ -76,7 +81,7 @@ export class ComponenteRedService {
     const response = await bff.get<PaginationDto<ComponenteRedType[]>>(
       `/v1/portal/components/${id}/client`,
       {
-        params,
+        params
       }
     );
     response.data.data.data = response.data.data.data.filter(
@@ -93,7 +98,7 @@ export class ComponenteRedService {
     const response = await bff.get<PaginationDto<ComponenteRedType[]>>(
       `v1/portal/components/${attribute}/${value}/attribute`,
       {
-        params: queryComponenteRed,
+        params: queryComponenteRed
       }
     );
     response.data.data.data = response.data.data.data.filter(
@@ -104,14 +109,54 @@ export class ComponenteRedService {
 
   public async searchByAttributes(queryComponenteRed: ParamsByAttribute) {
     const response = await bff.get<PaginationDto<ComponenteRedType[]>>(
-      "v1/portal/components/search-by-attributes",
+      'v1/portal/components/search-by-attributes',
       {
-        params: queryComponenteRed,
+        params: queryComponenteRed
       }
     );
     response.data.data.data = response.data.data.data.filter(
       (componente) => !componente.disabledAt
     );
+    return response;
+  }
+
+  /**
+   * Obtiene las relaciones jerárquicas (padres e hijos) de un componente
+   * @param componenteId - ID del componente
+   * @param queryParams - Parámetros de paginación para padres e hijos
+   * @returns Respuesta con parents y children paginados
+   */
+  public async getHierarchyRelations(
+    componenteId: number,
+    queryParams: ParamsByGetHierarchyRelations
+  ) {
+    const response = await bff.get<HierarchyRelationsResponse>(
+      `/v1/portal/components/${componenteId}/relation`,
+      {
+        params: queryParams
+      }
+    );
+
+    // Filtrar componentes deshabilitados en parents
+    if (response.data.data.parents.data.length > 0) {
+      response.data.data.parents.data = response.data.data.parents.data.filter(
+        (componente) => !componente.disabledAt
+      );
+      // Actualizar total después del filtrado
+      response.data.data.parents.total = response.data.data.parents.data.length;
+    }
+
+    // Filtrar componentes deshabilitados en children
+    if (response.data.data.children.data.length > 0) {
+      response.data.data.children.data =
+        response.data.data.children.data.filter(
+          (componente) => !componente.disabledAt
+        );
+      // Actualizar total después del filtrado
+      response.data.data.children.total =
+        response.data.data.children.data.length;
+    }
+
     return response;
   }
 }
