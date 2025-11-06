@@ -20,7 +20,7 @@ spec:
           image: image-registry.openshift-image-registry.svc:5000/dev-front-oss/portal-inventario-frontend:latest
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 8080
               protocol: TCP
           resources:
             requests:
