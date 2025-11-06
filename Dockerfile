@@ -12,11 +12,11 @@ COPY . .
 RUN npm run build
 
 ENV NODE_ENV=production
-ENV PORT=80
+ENV PORT=8080
 
 RUN addgroup -g 1001 -S nodejs \
  && adduser -S nextjs -u 1001
 USER nextjs
 
-EXPOSE 80
+EXPOSE 8080
 CMD ["npm", "run", "start"]
