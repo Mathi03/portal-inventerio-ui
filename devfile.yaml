@@ -15,7 +15,7 @@ metadata:
   projectType: Next.js
   language: JavaScript
   attributes:
-    alpha.dockerimage-port: 3000
+    alpha.dockerimage-port: 8080
 components:
   - name: image-build-portal-inventario-frontend
     image:
@@ -29,12 +29,12 @@ components:
       deployment/replicas: 1
       deployment/cpuRequest: 20m
       deployment/memoryRequest: 200Mi
-      deployment/container-port: 3000
+      deployment/container-port: 8080
     kubernetes:
       uri: deploy.yaml
       endpoints:
-        - name: http-3000
-          targetPort: 3000
+        - name: http-8080
+          targetPort: 8080
           path: /
           exposure: public
           protocol: http
