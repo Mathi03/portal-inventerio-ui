@@ -1,4 +1,5 @@
 import { MS_CONTACTO } from "@/shared/services-v2/constants";
+import { getTokenFromCookie } from "@/shared/utils/token";
 import axios from "axios";
 
 export const bff = axios.create({
@@ -51,7 +52,7 @@ export const source = axios.create({
 
 function attachTokenInterceptor(client: ReturnType<typeof axios.create>) {
   client.interceptors.request.use((config) => {
-    const token = localStorage.getItem("token");
+    const token = getTokenFromCookie();
     if (token) {
       config.headers = config.headers || {};
       config.headers["X-TOKEN-ID"] = `${token}`;

@@ -3,6 +3,7 @@ import axios, {
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from "axios";
+import { getTokenFromCookie } from "../utils/token";
 
 interface HttpServiceOptions {
   baseUrl: string;
@@ -22,7 +23,7 @@ const HttpService = ({ baseUrl }: HttpServiceOptions) => {
   http.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
       const token =
-        localStorage.getItem("token") ||
+        getTokenFromCookie() ||
         "eyJhbGciOiJIUzM4NCJ9.eyJjb2RFbXBsb3llZSI6IkI0QTcyQ0JFNDZBNDM1OTY2NTVDNkVGQzAxNThDRDM0Iiwic3ViIjoiZGVmYXVsdC1zdWJqZWN0IiwiaXNzIjoiZGVmYXVsdC1pc3N1ZXIiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJkZWZhdWx0LXVzZXJuYW1lIiwiaWF0IjoxNzQxMjEyODQ2LCJleHAiOjE3NDEyMTY0NDZ9.6ELCnqK5Q0nWIDJbnqkko4Nl0KudzesQtagmRW7aj2qGP-yAorv6cvnTUwauYPIo";
       const userId =
         localStorage.getItem("X-USER-ID") || "CEB58FDE89E9B392242F633B202F20FB";
