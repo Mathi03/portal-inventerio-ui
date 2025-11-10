@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import {
   TextField,
   Select,
@@ -34,7 +34,25 @@ interface InputDynamicProps {
     loadedOptions: any,
     meta: any
   ) => Promise<any>;
+  thirdColumnPath?: string; // ej: "attribute[0].puerto"
+  thirdColumnLabel?: string; // ej: "Puerto"
+  thirdColumnValue?: string | number; // valor extraído del objeto seleccionado
 }
+
+const ThirdColumnDisplay = memo(
+  ({ label, value }: { label: string; value: string | number | undefined }) => {
+    if (!value) return null;
+
+    return (
+      <div className="text-xs text-gray-600 mt-1 px-1">
+        <span className="font-medium">{label}:</span>{' '}
+        <span className="text-gray-800">{value}</span>
+      </div>
+    );
+  }
+);
+
+ThirdColumnDisplay.displayName = 'ThirdColumnDisplay';
 
 export default function InputDynamic({
   name,
@@ -51,7 +69,10 @@ export default function InputDynamic({
   regionId,
   stationId,
   isPaginated,
-  loadPaginatedOptions
+  loadPaginatedOptions,
+  thirdColumnPath,
+  thirdColumnLabel,
+  thirdColumnValue
 }: InputDynamicProps) {
   const [openForm, setOpenForm] = useState(false);
   const [internalAsyncValue, setInternalAsyncValue] = useState<{
@@ -111,6 +132,12 @@ export default function InputDynamic({
             isClearable
             required={required}
           />
+          {thirdColumnPath && thirdColumnLabel && (
+            <ThirdColumnDisplay
+              label={thirdColumnLabel}
+              value={thirdColumnValue}
+            />
+          )}
         </div>
       );
     }
@@ -162,7 +189,8 @@ export default function InputDynamic({
           }}
         />
       );
-    if (type === 'file') return <input />;
+    if (type === 'file')
+      return <input id={`${name}-file`} type="file" className="h-10" />;
     return (
       <TextField
         name={name}

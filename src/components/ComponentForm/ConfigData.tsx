@@ -192,6 +192,8 @@ interface ConfigDataProps {
   disabled?: boolean;
 }
 
+type ThirdColumnCache = Record<string, string | number | undefined>;
+
 // ========== COMPONENTE PRINCIPAL ==========
 export default function ConfigData({
   tipoComponente,
@@ -221,6 +223,10 @@ export default function ConfigData({
   const [resolvedAsyncValues, setResolvedAsyncValues] = useState<
     Record<string, { label: string; value: string }>
   >({});
+
+  const [thirdColumnValues, setThirdColumnValues] = useState<ThirdColumnCache>(
+    {}
+  );
 
   const hasInitializedRef = useRef(false);
   const isResolvingAsyncRef = useRef(false);
@@ -736,6 +742,7 @@ export default function ConfigData({
 
     const resolveInitialAsyncValues = async () => {
       const out: Record<string, { label: string; value: string }> = {};
+      const thirdColumnOut: ThirdColumnCache = {};
 
       await Promise.all(
         entries.map(async ({ attr, path }) => {
@@ -756,7 +763,8 @@ export default function ConfigData({
           if (!fieldValue) return;
 
           try {
-            const [labelKey, valueKey] = attr.valores_posibles_response;
+            const [labelKey, valueKey, thirdColumnKey] =
+              attr.valores_posibles_response;
             let data;
 
             if (valueKey.toLowerCase() === 'id') {
@@ -793,6 +801,13 @@ export default function ConfigData({
                   value: String(valueValue)
                 };
               }
+
+              if (thirdColumnKey) {
+                const thirdValue = getNestedValue(data, thirdColumnKey);
+                if (thirdValue !== undefined) {
+                  thirdColumnOut[path] = thirdValue;
+                }
+              }
             }
           } catch (error) {
             console.warn(`Error resolving async value for ${path}:`, error);
@@ -802,6 +817,7 @@ export default function ConfigData({
 
       if (mounted) {
         setResolvedAsyncValues(out);
+        setThirdColumnValues(thirdColumnOut);
       }
     };
 
@@ -877,6 +893,20 @@ export default function ConfigData({
                             ? resolvedAsyncValues[fieldPath]
                             : storedValue;
 
+                        const responseFields = attr.valores_posibles_response;
+                        const hasThirdColumn =
+                          responseFields && responseFields.length >= 3;
+                        const thirdColumnPath = hasThirdColumn
+                          ? responseFields[2]
+                          : undefined;
+                        const thirdColumnLabel = thirdColumnPath
+                          ? thirdColumnPath
+                              .split(/[\[\.]/)
+                              .pop()
+                              ?.replace(/\]/g, '') || 'Valor'
+                          : undefined;
+                        const thirdColumnValue = thirdColumnValues[fieldPath];
+
                         return (
                           <InputDynamic
                             key={fieldPath}
@@ -900,6 +930,9 @@ export default function ConfigData({
                             onChange={onChange}
                             isPaginated={isPaginated}
                             loadPaginatedOptions={loader}
+                            thirdColumnPath={thirdColumnPath}
+                            thirdColumnLabel={thirdColumnLabel}
+                            thirdColumnValue={thirdColumnValue}
                           />
                         );
                       })}
@@ -996,6 +1029,7 @@ export default function ConfigData({
       formData,
       dynamicOptions,
       resolvedAsyncValues,
+      thirdColumnValues,
       dynamicConfigs,
       getLoader,
       pickShapeIndex,
