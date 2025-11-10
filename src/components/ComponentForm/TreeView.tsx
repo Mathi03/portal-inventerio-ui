@@ -20,8 +20,31 @@ function openNewWindow(id: number | string) {
 }
 
 const toStr = (x: any) => String(x);
-const getByPath = (obj: any, path: string) =>
-  path.split('.').reduce((acc, k) => (acc == null ? acc : acc[k]), obj);
+const getByPath = (obj: any, path: string) => {
+  const parts = path
+    .replace(/\[(\w+)\]/g, '.$1')
+    .split('.')
+    .filter(Boolean);
+
+  return parts.reduce((acc: any, key: string) => {
+    if (acc == null) return acc;
+
+    if (typeof acc === 'string') {
+      try {
+        acc = JSON.parse(acc);
+      } catch {
+        return null;
+      }
+    }
+
+    const index = parseInt(key, 10);
+    if (!isNaN(index) && Array.isArray(acc)) {
+      return acc[index];
+    }
+
+    return acc[key];
+  }, obj);
+};
 
 const clienteSpecs: NodeSpec[] = [
   { key: 'id_control_nodo_a', level: 1 },
@@ -45,18 +68,17 @@ const buildResolvedUrl = (
   valueKey: string,
   fieldValue: string | number
 ): string => {
-  const fieldSnake = camelToSnake(valueKey);
+  const rootKey = valueKey.split(/[\[\.]/, 1)[0];
+  const fieldSnake = camelToSnake(rootKey);
+
   const urlObj = new URL(source);
 
-  // si ya trae el parámetro -> lo reemplazamos
   if (urlObj.searchParams.has(fieldSnake)) {
     urlObj.searchParams.set(fieldSnake, String(fieldValue));
   } else {
-    // sino lo agregamos
     urlObj.searchParams.set(fieldSnake, String(fieldValue));
   }
 
-  // normalizamos paginación
   urlObj.searchParams.set('page', '1');
   urlObj.searchParams.set('limit', '10');
 
@@ -178,8 +200,8 @@ const TreeView = ({
             const list = Array.isArray(data)
               ? data
               : Array.isArray(data?.data)
-              ? data.data
-              : data;
+                ? data.data
+                : data;
             return Array.isArray(list) ? list[0] : list;
           }
         };
@@ -251,8 +273,8 @@ const TreeView = ({
         const obj = Array.isArray(data)
           ? data[0]
           : Array.isArray(data?.data)
-          ? data.data[0]
-          : data;
+            ? data.data[0]
+            : data;
         if (open && obj) {
           openNewWindow(obj?.id);
         } else {

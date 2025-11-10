@@ -20,6 +20,34 @@ function camelToSnake(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
 }
 
+const getNestedValue = (obj: any, path: string): any => {
+  // Convertir "attribute[0].puerto" a ["attribute", "0", "puerto"]
+  const parts = path
+    .replace(/\[(\w+)\]/g, '.$1')
+    .split('.')
+    .filter(Boolean);
+
+  return parts.reduce((current, part) => {
+    if (current === null || current === undefined) return undefined;
+
+    if (typeof current === 'string') {
+      try {
+        current = JSON.parse(current);
+      } catch {
+        return undefined;
+      }
+    }
+
+    // Manejar índices de array
+    const index = parseInt(part, 10);
+    if (!isNaN(index) && Array.isArray(current)) {
+      return current[index];
+    }
+
+    return current[part];
+  }, obj);
+};
+
 const normalizeApiData = (r: any) =>
   r?.data?.data?.data ?? r?.data?.data ?? r?.data ?? r;
 
@@ -340,10 +368,25 @@ export default function ConfigData({
         const labelKey = responseFields?.[0] ?? 'name';
         const valueKey = responseFields?.[1] ?? 'value';
 
-        return (items ?? []).map((item: any) => ({
-          text: String(item?.[labelKey]),
-          value: String(item?.[valueKey])
-        }));
+        return (items ?? []).map((item: any) => {
+          const hasNestedLabel =
+            labelKey.includes('[') || labelKey.includes('.');
+          const hasNestedValue =
+            valueKey.includes('[') || valueKey.includes('.');
+
+          const labelValue = hasNestedLabel
+            ? getNestedValue(item, labelKey)
+            : item?.[labelKey];
+
+          const valueValue = hasNestedValue
+            ? getNestedValue(item, valueKey)
+            : item?.[valueKey];
+
+          return {
+            text: String(labelValue ?? ''),
+            value: String(valueValue ?? '')
+          };
+        });
       } catch (err) {
         console.error('Error fetching options from', url, err);
         return [];
@@ -579,7 +622,7 @@ export default function ConfigData({
   ]);
 
   useEffect(() => {
-   if (hasInitializedRef.current) return;
+    if (hasInitializedRef.current) return;
 
     const hasData =
       Object.keys(attributes || {}).length > 0 ||
@@ -730,11 +773,26 @@ export default function ConfigData({
               data = Array.isArray(arr) ? arr[0] : arr;
             }
 
-            if (data && data[valueKey]) {
-              out[path] = {
-                label: String(data[labelKey]),
-                value: String(data[valueKey])
-              };
+            if (data) {
+              const hasNestedLabel =
+                labelKey.includes('[') || labelKey.includes('.');
+              const hasNestedValue =
+                valueKey.includes('[') || valueKey.includes('.');
+
+              const labelValue = hasNestedLabel
+                ? getNestedValue(data, labelKey)
+                : data[labelKey];
+
+              const valueValue = hasNestedValue
+                ? getNestedValue(data, valueKey)
+                : data[valueKey];
+
+              if (valueValue !== undefined) {
+                out[path] = {
+                  label: String(labelValue ?? valueValue),
+                  value: String(valueValue)
+                };
+              }
             }
           } catch (error) {
             console.warn(`Error resolving async value for ${path}:`, error);

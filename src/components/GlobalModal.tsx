@@ -31,14 +31,14 @@ export default function GlobalModal() {
       {modals.map((modal, index) => {
         const width = modal.size?.width ?? '90%';
         const height = modal.size?.height ?? '90%';
-        const zIndex = 1000 + index * 10;
+        // const zIndex = 1000 + index * 10;
 
         return (
           <div
             key={modal.id}
             className="fixed inset-0 flex items-center justify-center"
             style={{
-              zIndex,
+              //zIndex,
               backgroundColor:
                 index === 0 ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.3)'
             }}

@@ -450,10 +450,13 @@ export default function CreateForm({
           {}
         );
         const activeRegions: RegionType[] = response?.data?.data || [];
-        if (regionId) {
+        if (regionId || componenteRed?.regionId) {
           setFormState((prev) => ({
             ...prev,
-            region: activeRegions.find((r) => r.id === regionId) ?? null
+            region:
+              activeRegions.find(
+                (r) => r.id === (regionId || componenteRed?.regionId)
+              ) ?? null
           }));
         }
         setData((prev) => ({ ...prev, regiones: activeRegions }));
@@ -680,7 +683,7 @@ export default function CreateForm({
             }))
           }
         />
-        <Select
+        <SearchableSelect
           name={'refSourceId' as FormItem}
           label="Fuente"
           disabled={
