@@ -10,6 +10,7 @@ import SelectField from '@/components/SelectField';
 import Modal from '@/components/Modal';
 import CreateForm from '.';
 import IconButton from '../IconButton';
+import FileUpload from './FileUpload';
 
 interface InputDynamicProps {
   name: string;
@@ -190,7 +191,16 @@ export default function InputDynamic({
         />
       );
     if (type === 'file')
-      return <input id={`${name}-file`} type="file" className="h-10" />;
+      return (
+        <FileUpload
+          name={name}
+          label={label}
+          required={required}
+          value={(value ?? '').toString()}
+          onChange={onChange}
+          acceptedFileTypes={['.txt']}
+        />
+      );
     return (
       <TextField
         name={name}

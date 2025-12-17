@@ -29,12 +29,13 @@ const TypeEnum = z.union(
     z.literal("date"),
     z.literal("boolean"),
     z.literal("master"),
+    z.literal("file"),
   ],
   {
     invalid_type_error:
-      "El tipo debe ser uno de: 'number', 'string', 'array', 'date', 'master' o 'boolean'",
+      "El tipo debe ser uno de: 'number', 'string', 'array', 'date', 'master', 'file' o 'boolean'",
     required_error:
-      "El tipo debe ser uno de: 'number', 'string', 'array', 'date' o 'boolean'",
+      "El tipo debe ser uno de: 'number', 'string', 'array', 'date', 'master', 'file' o 'boolean'",
   }
 );
 
